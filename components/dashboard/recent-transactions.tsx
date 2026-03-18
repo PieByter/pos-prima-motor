@@ -1,4 +1,8 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Loader } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -8,28 +12,57 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const transactions = [
-  {
-    id: "#ORD-7829",
-    customer: "John Doe",
-    amount: "Rp 120.500",
-    status: "completed" as const,
-  },
-  {
-    id: "#ORD-7830",
-    customer: "Sarah Smith",
-    amount: "Rp 45.000",
-    status: "completed" as const,
-  },
-  {
-    id: "#ORD-7831",
-    customer: "Mike Ross",
-    amount: "Rp 210.000",
-    status: "processing" as const,
-  },
-];
 
+interface Transaction {
+  id: string;
+  customer: string;
+  amount: number;
+  status: "completed" | "processing" | "pending";
+}
 export function RecentTransactions() {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const response = await fetch("/api/dashboard/recent");
+        if (!response.ok) throw new Error("Failed to fetch");
+        const result = await response.json();
+        const mapped = (result ?? []).map(
+          (row: {
+            id: number;
+            invoice_number: string;
+            total_amount: number;
+            status: string;
+            customer?: { name?: string };
+          }) => ({
+            id: row.invoice_number ?? `TRX-${row.id}`,
+            customer: row.customer?.name ?? "Walk-in Customer",
+            amount: Number(row.total_amount ?? 0),
+            status: row.status === "completed" ? "completed" : "processing",
+          })
+        );
+        setTransactions(mapped);
+      } catch (error) {
+        console.error("Error fetching transactions:", error);
+        setTransactions([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTransactions();
+  }, []);
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
       <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
@@ -54,7 +87,14 @@ export function RecentTransactions() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {transactions.map((tx) => (
+          {isLoading ? (
+            <TableRow>
+              <TableCell colSpan={4} className="text-center py-6">
+                <Loader className="h-6 w-6 animate-spin text-gray-400 mx-auto" />
+              </TableCell>
+            </TableRow>
+          ) : (
+          transactions.map((tx) => (
             <TableRow key={tx.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
               <TableCell className="font-medium text-sky-500">
                 {tx.id}
@@ -63,7 +103,7 @@ export function RecentTransactions() {
                 {tx.customer}
               </TableCell>
               <TableCell className="text-gray-900 dark:text-white">
-                {tx.amount}
+                {formatCurrency(tx.amount)}
               </TableCell>
               <TableCell>
                 {tx.status === "completed" ? (
@@ -77,7 +117,8 @@ export function RecentTransactions() {
                 )}
               </TableCell>
             </TableRow>
-          ))}
+          ))
+          )}
         </TableBody>
       </Table>
     </div>

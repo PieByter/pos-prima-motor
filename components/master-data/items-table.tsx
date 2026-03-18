@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import {
   Search,
@@ -29,51 +29,90 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  type Item,
-  dummyItems,
-  CATEGORIES,
-  formatRupiah,
-  getStockStatus,
-} from "@/lib/data/items";
+import { formatRupiah, getStockStatus, CATEGORIES, type Item } from "@/lib/data/items";
+import { Loader } from "lucide-react";
 import { ItemFormDialog } from "./item-form-dialog";
 
 const ITEMS_PER_PAGE = 5;
 
+type ApiItem = {
+  id: number;
+  name: string;
+  description?: string | null;
+  sku?: string | null;
+  category?: string | null;
+  purchase_price: number;
+  selling_price: number;
+  service_fee?: number | null;
+  stock?: number | null;
+  current_stock?: number | null;
+  picture?: string | null;
+  created_at?: string;
+};
+
 export function ItemsTable() {
-  const [items, setItems] = useState<Item[]>(dummyItems);
+  const [items, setItems] = useState<Item[]>([]);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchItems = async () => {
+      setIsLoading(true);
+      try {
+        const params = new URLSearchParams();
+        if (search) params.append("search", search);
+        if (categoryFilter !== "all") params.append("category", categoryFilter);
+        params.append("page", currentPage.toString());
+        params.append("limit", ITEMS_PER_PAGE.toString());
+
+        const response = await fetch(`/api/items?${params}`);
+        if (!response.ok) throw new Error("Failed to fetch items");
+        const result = await response.json();
+        const rows: ApiItem[] = result.data || result || [];
+        const mapped: Item[] = rows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          description: row.description ?? "",
+          sku: row.sku ?? "-",
+          category: row.category ?? "Uncategorized",
+          purchasePrice: Number(row.purchase_price ?? 0),
+          sellingPrice: Number(row.selling_price ?? 0),
+          serviceFee: Number(row.service_fee ?? 0),
+          stock: Number(row.stock ?? row.current_stock ?? 0),
+          picture: row.picture ?? null,
+          createdAt: row.created_at ?? new Date().toISOString().slice(0, 10),
+        }));
+        setItems(mapped);
+      } catch (error) {
+        console.error("Error fetching items:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchItems();
+  }, [search, categoryFilter, currentPage]);
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
 
-  // Filter items
+  // Apply stock filter on frontend (API doesn't handle this)
   const filteredItems = items.filter((item) => {
-    const matchSearch =
-      item.name.toLowerCase().includes(search.toLowerCase()) ||
-      item.sku.toLowerCase().includes(search.toLowerCase());
-    const matchCategory =
-      categoryFilter === "all" || item.category === categoryFilter;
-    const matchStock =
-      stockFilter === "all" ||
-      (stockFilter === "critical" && item.stock <= 5) ||
-      (stockFilter === "warning" && item.stock > 5 && item.stock <= 20) ||
-      (stockFilter === "safe" && item.stock > 20);
-    return matchSearch && matchCategory && matchStock;
+    if (stockFilter === "all") return true;
+    if (stockFilter === "critical") return item.stock <= 5;
+    if (stockFilter === "warning") return item.stock > 5 && item.stock <= 20;
+    if (stockFilter === "safe") return item.stock > 20;
+    return true;
   });
 
-  // Pagination
-  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
-  const paginatedItems = filteredItems.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+  const paginatedItems = filteredItems;
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE + 1;
   const endIndex = Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length);
+  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
 
   function handleAddItem() {
     setEditingItem(null);
@@ -85,27 +124,74 @@ export function ItemsTable() {
     setDialogOpen(true);
   }
 
-  function handleDeleteItem(id: number) {
-    setItems((prev) => prev.filter((i) => i.id !== id));
+  async function handleDeleteItem(id: number) {
+    try {
+      const response = await fetch(`/api/items/${id}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Failed to delete item");
+      setItems((prev) => prev.filter((i) => i.id !== id));
+    } catch (error) {
+      console.error("Error deleting item:", error);
+    }
   }
 
-  function handleSaveItem(data: Omit<Item, "id" | "createdAt">) {
-    if (editingItem) {
-      setItems((prev) =>
-        prev.map((i) =>
-          i.id === editingItem.id ? { ...i, ...data } : i
-        )
-      );
-    } else {
-      const newItem: Item = {
-        ...data,
-        id: Math.max(0, ...items.map((i) => i.id)) + 1,
-        createdAt: new Date().toISOString().split("T")[0],
-      };
-      setItems((prev) => [...prev, newItem]);
+  async function handleSaveItem(data: Omit<Item, "id" | "createdAt">) {
+    const payload = {
+      name: data.name,
+      description: data.description,
+      sku: data.sku,
+      category: data.category,
+      purchase_price: data.purchasePrice,
+      selling_price: data.sellingPrice,
+      service_fee: data.serviceFee,
+      picture: data.picture,
+    };
+
+    try {
+      if (editingItem) {
+        const response = await fetch(`/api/items/${editingItem.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw new Error("Failed to update item");
+      } else {
+        const response = await fetch("/api/items", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw new Error("Failed to create item");
+      }
+
+      setDialogOpen(false);
+      setEditingItem(null);
+      setCurrentPage(1);
+
+      // Refresh list from API to keep table consistent with DB state.
+      const refresh = await fetch(`/api/items?page=1&limit=${ITEMS_PER_PAGE}`, {
+        cache: "no-store",
+      });
+      if (refresh.ok) {
+        const result = await refresh.json();
+        const rows: ApiItem[] = result.data || result || [];
+        const mapped: Item[] = rows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          description: row.description ?? "",
+          sku: row.sku ?? "-",
+          category: row.category ?? "Uncategorized",
+          purchasePrice: Number(row.purchase_price ?? 0),
+          sellingPrice: Number(row.selling_price ?? 0),
+          serviceFee: Number(row.service_fee ?? 0),
+          stock: Number(row.stock ?? row.current_stock ?? 0),
+          picture: row.picture ?? null,
+          createdAt: row.created_at ?? new Date().toISOString().slice(0, 10),
+        }));
+        setItems(mapped);
+      }
+    } catch (error) {
+      console.error("Error saving item:", error);
     }
-    setDialogOpen(false);
-    setEditingItem(null);
   }
 
   return (
@@ -217,9 +303,13 @@ export function ItemsTable() {
                 <TableRow>
                   <TableCell
                     colSpan={8}
-                    className="text-center py-12 text-gray-500 dark:text-gray-400"
+                    className="text-center py-12 text-gray-500 dark:text-gray-400 flex items-center justify-center"
                   >
-                    No items found.
+                    {isLoading ? (
+                      <Loader className="h-6 w-6 animate-spin text-gray-400 mx-auto" />
+                    ) : (
+                      "No items found."
+                    )}
                   </TableCell>
                 </TableRow>
               ) : (

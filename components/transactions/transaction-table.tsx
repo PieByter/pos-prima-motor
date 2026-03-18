@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Download,
   Plus,
+  Loader2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  type Transaction,
   type TransactionType,
   STATUSES,
   STATUS_STYLES,
@@ -32,20 +32,67 @@ import {
 
 const ITEMS_PER_PAGE = 5;
 
+type UiTransaction = {
+  id: number;
+  invoiceNumber: string;
+  date: string;
+  customerOrSupplier: string;
+  customerInitials: string;
+  avatarColor: string;
+  mechanic: string;
+  status: keyof typeof STATUS_STYLES;
+  totalAmount: number;
+};
+
+const AVATAR_COLORS = [
+  "bg-blue-100 text-blue-700",
+  "bg-purple-100 text-purple-700",
+  "bg-orange-100 text-orange-700",
+  "bg-emerald-100 text-emerald-700",
+  "bg-rose-100 text-rose-700",
+  "bg-sky-100 text-sky-700",
+  "bg-amber-100 text-amber-700",
+  "bg-indigo-100 text-indigo-700",
+];
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+function normalizeStatus(status: string): keyof typeof STATUS_STYLES {
+  if (status === "completed") return "Completed";
+  if (status === "pending") return "Pending";
+  if (status === "in_progress") return "In Progress";
+  if (status === "cancelled") return "Cancelled";
+  return "Pending";
+}
+
+function avatarColorForName(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i += 1) hash += name.charCodeAt(i);
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
+
 interface TransactionTableProps {
   type: TransactionType;
-  data: Transaction[];
   entityLabel: string; // "Customer" or "Supplier"
   showMechanic?: boolean;
 }
 
 export function TransactionTable({
   type,
-  data,
   entityLabel,
   showMechanic = true,
 }: TransactionTableProps) {
   const router = useRouter();
+  const [transactions, setTransactions] = useState<UiTransaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -55,15 +102,70 @@ export function TransactionTable({
       ? "/dashboard/transactions/sales"
       : "/dashboard/transactions/purchases";
 
+  useEffect(() => {
+    const loadTransactions = async () => {
+      setIsLoading(true);
+      try {
+        const endpoint = type === "sale" ? "/api/sales" : "/api/purchases";
+        const response = await fetch(`${endpoint}?page=1&limit=200`, {
+          cache: "no-store",
+        });
+
+        if (!response.ok) throw new Error("Failed to fetch transactions");
+
+        const json = await response.json();
+        const rows = (json?.data ?? []) as Array<Record<string, unknown>>;
+
+        const mapped: UiTransaction[] = rows.map((row) => {
+          const name =
+            type === "sale"
+              ? ((row.customer as { name?: string } | null)?.name ?? "Walk-in Customer")
+              : ((row.supplier as { name?: string } | null)?.name ?? "Unknown Supplier");
+
+          const date =
+            type === "sale"
+              ? String(row.sale_date ?? row.created_at ?? "")
+              : String(row.purchase_date ?? row.created_at ?? "");
+
+          const mechanicName =
+            type === "sale"
+              ? ((row.mechanic as { name?: string } | null)?.name ?? "-")
+              : "-";
+
+          return {
+            id: Number(row.id),
+            invoiceNumber: String(row.invoice_number ?? `TRX-${row.id}`),
+            date,
+            customerOrSupplier: name,
+            customerInitials: getInitials(name),
+            avatarColor: avatarColorForName(name),
+            mechanic: mechanicName,
+            status: normalizeStatus(String(row.status ?? "pending")),
+            totalAmount: Number(row.total_amount ?? 0),
+          };
+        });
+
+        setTransactions(mapped);
+      } catch (error) {
+        console.error("Failed to load transactions:", error);
+        setTransactions([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadTransactions();
+  }, [type]);
+
   // Filter
-  const filtered = data.filter((t) => {
+  const filtered = useMemo(() => transactions.filter((t) => {
     const matchSearch =
       t.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
       t.customerOrSupplier.toLowerCase().includes(search.toLowerCase());
     const matchStatus =
       statusFilter === "all" || t.status === statusFilter;
     return matchSearch && matchStatus;
-  });
+  }), [transactions, search, statusFilter]);
 
   // Pagination
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
@@ -215,7 +317,19 @@ export function TransactionTable({
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
-              {paginated.length === 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td
+                    colSpan={showMechanic ? 7 : 6}
+                    className="text-center py-12 text-gray-500 dark:text-gray-400"
+                  >
+                    <div className="inline-flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading transactions...
+                    </div>
+                  </td>
+                </tr>
+              ) : paginated.length === 0 ? (
                 <tr>
                   <td
                     colSpan={showMechanic ? 7 : 6}

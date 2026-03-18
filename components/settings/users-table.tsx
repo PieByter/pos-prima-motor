@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Plus,
   ChevronLeft,
@@ -10,6 +10,7 @@ import {
   Trash2,
   ShieldCheck,
   ShieldOff,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,17 +21,69 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  type User,
-  dummyUsers,
   ROLE_STYLES,
   STATUS_STYLES,
+  getInitials,
+  AVATAR_COLORS,
 } from "@/lib/data/users";
 
 const USERS_PER_PAGE = 3;
 
+type UiUser = {
+  id: number;
+  apiId: string;
+  name: string;
+  email: string;
+  role: "Admin" | "Mekanik" | "Kasir";
+  status: "Aktif" | "Inactive";
+  lastLogin: string;
+  initials: string;
+  avatarColor: string;
+};
+
 export function UsersTable() {
-  const [users, setUsers] = useState<User[]>(dummyUsers);
+  const [users, setUsers] = useState<UiUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch("/api/users", { cache: "no-store" });
+        if (!response.ok) throw new Error("Failed to fetch users");
+
+        const json = await response.json();
+        const rows = (json ?? []) as Array<{
+          id: string;
+          name: string;
+          role: "admin" | "mekanik";
+          is_active: boolean;
+          created_at: string;
+        }>;
+
+        const mapped: UiUser[] = rows.map((u, idx) => ({
+          id: idx + 1,
+          apiId: u.id,
+          name: u.name,
+          email: `${u.name.toLowerCase().replace(/\s+/g, ".")}@primamotor.com`,
+          role: u.role === "admin" ? "Admin" : "Mekanik",
+          status: u.is_active ? "Aktif" : "Inactive",
+          lastLogin: "-",
+          initials: getInitials(u.name),
+          avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
+        }));
+
+        setUsers(mapped);
+      } catch (error) {
+        console.error("Failed to load users:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadUsers();
+  }, []);
 
   const totalPages = Math.ceil(users.length / USERS_PER_PAGE);
   const paginatedUsers = users.slice(
@@ -40,18 +93,35 @@ export function UsersTable() {
   const startIndex = (currentPage - 1) * USERS_PER_PAGE + 1;
   const endIndex = Math.min(currentPage * USERS_PER_PAGE, users.length);
 
-  function handleToggleStatus(id: number) {
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === id
-          ? { ...u, status: u.status === "Aktif" ? "Inactive" : "Aktif" }
-          : u
-      )
-    );
+  async function handleToggleStatus(id: number) {
+    const target = users.find((u) => u.id === id);
+    if (!target) return;
+
+    const patch = await fetch(`/api/users/${target.apiId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_active: target.status !== "Aktif" }),
+    });
+
+    if (patch.ok) {
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === id
+            ? { ...u, status: u.status === "Aktif" ? "Inactive" : "Aktif" }
+            : u
+        )
+      );
+    }
   }
 
-  function handleDeleteUser(id: number) {
-    setUsers((prev) => prev.filter((u) => u.id !== id));
+  async function handleDeleteUser(id: number) {
+    const target = users.find((u) => u.id === id);
+    if (!target) return;
+
+    const del = await fetch(`/api/users/${target.apiId}`, { method: "DELETE" });
+    if (del.ok) {
+      setUsers((prev) => prev.filter((u) => u.id !== id));
+    }
   }
 
   return (
@@ -108,7 +178,23 @@ export function UsersTable() {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
-              {paginatedUsers.map((user) => (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading users...
+                    </span>
+                  </td>
+                </tr>
+              ) : paginatedUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
+                    Tidak ada data pengguna.
+                  </td>
+                </tr>
+              ) : (
+              paginatedUsers.map((user) => (
                 <tr
                   key={user.id}
                   className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
@@ -200,7 +286,8 @@ export function UsersTable() {
                     </DropdownMenu>
                   </td>
                 </tr>
-              ))}
+              ))
+              )}
             </tbody>
           </table>
         </div>

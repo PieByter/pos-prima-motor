@@ -54,7 +54,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="hidden lg:flex w-64 shrink-0 flex-col bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-gray-700 h-screen">
+    <aside className="hidden md:flex w-64 shrink-0 flex-col bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-gray-700 h-screen">
       {/* Logo */}
       <div className="h-16 flex items-center px-6 border-b border-gray-200 dark:border-gray-700">
         <Link href="/dashboard" className="flex items-center gap-3">

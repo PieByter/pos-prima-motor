@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import {
   DollarSign,
   ShoppingBag,
@@ -6,12 +9,53 @@ import {
   TrendingUp,
   TrendingDown,
   Plus,
+  Loader,
 } from "lucide-react";
 
-const stats = [
+interface SummaryData {
+  totalSales: number;
+  totalPurchases: number;
+  totalItems: number;
+  totalCustomers: number;
+}
+
+export function SummaryCards() {
+  const [data, setData] = useState<SummaryData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSummary = async () => {
+      try {
+        const response = await fetch("/api/dashboard/summary");
+        if (!response.ok) throw new Error("Failed to fetch");
+        const result = await response.json();
+        setData(result);
+      } catch (error) {
+        console.error("Error fetching summary:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSummary();
+  }, []);
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
+  const formatNumber = (value: number) => {
+    return new Intl.NumberFormat("id-ID").format(value);
+  };
+
+  const stats = [
   {
     label: "Total Sales",
-    value: "Rp 24.500.000",
+     value: data ? formatCurrency(data.totalSales) : "—",
     change: "12.5%",
     trend: "up" as const,
     sub: "vs last month",
@@ -21,7 +65,7 @@ const stats = [
   },
   {
     label: "Total Purchases",
-    value: "Rp 10.240.000",
+     value: data ? formatCurrency(data.totalPurchases) : "—",
     change: "2.3%",
     trend: "down" as const,
     sub: "vs last month",
@@ -31,7 +75,7 @@ const stats = [
   },
   {
     label: "Inventory Items",
-    value: "1.452",
+     value: data ? formatNumber(data.totalItems) : "—",
     change: "84",
     trend: "add" as const,
     sub: "new items added",
@@ -41,7 +85,7 @@ const stats = [
   },
   {
     label: "Active Customers",
-    value: "892",
+     value: data ? formatNumber(data.totalCustomers) : "—",
     change: "5.4%",
     trend: "up" as const,
     sub: "vs last month",
@@ -49,9 +93,8 @@ const stats = [
     iconBg: "bg-teal-50 dark:bg-teal-900/20",
     iconColor: "text-teal-600 dark:text-teal-400",
   },
-];
+    ];
 
-export function SummaryCards() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {stats.map((stat) => (
@@ -65,7 +108,11 @@ export function SummaryCards() {
                 {stat.label}
               </p>
               <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                {stat.value}
+                {isLoading ? (
+                  <Loader className="h-6 w-6 animate-spin text-gray-400" />
+                ) : (
+                  stat.value
+                )}
               </h3>
             </div>
             <div className={`p-2 rounded-lg ${stat.iconBg}`}>

@@ -1,33 +1,53 @@
-import { Droplets, Settings, Bike, Wrench } from "lucide-react";
+"use client";
 
-const topItems = [
-  {
-    name: "Motul 5100 10W-40",
-    category: "Oil & Lubricants",
-    amount: "Rp 1.240.000",
-    icon: Droplets,
-  },
-  {
-    name: "NGK Spark Plug",
-    category: "Engine Parts",
-    amount: "Rp 890.000",
-    icon: Settings,
-  },
-  {
-    name: "Michelin Pilot Street",
-    category: "Tires",
-    amount: "Rp 2.100.000",
-    icon: Bike,
-  },
-  {
-    name: "Brake Pads Kit",
-    category: "Braking System",
-    amount: "Rp 650.000",
-    icon: Wrench,
-  },
-];
+import { useEffect, useState } from "react";
+import { Droplets, Settings, Bike, Wrench, Loader } from "lucide-react";
 
+
+interface TopItem {
+  item_id?: number;
+  name: string;
+  category?: string;
+  amount: number;
+}
 export function TopSellingItems() {
+  const [items, setItems] = useState<TopItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTopItems = async () => {
+      try {
+        const response = await fetch("/api/dashboard/top-items");
+        if (!response.ok) throw new Error("Failed to fetch");
+        const result = await response.json();
+        const mapped = (result ?? []).map(
+          (row: { item_id: number; name: string; total_revenue: number }) => ({
+            item_id: row.item_id,
+            name: row.name,
+            category: "Sparepart",
+            amount: Number(row.total_revenue ?? 0),
+          })
+        );
+        setItems(mapped);
+      } catch (error) {
+        console.error("Error fetching top items:", error);
+        setItems([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTopItems();
+  }, []);
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
   return (
     <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
       <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6">
@@ -35,10 +55,15 @@ export function TopSellingItems() {
       </h3>
 
       <div className="space-y-5">
-        {topItems.map((item) => (
+        {isLoading ? (
+          <div className="flex justify-center py-6">
+            <Loader className="h-6 w-6 animate-spin text-gray-400" />
+          </div>
+        ) : (
+        items.map((item) => (
           <div key={item.name} className="flex items-center gap-4">
             <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded-lg">
-              <item.icon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+              <Droplets className="h-5 w-5 text-gray-600 dark:text-gray-400" />
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
@@ -49,10 +74,11 @@ export function TopSellingItems() {
               </p>
             </div>
             <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">
-              {item.amount}
+              {formatCurrency(item.amount)}
             </span>
           </div>
-        ))}
+        ))
+        )}
       </div>
 
       <button className="w-full mt-6 py-2 text-sm text-sky-500 font-medium hover:bg-sky-50 dark:hover:bg-sky-900/20 rounded-lg transition-colors cursor-pointer">

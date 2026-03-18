@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -10,6 +10,7 @@ import {
   Wrench,
   CalendarDays,
   Hash,
+  Loader2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -22,8 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { type TransactionType } from "@/lib/data/transactions";
-import { dummyItems, formatRupiah } from "@/lib/data/items";
-import { dummyUsers } from "@/lib/data/users";
+import { formatRupiah } from "@/lib/data/items";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -42,10 +42,24 @@ export type FormLineItem = {
 
 export type TransactionFormData = {
   customer: string;
-  mechanicId: number | null;
+  mechanicId: string | null;
   date: string;
   items: FormLineItem[];
   notes: string;
+};
+
+type ItemOption = {
+  id: number;
+  name: string;
+  sku: string | null;
+  purchase_price: number;
+  selling_price: number;
+  service_fee: number;
+};
+
+type MechanicOption = {
+  id: string;
+  name: string;
 };
 
 /* ------------------------------------------------------------------ */
@@ -84,8 +98,6 @@ function generateTrxId() {
   return `TRX-${Math.floor(10000 + Math.random() * 90000)}`;
 }
 
-const mechanics = dummyUsers.filter((u) => u.role === "Mekanik");
-
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */
 /* ------------------------------------------------------------------ */
@@ -122,6 +134,46 @@ export function TransactionForm({
   const [lines, setLines] = useState<FormLineItem[]>(
     initialData?.items?.length ? initialData.items : [emptyLine()]
   );
+  const [itemOptions, setItemOptions] = useState<ItemOption[]>([]);
+  const [mechanicOptions, setMechanicOptions] = useState<MechanicOption[]>([]);
+  const [isOptionsLoading, setIsOptionsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadOptions = async () => {
+      setIsOptionsLoading(true);
+      try {
+        const [itemsRes, usersRes] = await Promise.all([
+          fetch("/api/items?page=1&limit=200", { cache: "no-store" }),
+          fetch("/api/users", { cache: "no-store" }),
+        ]);
+
+        if (itemsRes.ok) {
+          const itemsJson = await itemsRes.json();
+          setItemOptions((itemsJson?.data ?? []) as ItemOption[]);
+        }
+
+        if (usersRes.ok) {
+          const usersJson = (await usersRes.json()) as Array<{
+            id: string;
+            name: string;
+            role: "admin" | "mekanik";
+          }>;
+
+          const mechanics = usersJson
+            .filter((u) => u.role === "mekanik")
+            .map((u) => ({ id: u.id, name: u.name }));
+
+          setMechanicOptions(mechanics);
+        }
+      } catch (error) {
+        console.error("Failed to load form options:", error);
+      } finally {
+        setIsOptionsLoading(false);
+      }
+    };
+
+    loadOptions();
+  }, []);
 
   /* ---- derived totals ---- */
   const totals = useMemo(() => {
@@ -173,16 +225,16 @@ export function TransactionForm({
 
   const selectItem = useCallback(
     (key: number, itemId: string) => {
-      const item = dummyItems.find((i) => i.id === Number(itemId));
+      const item = itemOptions.find((i) => i.id === Number(itemId));
       if (!item) return;
       updateLine(key, {
         itemId: item.id,
         name: item.name,
-        unitPrice: isSale ? item.sellingPrice : item.purchasePrice,
-        serviceFee: isSale ? item.serviceFee : 0,
+        unitPrice: isSale ? item.selling_price : item.purchase_price,
+        serviceFee: isSale ? item.service_fee : 0,
       });
     },
-    [updateLine, isSale]
+    [updateLine, isSale, itemOptions]
   );
 
   /* ---- handlers ---- */
@@ -266,8 +318,8 @@ export function TransactionForm({
                         <SelectValue placeholder="Pilih mekanik..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {mechanics.map((m) => (
-                          <SelectItem key={m.id} value={m.id.toString()}>
+                        {mechanicOptions.map((m) => (
+                          <SelectItem key={m.id} value={m.id}>
                             {m.name}
                           </SelectItem>
                         ))}
@@ -345,7 +397,7 @@ export function TransactionForm({
                               <SelectValue placeholder="Cari item..." />
                             </SelectTrigger>
                             <SelectContent>
-                              {dummyItems.map((item) => (
+                              {itemOptions.map((item) => (
                                 <SelectItem
                                   key={item.id}
                                   value={item.id.toString()}
@@ -537,6 +589,14 @@ export function TransactionForm({
           </div>
         </div>
       </div>
+      {isOptionsLoading && (
+        <div className="fixed bottom-4 right-4 rounded-lg border bg-white px-3 py-2 text-sm text-slate-600 shadow-sm dark:bg-slate-800 dark:text-slate-300">
+          <span className="inline-flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading items & mechanics...
+          </span>
+        </div>
+      )}
     </div>
   );
 }

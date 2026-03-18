@@ -1,4 +1,8 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Loader } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -8,28 +12,43 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const lowStockItems = [
-  {
-    name: "Yamaha Drive Belt",
-    category: "Transmission",
-    stock: 2,
-    status: "critical" as const,
-  },
-  {
-    name: "Honda Air Filter",
-    category: "Filters",
-    stock: 5,
-    status: "warning" as const,
-  },
-  {
-    name: "Rear Mirror Set",
-    category: "Accessories",
-    stock: 4,
-    status: "warning" as const,
-  },
-];
 
+interface LowStockItem {
+  name: string;
+  category: string;
+  stock: number;
+  status: "critical" | "warning";
+}
 export function LowStockAlert() {
+  const [items, setItems] = useState<LowStockItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLowStock = async () => {
+      try {
+        const response = await fetch("/api/dashboard/low-stock");
+        if (!response.ok) throw new Error("Failed to fetch");
+        const result = await response.json();
+        const mapped = (result ?? []).map(
+          (row: { name: string; current_stock: number; category?: string }) => ({
+            name: row.name,
+            category: row.category ?? "Sparepart",
+            stock: Number(row.current_stock ?? 0),
+            status: Number(row.current_stock ?? 0) <= 3 ? "critical" : "warning",
+          })
+        );
+        setItems(mapped);
+      } catch (error) {
+        console.error("Error fetching low stock items:", error);
+        setItems([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLowStock();
+  }, []);
+
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
       <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
@@ -51,7 +70,14 @@ export function LowStockAlert() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {lowStockItems.map((item) => (
+          {isLoading ? (
+            <TableRow>
+              <TableCell colSpan={4} className="text-center py-6">
+                <Loader className="h-6 w-6 animate-spin text-gray-400 mx-auto" />
+              </TableCell>
+            </TableRow>
+          ) : (
+          items.map((item) => (
             <TableRow key={item.name} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
               <TableCell className="font-medium text-gray-900 dark:text-white">
                 {item.name}
@@ -74,7 +100,8 @@ export function LowStockAlert() {
                 )}
               </TableCell>
             </TableRow>
-          ))}
+          ))
+          )}
         </TableBody>
       </Table>
     </div>

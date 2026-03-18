@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   AreaChart,
   Area,
@@ -9,16 +10,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { Loader } from "lucide-react";
 
-const data = [
-  { day: "Mon", sales: 1200000 },
-  { day: "Tue", sales: 1900000 },
-  { day: "Wed", sales: 1500000 },
-  { day: "Thu", sales: 2200000 },
-  { day: "Fri", sales: 1800000 },
-  { day: "Sat", sales: 2800000 },
-  { day: "Sun", sales: 2400000 },
-];
 
 const formatCurrency = (value: number) => {
   if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
@@ -27,20 +20,65 @@ const formatCurrency = (value: number) => {
 };
 
 export function SalesChart() {
+  const [data, setData] = useState<Array<{ day: string; sales: number }>>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [period, setPeriod] = useState("7days");
+
+  useEffect(() => {
+    const fetchChartData = async () => {
+      setIsLoading(true);
+      try {
+        // Calculate date range
+        const end = new Date();
+        const start = new Date();
+        
+        if (period === "7days") start.setDate(start.getDate() - 7);
+        else if (period === "month") start.setMonth(start.getMonth() - 1);
+        else if (period === "year") start.setFullYear(start.getFullYear() - 1);
+        
+        const response = await fetch(
+          `/api/dashboard/chart?start=${start.toISOString().split("T")[0]}&end=${end.toISOString().split("T")[0]}`
+        );
+        if (!response.ok) throw new Error("Failed to fetch");
+        const result = await response.json();
+        const mapped = (result ?? []).map((row: { date: string; amount: number }) => ({
+          day: new Date(row.date).toLocaleDateString("id-ID", { weekday: "short" }),
+          sales: Number(row.amount ?? 0),
+        }));
+        setData(mapped);
+      } catch (error) {
+        console.error("Error fetching chart data:", error);
+        setData([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchChartData();
+  }, [period]);
+
   return (
     <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-lg font-bold text-gray-900 dark:text-white">
           Sales Trends
         </h3>
-        <select className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm rounded-lg px-3 py-2 focus:ring-sky-500 focus:border-sky-500">
-          <option>Last 7 Days</option>
-          <option>Last Month</option>
-          <option>Last Year</option>
+        <select 
+          value={period}
+          onChange={(e) => setPeriod(e.target.value)}
+          className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm rounded-lg px-3 py-2 focus:ring-sky-500 focus:border-sky-500">
+          <option value="7days">Last 7 Days</option>
+          <option value="month">Last Month</option>
+          <option value="year">Last Year</option>
         </select>
       </div>
 
       <div className="h-72 w-full">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader className="h-8 w-8 animate-spin text-gray-400" />
+          </div>
+        ) : (
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data}>
             <defs>
@@ -87,6 +125,7 @@ export function SalesChart() {
             />
           </AreaChart>
         </ResponsiveContainer>
+        )}
       </div>
     </div>
   );

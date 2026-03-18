@@ -2,25 +2,56 @@
 
 import { useState } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PrimaMotorLogo } from "@/components/prima-motor-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ToastContainer, useToasts } from "@/components/ui/toast";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const { toasts, showToast, removeToast } = useToasts();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    const formData = new FormData(e.currentTarget);
+    const email = String(formData.get("email") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
+
     setIsLoading(true);
 
-    // TODO: Integrate Supabase Auth
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-    setIsLoading(false);
+      const result = await response.json();
+
+      if (!response.ok) {
+        showToast(result?.error || "Gagal login. Coba lagi.", "error", 3000);
+        return;
+      }
+
+      showToast("Login berhasil. Mengarahkan...", "success", 2000);
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 1000);
+    } catch {
+      showToast("Terjadi kesalahan jaringan. Coba lagi.", "error", 3000);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -112,6 +143,17 @@ export default function LoginPage() {
                   )}
                 </Button>
               </div>
+
+              {/* Auth Navigation */}
+              <div className="text-center text-sm text-gray-600 dark:text-gray-300">
+                Don&apos;t have an account?{" "}
+                <Link
+                  href="/register"
+                  className="font-medium text-amber-600 hover:text-amber-700 underline decoration-dotted"
+                >
+                  Register
+                </Link>
+              </div>
             </form>
 
             {/* Help Text */}
@@ -143,6 +185,9 @@ export default function LoginPage() {
           System Operational • v1.0.0
         </div>
       </div>
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
     </>
   );
 }

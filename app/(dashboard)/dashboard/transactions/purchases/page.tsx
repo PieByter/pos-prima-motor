@@ -1,6 +1,5 @@
 import { Navbar } from "@/components/layout/navbar";
 import { TransactionTable } from "@/components/transactions/transaction-table";
-import { dummyPurchases } from "@/lib/data/transactions";
 
 export default function PurchasesPage() {
   return (
@@ -12,7 +11,6 @@ export default function PurchasesPage() {
 
       <TransactionTable
         type="purchase"
-        data={dummyPurchases}
         entityLabel="Supplier"
         showMechanic={false}
       />

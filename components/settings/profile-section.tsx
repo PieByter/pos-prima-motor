@@ -1,9 +1,42 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Camera, Pencil, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+type ProfileData = {
+  user?: { email?: string | null };
+  profile?: { name?: string; role?: string };
+};
+
 export function ProfileSection() {
+  const [data, setData] = useState<ProfileData | null>(null);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const response = await fetch("/api/auth/me", { cache: "no-store" });
+        if (!response.ok) return;
+        setData(await response.json());
+      } catch (error) {
+        console.error("Failed to load profile:", error);
+      }
+    };
+
+    loadProfile();
+  }, []);
+
+  const name = data?.profile?.name ?? "User";
+  const email = data?.user?.email ?? "-";
+  const role = data?.profile?.role ?? "-";
+  const initials = name
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
   return (
     <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
       <div className="p-6 md:p-8">
@@ -12,7 +45,7 @@ export function ProfileSection() {
           <div className="relative group">
             <div className="size-32 rounded-full bg-slate-200 dark:bg-slate-700 ring-4 ring-slate-50 dark:ring-slate-700 flex items-center justify-center">
               <span className="text-4xl font-bold text-slate-500 dark:text-slate-400">
-                AP
+                {initials || "U"}
               </span>
             </div>
             <button
@@ -27,13 +60,13 @@ export function ProfileSection() {
           <div className="flex-1 space-y-4">
             <div>
               <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
-                Admin Prima Motor
+                {name}
               </h3>
               <p className="text-slate-500 dark:text-slate-400">
-                admin@primamotor.com
+                {email}
               </p>
               <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                Super Admin
+                {role}
               </div>
             </div>
             <div className="flex flex-wrap gap-3 pt-2">

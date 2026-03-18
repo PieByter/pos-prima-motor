@@ -257,7 +257,7 @@ export function TransactionForm({
     <div className="flex-1 overflow-auto p-6">
       <div className="max-w-6xl space-y-6">
         {/* Header */}
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+        <div className="flex flex-row items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
               {isEdit ? "Edit Transaksi" : "Buat Transaksi Baru"}

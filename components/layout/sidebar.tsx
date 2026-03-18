@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Database,
@@ -47,6 +47,20 @@ const sidebarNav: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+    } catch {
+      // Always redirect to login even if network request fails.
+    } finally {
+      router.replace("/login");
+      router.refresh();
+    }
+  };
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
@@ -54,7 +68,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="hidden md:flex w-64 shrink-0 flex-col bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-gray-700 h-screen">
+    <aside className="flex w-64 shrink-0 flex-col bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-gray-700 h-screen">
       {/* Logo */}
       <div className="h-16 flex items-center px-6 border-b border-gray-200 dark:border-gray-700">
         <Link href="/dashboard" className="flex items-center gap-3">
@@ -136,7 +150,11 @@ export function Sidebar() {
               admin@primamotor.com
             </p>
           </div>
-          <button className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 cursor-pointer">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 cursor-pointer"
+          >
             <LogOut className="h-5 w-5" />
           </button>
         </div>

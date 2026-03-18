@@ -39,8 +39,8 @@ export function ProfileSection() {
 
   return (
     <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-      <div className="p-6 md:p-8">
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
+      <div className="p-8">
+        <div className="flex flex-row items-center gap-8">
           {/* Avatar */}
           <div className="relative group">
             <div className="size-32 rounded-full bg-slate-200 dark:bg-slate-700 ring-4 ring-slate-50 dark:ring-slate-700 flex items-center justify-center">

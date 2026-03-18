@@ -103,7 +103,7 @@ function ItemFormContent({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6 py-2">
       {/* Row 1: Nama Barang & SKU */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-6">
         {/* Nama Barang */}
         <div className="flex flex-col gap-2">
           <Label
@@ -163,7 +163,7 @@ function ItemFormContent({
       </div>
 
       {/* Row 2: Harga Beli & Harga Jual */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-6">
         <div className="flex flex-col gap-2">
           <Label
             htmlFor="item-purchase"
@@ -214,7 +214,7 @@ function ItemFormContent({
       </div>
 
       {/* Row 3: Biaya Jasa Service & Kategori */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-6">
         <div className="flex flex-col gap-2">
           <Label
             htmlFor="item-service"

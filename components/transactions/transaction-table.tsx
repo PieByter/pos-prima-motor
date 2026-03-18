@@ -111,7 +111,14 @@ export function TransactionTable({
           cache: "no-store",
         });
 
-        if (!response.ok) throw new Error("Failed to fetch transactions");
+        if (!response.ok) {
+          const errorBody = await response
+            .json()
+            .catch(() => ({ error: "Unknown server error" }));
+          console.warn("Failed to fetch transactions:", errorBody?.error ?? response.statusText);
+          setTransactions([]);
+          return;
+        }
 
         const json = await response.json();
         const rows = (json?.data ?? []) as Array<Record<string, unknown>>;
@@ -278,7 +285,7 @@ export function TransactionTable({
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden sm:table-cell"
+                  className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider"
                 >
                   Tanggal
                 </th>
@@ -291,7 +298,7 @@ export function TransactionTable({
                 {showMechanic && (
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden md:table-cell"
+                    className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider"
                   >
                     Mekanik
                   </th>
@@ -357,7 +364,7 @@ export function TransactionTable({
                       </td>
 
                       {/* Date */}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400 hidden sm:table-cell">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
                         {formatDate(t.date)}
                       </td>
 
@@ -377,7 +384,7 @@ export function TransactionTable({
 
                       {/* Mechanic */}
                       {showMechanic && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400 hidden md:table-cell">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
                           {t.mechanic}
                         </td>
                       )}

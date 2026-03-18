@@ -60,7 +60,7 @@ export function TransactionDetail({
       </div>
 
       {/* Header */}
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+      <div className="flex flex-row items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-4">
             <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -104,7 +104,7 @@ export function TransactionDetail({
       </div>
 
       {/* Info Cards */}
-      <div className={`grid gap-6 ${isSale ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+      <div className={`grid gap-6 ${isSale ? "grid-cols-3" : "grid-cols-2"}`}>
         {/* Customer / Supplier Info */}
         <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
           <div className="mb-4 flex items-center gap-2 text-slate-900 dark:text-white">
@@ -235,13 +235,13 @@ export function TransactionDetail({
                 <th className="px-6 py-3 font-medium text-center" scope="col">
                   Tipe
                 </th>
-                <th className="px-6 py-3 font-medium text-right hidden sm:table-cell" scope="col">
+                <th className="px-6 py-3 font-medium text-right" scope="col">
                   Harga Satuan
                 </th>
                 <th className="px-6 py-3 font-medium text-center" scope="col">
                   Qty
                 </th>
-                <th className="px-6 py-3 font-medium text-right hidden md:table-cell" scope="col">
+                <th className="px-6 py-3 font-medium text-right" scope="col">
                   Diskon
                 </th>
                 <th className="px-6 py-3 font-medium text-right" scope="col">
@@ -279,13 +279,13 @@ export function TransactionDetail({
                         {item.type}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right text-slate-600 dark:text-slate-300 hidden sm:table-cell">
+                    <td className="px-6 py-4 text-right text-slate-600 dark:text-slate-300">
                       {formatRupiah(item.unitPrice)}
                     </td>
                     <td className="px-6 py-4 text-center text-slate-600 dark:text-slate-300">
                       {item.qty}
                     </td>
-                    <td className="px-6 py-4 text-right hidden md:table-cell">
+                    <td className="px-6 py-4 text-right">
                       {item.discount > 0 ? (
                         <span className="text-green-600 dark:text-green-400 font-medium">
                           - {formatRupiah(item.discount)}

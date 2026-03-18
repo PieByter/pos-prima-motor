@@ -282,13 +282,13 @@ export function ItemsTable() {
               <TableRow className="bg-gray-50 dark:bg-slate-700/50">
                 <TableHead className="w-15">Photo</TableHead>
                 <TableHead>Item Name</TableHead>
-                <TableHead className="hidden md:table-cell">
+                <TableHead>
                   SKU / Code
                 </TableHead>
-                <TableHead className="hidden lg:table-cell">
+                <TableHead>
                   Category
                 </TableHead>
-                <TableHead className="hidden md:table-cell text-right">
+                <TableHead className="text-right">
                   Purchase Price
                 </TableHead>
                 <TableHead className="text-right">Selling Price</TableHead>
@@ -347,19 +347,19 @@ export function ItemsTable() {
                             {item.description}
                           </p>
                           {/* Mobile: show SKU below name */}
-                          <p className="text-xs text-gray-400 mt-0.5 md:hidden">
+                          <p className="hidden">
                             {item.sku}
                           </p>
                         </div>
                       </TableCell>
 
                       {/* SKU */}
-                      <TableCell className="hidden md:table-cell font-mono text-sm text-gray-600 dark:text-gray-300">
+                      <TableCell className="font-mono text-sm text-gray-600 dark:text-gray-300">
                         {item.sku}
                       </TableCell>
 
                       {/* Category */}
-                      <TableCell className="hidden lg:table-cell">
+                      <TableCell>
                         <Badge
                           variant="secondary"
                           className="text-xs font-normal"
@@ -369,7 +369,7 @@ export function ItemsTable() {
                       </TableCell>
 
                       {/* Purchase Price */}
-                      <TableCell className="hidden md:table-cell text-right text-sm text-gray-600 dark:text-gray-300">
+                      <TableCell className="text-right text-sm text-gray-600 dark:text-gray-300">
                         {formatRupiah(item.purchasePrice)}
                       </TableCell>
 

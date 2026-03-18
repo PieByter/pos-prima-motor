@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Menu,
   Bike,
@@ -50,7 +50,22 @@ const sidebarNav: NavItem[] = [
 
 export function MobileSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+    } catch {
+      // Always redirect to login even if network request fails.
+    } finally {
+      setOpen(false);
+      router.replace("/login");
+      router.refresh();
+    }
+  };
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
@@ -60,7 +75,7 @@ export function MobileSidebar() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <button className="md:hidden p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer">
+        <button className="sm:hidden p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer">
           <Menu className="h-5 w-5" />
         </button>
       </SheetTrigger>
@@ -147,7 +162,11 @@ export function MobileSidebar() {
                 admin@primamotor.com
               </p>
             </div>
-            <button className="text-gray-400 hover:text-gray-500 cursor-pointer">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="text-gray-400 hover:text-gray-500 cursor-pointer"
+            >
               <LogOut className="h-5 w-5" />
             </button>
           </div>

@@ -39,10 +39,7 @@ export async function getSales(
 
   let query = supabase
     .from('sales')
-    .select(
-      '*, customer:customers(name), mechanic:profiles!sales_mechanic_id_fkey(name)',
-      { count: 'exact' },
-    )
+    .select('*', { count: 'exact' })
 
   if (search) {
     query = query.ilike('invoice_number', `%${search}%`)
@@ -69,9 +66,58 @@ export async function getSales(
 
   if (error) return { data: null, error }
 
+  const rows = (data ?? []) as Sale[]
+
+  const customerIds = Array.from(
+    new Set(
+      rows
+        .map((row) => row.customer_id)
+        .filter((id): id is number => typeof id === 'number'),
+    ),
+  )
+
+  const mechanicIds = Array.from(
+    new Set(
+      rows
+        .map((row) => row.mechanic_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  )
+
+  const customerMap = new Map<number, { name: string | null }>()
+  const mechanicMap = new Map<string, { name: string | null }>()
+
+  if (customerIds.length > 0) {
+    const { data: customers } = await supabase
+      .from('customers')
+      .select('id, name')
+      .in('id', customerIds)
+
+    for (const customer of customers ?? []) {
+      customerMap.set(customer.id, { name: customer.name })
+    }
+  }
+
+  if (mechanicIds.length > 0) {
+    const { data: mechanics } = await supabase
+      .from('profiles')
+      .select('id, name')
+      .in('id', mechanicIds)
+
+    for (const mechanic of mechanics ?? []) {
+      mechanicMap.set(mechanic.id, { name: mechanic.name })
+    }
+  }
+
+  const enrichedRows = rows.map((row) => ({
+    ...row,
+    customer: row.customer_id ? customerMap.get(row.customer_id) ?? null : null,
+    mechanic: mechanicMap.get(row.mechanic_id) ?? null,
+  }))
+
   return {
     data: {
-      data: data as Sale[],
+      data: enrichedRows as Sale[],
       total: count ?? 0,
       page,
       limit,

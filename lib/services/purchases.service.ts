@@ -29,7 +29,7 @@ export async function getPurchases(
 
   let query = supabase
     .from('purchases')
-    .select('*, supplier:suppliers(name)', { count: 'exact' })
+    .select('*', { count: 'exact' })
 
   if (search) {
     query = query.ilike('invoice_number', `%${search}%`)
@@ -53,9 +53,37 @@ export async function getPurchases(
 
   if (error) return { data: null, error }
 
+  const rows = (data ?? []) as Purchase[]
+
+  const supplierIds = Array.from(
+    new Set(
+      rows
+        .map((row) => row.supplier_id)
+        .filter((id): id is number => typeof id === 'number'),
+    ),
+  )
+
+  const supplierMap = new Map<number, { name: string | null }>()
+
+  if (supplierIds.length > 0) {
+    const { data: suppliers } = await supabase
+      .from('suppliers')
+      .select('id, name')
+      .in('id', supplierIds)
+
+    for (const supplier of suppliers ?? []) {
+      supplierMap.set(supplier.id, { name: supplier.name })
+    }
+  }
+
+  const enrichedRows = rows.map((row) => ({
+    ...row,
+    supplier: supplierMap.get(row.supplier_id) ?? null,
+  }))
+
   return {
     data: {
-      data: data as Purchase[],
+      data: enrichedRows as Purchase[],
       total: count ?? 0,
       page,
       limit,

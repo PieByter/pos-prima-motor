@@ -6,6 +6,8 @@ import { LowStockAlert } from "@/components/dashboard/low-stock-alert";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 
 export default function DashboardPage() {
+  const currentYear = new Date().getFullYear();
+
   return (
     <>
       <Navbar
@@ -34,7 +36,7 @@ export default function DashboardPage() {
 
       {/* Footer */}
       <footer className="text-center text-xs text-gray-400 dark:text-gray-500 pb-4">
-        © 2026 Prima Motor POS System. All rights reserved.
+        © {currentYear} Prima Motor POS System. All rights reserved.
       </footer>
     </>
   );

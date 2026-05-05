@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Loader } from "lucide-react";
+import { useFetch } from "@/lib/hooks/use-fetch";
+import {
+  DashboardCard,
+  SectionHeader,
+  LoadingSpinner,
+} from "./ui/dashboard-card";
 import {
   Table,
   TableBody,
@@ -12,6 +16,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+interface LowStockRaw {
+  name: string;
+  current_stock: number;
+  category?: string;
+}
 
 interface LowStockItem {
   name: string;
@@ -19,91 +28,96 @@ interface LowStockItem {
   stock: number;
   status: "critical" | "warning";
 }
+
 export function LowStockAlert() {
-  const [items, setItems] = useState<LowStockItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: rawItems, isLoading } = useFetch<LowStockRaw[]>(
+    "/api/dashboard/low-stock",
+  );
 
-  useEffect(() => {
-    const fetchLowStock = async () => {
-      try {
-        const response = await fetch("/api/dashboard/low-stock");
-        if (!response.ok) throw new Error("Failed to fetch");
-        const result = await response.json();
-        const mapped = (result ?? []).map(
-          (row: { name: string; current_stock: number; category?: string }) => ({
-            name: row.name,
-            category: row.category ?? "Sparepart",
-            stock: Number(row.current_stock ?? 0),
-            status: Number(row.current_stock ?? 0) <= 3 ? "critical" : "warning",
-          })
-        );
-        setItems(mapped);
-      } catch (error) {
-        console.error("Error fetching low stock items:", error);
-        setItems([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchLowStock();
-  }, []);
+  const items: LowStockItem[] = (rawItems ?? []).map((row) => ({
+    name: row.name,
+    category: row.category ?? "Sparepart",
+    stock: Number(row.current_stock ?? 0),
+    status: Number(row.current_stock ?? 0) <= 3 ? "critical" : "warning",
+  }));
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-          Low Stock Alert
-        </h3>
-        <Badge variant="destructive" className="text-xs font-bold">
+    <DashboardCard>
+      <SectionHeader label="Inventory health" title="Low Stock Alert">
+        <Badge
+          variant="destructive"
+          className="rounded-full px-2.5 py-0.5 text-[10px] font-bold"
+        >
           Critical
         </Badge>
-      </div>
+      </SectionHeader>
 
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-gray-50 dark:bg-gray-800/50">
-            <TableHead className="text-xs uppercase">Item Name</TableHead>
-            <TableHead className="text-xs uppercase">Category</TableHead>
-            <TableHead className="text-xs uppercase">Stock</TableHead>
-            <TableHead className="text-xs uppercase">Status</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {isLoading ? (
-            <TableRow>
-              <TableCell colSpan={4} className="text-center py-6">
-                <Loader className="h-6 w-6 animate-spin text-gray-400 mx-auto" />
-              </TableCell>
+      <div className="px-2 pb-2">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-slate-50/60 dark:bg-slate-900/30">
+              <TableHead className="text-[10px] font-bold uppercase tracking-[0.15em]">
+                Item Name
+              </TableHead>
+              <TableHead className="text-[10px] font-bold uppercase tracking-[0.15em]">
+                Category
+              </TableHead>
+              <TableHead className="text-[10px] font-bold uppercase tracking-[0.15em]">
+                Stock
+              </TableHead>
+              <TableHead className="text-[10px] font-bold uppercase tracking-[0.15em]">
+                Status
+              </TableHead>
             </TableRow>
-          ) : (
-          items.map((item) => (
-            <TableRow key={item.name} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-              <TableCell className="font-medium text-gray-900 dark:text-white">
-                {item.name}
-              </TableCell>
-              <TableCell className="text-gray-500 dark:text-gray-400">
-                {item.category}
-              </TableCell>
-              <TableCell className="text-gray-900 dark:text-white">
-                {item.stock}
-              </TableCell>
-              <TableCell>
-                {item.status === "critical" ? (
-                  <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 hover:bg-red-100">
-                    Critical
-                  </Badge>
-                ) : (
-                  <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 hover:bg-yellow-100">
-                    Warning
-                  </Badge>
-                )}
-              </TableCell>
-            </TableRow>
-          ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={4}>
+                  <LoadingSpinner />
+                </TableCell>
+              </TableRow>
+            ) : items.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={4}
+                  className="py-8 text-center text-sm text-slate-400"
+                >
+                  Tidak ada item low stock.
+                </TableCell>
+              </TableRow>
+            ) : (
+              items.map((item) => (
+                <TableRow
+                  key={item.name}
+                  className="transition-colors hover:bg-slate-50/60 dark:hover:bg-slate-800/30"
+                >
+                  <TableCell className="font-medium text-slate-700 dark:text-slate-200">
+                    {item.name}
+                  </TableCell>
+                  <TableCell className="text-slate-500 dark:text-slate-400">
+                    {item.category}
+                  </TableCell>
+                  <TableCell className="font-semibold text-slate-700 dark:text-slate-200">
+                    {item.stock}
+                  </TableCell>
+                  <TableCell>
+                    {item.status === "critical" ? (
+                      <Badge className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-50 dark:bg-rose-900/20 dark:text-rose-300">
+                        Critical
+                      </Badge>
+                    ) : (
+                      <Badge className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 hover:bg-amber-50 dark:bg-amber-900/20 dark:text-amber-300">
+                        Warning
+                      </Badge>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </DashboardCard>
   );
 }

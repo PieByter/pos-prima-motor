@@ -164,12 +164,17 @@ export function ToastContainer({ toasts, onRemoveToast }: ToastContainerProps) {
 export function useToasts() {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
+  const createToastId = () =>
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
   const showToast = (
     message: string,
     type: ToastType = "info",
     duration = 3000,
   ) => {
-    const id = Date.now().toString();
+    const id = createToastId();
     setToasts((prev) => [...prev, { id, message, type, duration }]);
   };
 

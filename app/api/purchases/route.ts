@@ -1,13 +1,11 @@
-import { createClient } from '@/lib/supabase/server'
 import { getPurchases, createPurchase, generateInvoiceNumber } from '@/lib/services/purchases.service'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
     const searchParams = request.nextUrl.searchParams
 
-    const { data, error } = await getPurchases(supabase, {
+    const { data, error } = await getPurchases({
       search: searchParams.get('search') ?? undefined,
       supplier_id: searchParams.get('supplier_id') ? Number(searchParams.get('supplier_id')) : undefined,
       status: searchParams.get('status') ?? undefined,
@@ -26,15 +24,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
     const { header, details } = await request.json()
 
-    // Auto-generate invoice number if not provided
     if (!header.invoice_number) {
-      header.invoice_number = await generateInvoiceNumber(supabase)
+      header.invoice_number = await generateInvoiceNumber()
     }
 
-    const { data, error } = await createPurchase(supabase, header, details)
+    const { data, error } = await createPurchase(header, details)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
     return NextResponse.json(data, { status: 201 })

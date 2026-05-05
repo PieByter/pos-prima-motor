@@ -1,89 +1,69 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Droplets, Settings, Bike, Wrench, Loader } from "lucide-react";
+import { Droplets } from "lucide-react";
+import { useFetch } from "@/lib/hooks/use-fetch";
+import { formatCurrency } from "@/lib/format";
+import {
+  DashboardCard,
+  SectionHeader,
+  EmptyState,
+  LoadingSpinner,
+} from "./ui/dashboard-card";
 
-
-interface TopItem {
-  item_id?: number;
+interface TopItemRaw {
+  item_id: number;
   name: string;
-  category?: string;
-  amount: number;
+  total_revenue: number;
 }
+
 export function TopSellingItems() {
-  const [items, setItems] = useState<TopItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: rawItems, isLoading } = useFetch<TopItemRaw[]>(
+    "/api/dashboard/top-items",
+  );
 
-  useEffect(() => {
-    const fetchTopItems = async () => {
-      try {
-        const response = await fetch("/api/dashboard/top-items");
-        if (!response.ok) throw new Error("Failed to fetch");
-        const result = await response.json();
-        const mapped = (result ?? []).map(
-          (row: { item_id: number; name: string; total_revenue: number }) => ({
-            item_id: row.item_id,
-            name: row.name,
-            category: "Sparepart",
-            amount: Number(row.total_revenue ?? 0),
-          })
-        );
-        setItems(mapped);
-      } catch (error) {
-        console.error("Error fetching top items:", error);
-        setItems([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchTopItems();
-  }, []);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
+  const items = (rawItems ?? []).map((row) => ({
+    id: row.item_id,
+    name: row.name,
+    amount: Number(row.total_revenue ?? 0),
+  }));
 
   return (
-    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6">
-        Top Selling Items
-      </h3>
+    <DashboardCard className="flex flex-col">
+      <SectionHeader label="Performance" title="Top Selling Items" />
 
-      <div className="space-y-5">
+      <div className="flex-1 space-y-2.5 px-4 py-4">
         {isLoading ? (
-          <div className="flex justify-center py-6">
-            <Loader className="h-6 w-6 animate-spin text-gray-400" />
-          </div>
+          <LoadingSpinner />
+        ) : items.length === 0 ? (
+          <EmptyState message="Belum ada data penjualan teratas." />
         ) : (
-        items.map((item) => (
-          <div key={item.name} className="flex items-center gap-4">
-            <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded-lg">
-              <Droplets className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+          items.map((item) => (
+            <div
+              key={item.id}
+              className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/50 px-3 py-2.5 transition-colors hover:bg-slate-100/60 dark:border-slate-800/50 dark:bg-slate-800/30 dark:hover:bg-slate-800/50"
+            >
+              <div className="rounded-lg bg-sky-50 p-2 text-sky-600 dark:bg-sky-500/10 dark:text-sky-300">
+                <Droplets className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="truncate text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  {item.name}
+                </h4>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                  Sparepart
+                </p>
+              </div>
+              <span className="whitespace-nowrap text-sm font-bold text-slate-700 dark:text-slate-200">
+                {formatCurrency(item.amount)}
+              </span>
             </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                {item.name}
-              </h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {item.category}
-              </p>
-            </div>
-            <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">
-              {formatCurrency(item.amount)}
-            </span>
-          </div>
-        ))
+          ))
         )}
       </div>
 
-      <button className="w-full mt-6 py-2 text-sm text-sky-500 font-medium hover:bg-sky-50 dark:hover:bg-sky-900/20 rounded-lg transition-colors cursor-pointer">
+      <button className="w-full border-t border-slate-100 py-3 text-xs font-semibold text-sky-600 transition-colors hover:bg-sky-50/50 dark:border-slate-800/60 dark:text-sky-400 dark:hover:bg-sky-900/20">
         View All Items
       </button>
-    </div>
+    </DashboardCard>
   );
 }

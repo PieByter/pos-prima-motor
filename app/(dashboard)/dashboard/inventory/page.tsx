@@ -4,7 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, Package, TriangleAlert } from "lucide-react";
+import { Loader2, TriangleAlert } from "lucide-react";
+import {
+  DashboardCard,
+  SectionHeader,
+} from "@/components/dashboard/ui/dashboard-card";
+import { cn } from "@/lib/utils";
+
+/* ───── Types ───── */
 
 type StockSummaryRow = {
   item_id: number;
@@ -39,10 +46,7 @@ type StockMovementRow = {
   reference_type: "purchase" | "sale" | null;
   reference_id: number | null;
   created_at: string;
-  item?: {
-    name: string;
-    sku: string;
-  };
+  item?: { name: string; sku: string };
 };
 
 type PaginatedMovements = {
@@ -52,6 +56,36 @@ type PaginatedMovements = {
   limit: number;
   totalPages: number;
 };
+
+/* ───── Stat Card Helper ───── */
+
+function MiniStat({
+  label,
+  value,
+  className,
+}: {
+  label: string;
+  value: string | number;
+  className?: string;
+}) {
+  return (
+    <DashboardCard className="p-5">
+      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
+        {label}
+      </p>
+      <p
+        className={cn(
+          "mt-2 text-2xl font-bold tracking-tight text-slate-800 dark:text-white",
+          className,
+        )}
+      >
+        {value}
+      </p>
+    </DashboardCard>
+  );
+}
+
+/* ───── Main Component ───── */
 
 export default function InventoryPage() {
   const [search, setSearch] = useState("");
@@ -74,7 +108,6 @@ export default function InventoryPage() {
         page: String(page),
         limit: "12",
       });
-
       if (search.trim()) stockQuery.set("search", search.trim());
       if (status !== "all") stockQuery.set("stock_status", status);
 
@@ -120,46 +153,24 @@ export default function InventoryPage() {
         subtitle="Monitoring stok, item low-stock, dan pergerakan barang."
       />
 
-      <div className="space-y-6">
-        <div className="grid grid-cols-4 gap-4">
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Items (Filtered)
-            </p>
-            <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
-              {stock?.total ?? 0}
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Current Stock (Page)
-            </p>
-            <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
-              {totalCurrentStock}
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Low Stock Items
-            </p>
-            <p className="mt-2 text-2xl font-bold text-amber-600 dark:text-amber-400">
-              {lowStock.length}
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Recent Movements
-            </p>
-            <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
-              {movements?.total ?? 0}
-            </p>
-          </div>
+      <div className="space-y-5">
+        {/* Stat Cards */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <MiniStat label="Items (Filtered)" value={stock?.total ?? 0} />
+          <MiniStat label="Current Stock (Page)" value={totalCurrentStock} />
+          <MiniStat
+            label="Low Stock Items"
+            value={lowStock.length}
+            className="text-amber-600 dark:text-amber-400"
+          />
+          <MiniStat label="Recent Movements" value={movements?.total ?? 0} />
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-          <div className="flex items-end gap-3">
-            <div className="w-80 space-y-1.5">
-              <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
+        {/* Filters */}
+        <DashboardCard className="p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+            <div className="w-full space-y-1.5 lg:max-w-md">
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                 Search Item
               </label>
               <Input
@@ -168,13 +179,12 @@ export default function InventoryPage() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                 Stock Status
               </label>
               <select
-                className="h-9 w-44 rounded-md border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-900"
+                className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:w-44"
                 value={status}
                 onChange={(e) => {
                   setStatus(e.target.value as "all" | "low" | "critical");
@@ -186,9 +196,8 @@ export default function InventoryPage() {
                 <option value="critical">Critical (&lt;= 2)</option>
               </select>
             </div>
-
             <Button
-              className="bg-sky-500 text-white hover:bg-sky-600"
+              className="h-9 bg-sky-500 text-white hover:bg-sky-600"
               onClick={() => {
                 setPage(1);
                 loadInventory();
@@ -197,7 +206,7 @@ export default function InventoryPage() {
             >
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                   Loading
                 </>
               ) : (
@@ -206,47 +215,62 @@ export default function InventoryPage() {
             </Button>
           </div>
           {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
-        </div>
+        </DashboardCard>
 
-        <div className="grid grid-cols-[2fr_1fr] gap-6">
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <div className="border-b border-slate-200 px-6 py-4 dark:border-slate-700">
-              <h3 className="font-semibold text-slate-900 dark:text-white">Stock Summary</h3>
-            </div>
+        {/* Main Grid: Stock Table + Sidebar */}
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[2fr_1fr]">
+          {/* Stock Summary Table */}
+          <DashboardCard>
+            <SectionHeader label="Inventory overview" title="Stock Summary" />
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-900/40 dark:text-slate-400">
+                <thead className="bg-slate-50/60 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 dark:bg-slate-900/30 dark:text-slate-500">
                   <tr>
-                    <th className="px-6 py-3">Item</th>
-                    <th className="px-6 py-3">SKU</th>
-                    <th className="px-6 py-3">Category</th>
-                    <th className="px-6 py-3 text-right">IN</th>
-                    <th className="px-6 py-3 text-right">OUT</th>
-                    <th className="px-6 py-3 text-right">Current</th>
+                    <th className="px-5 py-2.5">Item</th>
+                    <th className="px-5 py-2.5">SKU</th>
+                    <th className="px-5 py-2.5">Category</th>
+                    <th className="px-5 py-2.5 text-right">IN</th>
+                    <th className="px-5 py-2.5 text-right">OUT</th>
+                    <th className="px-5 py-2.5 text-right">Current</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                   {loading ? (
                     <tr>
-                      <td className="px-6 py-10 text-center text-slate-500" colSpan={6}>
+                      <td className="px-5 py-8 text-center text-slate-400" colSpan={6}>
                         <Loader2 className="mx-auto h-5 w-5 animate-spin" />
                       </td>
                     </tr>
                   ) : (stock?.data?.length ?? 0) === 0 ? (
                     <tr>
-                      <td className="px-6 py-10 text-center text-slate-500" colSpan={6}>
+                      <td className="px-5 py-8 text-center text-slate-400" colSpan={6}>
                         Tidak ada data stok.
                       </td>
                     </tr>
                   ) : (
                     (stock?.data ?? []).map((row) => (
-                      <tr key={row.item_id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                        <td className="px-6 py-3 font-medium text-slate-800 dark:text-slate-100">{row.name}</td>
-                        <td className="px-6 py-3 text-slate-600 dark:text-slate-300">{row.sku ?? "-"}</td>
-                        <td className="px-6 py-3 text-slate-600 dark:text-slate-300">{row.category ?? "-"}</td>
-                        <td className="px-6 py-3 text-right text-emerald-600 dark:text-emerald-400">{row.total_in}</td>
-                        <td className="px-6 py-3 text-right text-rose-600 dark:text-rose-400">{row.total_out}</td>
-                        <td className="px-6 py-3 text-right font-semibold text-slate-900 dark:text-white">{row.current_stock}</td>
+                      <tr
+                        key={row.item_id}
+                        className="transition-colors hover:bg-slate-50/60 dark:hover:bg-slate-800/30"
+                      >
+                        <td className="px-5 py-2.5 font-medium text-slate-700 dark:text-slate-200">
+                          {row.name}
+                        </td>
+                        <td className="px-5 py-2.5 text-slate-500 dark:text-slate-400">
+                          {row.sku ?? "-"}
+                        </td>
+                        <td className="px-5 py-2.5 text-slate-500 dark:text-slate-400">
+                          {row.category ?? "-"}
+                        </td>
+                        <td className="px-5 py-2.5 text-right text-emerald-600 dark:text-emerald-400">
+                          {row.total_in}
+                        </td>
+                        <td className="px-5 py-2.5 text-right text-rose-600 dark:text-rose-400">
+                          {row.total_out}
+                        </td>
+                        <td className="px-5 py-2.5 text-right font-bold text-slate-800 dark:text-white">
+                          {row.current_stock}
+                        </td>
                       </tr>
                     ))
                   )}
@@ -254,8 +278,9 @@ export default function InventoryPage() {
               </table>
             </div>
 
-            <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 dark:border-slate-700">
-              <p className="text-sm text-slate-500">
+            {/* Pagination */}
+            <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 dark:border-slate-800/60">
+              <p className="text-xs text-slate-400">
                 Page {stock?.page ?? 1} of {stock?.totalPages ?? 1}
               </p>
               <div className="flex gap-2">
@@ -279,29 +304,34 @@ export default function InventoryPage() {
                 </Button>
               </div>
             </div>
-          </div>
+          </DashboardCard>
 
-          <div className="space-y-6">
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-              <div className="border-b border-slate-200 px-6 py-4 dark:border-slate-700">
-                <h3 className="font-semibold text-slate-900 dark:text-white">Low Stock Alert</h3>
-              </div>
-              <div className="max-h-75 overflow-auto p-3">
+          {/* Sidebar: Low Stock + Movements */}
+          <div className="space-y-5">
+            <DashboardCard>
+              <SectionHeader label="Alert panel" title="Low Stock Alert" />
+              <div className="max-h-72 overflow-auto p-3">
                 {lowStock.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-slate-500">Tidak ada item low stock.</p>
+                  <p className="py-6 text-center text-sm text-slate-400">
+                    Tidak ada item low stock.
+                  </p>
                 ) : (
                   <div className="space-y-2">
                     {lowStock.map((item) => (
                       <div
                         key={item.item_id}
-                        className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900/70 dark:bg-amber-900/20"
+                        className="flex items-center justify-between rounded-xl border border-amber-200/60 bg-amber-50/50 px-3 py-2 dark:border-amber-900/50 dark:bg-amber-900/15"
                       >
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">{item.name}</p>
-                          <p className="text-xs text-slate-500">{item.sku ?? "-"}</p>
+                          <p className="truncate text-sm font-medium text-slate-700 dark:text-slate-200">
+                            {item.name}
+                          </p>
+                          <p className="text-[11px] text-slate-400">
+                            {item.sku ?? "-"}
+                          </p>
                         </div>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-900/60 dark:text-amber-300">
-                          <TriangleAlert className="h-3.5 w-3.5" />
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                          <TriangleAlert className="h-3 w-3" />
                           {item.current_stock}
                         </span>
                       </div>
@@ -309,42 +339,47 @@ export default function InventoryPage() {
                   </div>
                 )}
               </div>
-            </div>
+            </DashboardCard>
 
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-              <div className="border-b border-slate-200 px-6 py-4 dark:border-slate-700">
-                <h3 className="font-semibold text-slate-900 dark:text-white">Recent Movements</h3>
-              </div>
-              <div className="max-h-75 overflow-auto p-3">
+            <DashboardCard>
+              <SectionHeader label="Activity log" title="Recent Movements" />
+              <div className="max-h-72 overflow-auto p-3">
                 {(movements?.data ?? []).length === 0 ? (
-                  <p className="py-8 text-center text-sm text-slate-500">Belum ada pergerakan stok.</p>
+                  <p className="py-6 text-center text-sm text-slate-400">
+                    Belum ada pergerakan stok.
+                  </p>
                 ) : (
                   <div className="space-y-2">
                     {(movements?.data ?? []).map((m) => (
-                      <div key={m.id} className="rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700">
+                      <div
+                        key={m.id}
+                        className="rounded-xl border border-slate-100 px-3 py-2 dark:border-slate-800/60"
+                      >
                         <div className="flex items-center justify-between gap-2">
-                          <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">
+                          <p className="truncate text-sm font-medium text-slate-700 dark:text-slate-200">
                             {m.item?.name ?? `Item #${m.item_id}`}
                           </p>
                           <span
-                            className={`rounded px-2 py-0.5 text-xs font-semibold ${
+                            className={cn(
+                              "rounded px-2 py-0.5 text-[10px] font-bold",
                               m.type === "IN"
-                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
-                                : "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300"
-                            }`}
+                                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                                : "bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
+                            )}
                           >
                             {m.type} {m.quantity}
                           </span>
                         </div>
-                        <p className="mt-1 text-xs text-slate-500">
-                          Ref: {m.reference_type ?? "manual"} #{m.reference_id ?? "-"}
+                        <p className="mt-0.5 text-[11px] text-slate-400">
+                          Ref: {m.reference_type ?? "manual"} #
+                          {m.reference_id ?? "-"}
                         </p>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-            </div>
+            </DashboardCard>
           </div>
         </div>
       </div>

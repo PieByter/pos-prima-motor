@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import { getUserById, updateUser, deleteUser } from '@/lib/services/users.service'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -7,8 +6,7 @@ type RouteParams = { params: Promise<{ id: string }> }
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
-    const supabase = await createClient()
-    const { data, error } = await getUserById(supabase, id)
+    const { data, error } = await getUserById(id)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 404 })
     return NextResponse.json(data)
@@ -20,10 +18,9 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
-    const supabase = await createClient()
     const body = await request.json()
 
-    const { data, error } = await updateUser(supabase, id, body)
+    const { data, error } = await updateUser(id, body)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
     return NextResponse.json(data)

@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
   DollarSign,
   ShoppingBag,
@@ -9,8 +8,10 @@ import {
   TrendingUp,
   TrendingDown,
   Plus,
-  Loader,
 } from "lucide-react";
+import { useFetch } from "@/lib/hooks/use-fetch";
+import { formatCurrency, formatNumber } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 interface SummaryData {
   totalSales: number;
@@ -19,124 +20,147 @@ interface SummaryData {
   totalCustomers: number;
 }
 
-export function SummaryCards() {
-  const [data, setData] = useState<SummaryData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchSummary = async () => {
-      try {
-        const response = await fetch("/api/dashboard/summary");
-        if (!response.ok) throw new Error("Failed to fetch");
-        const result = await response.json();
-        setData(result);
-      } catch (error) {
-        console.error("Error fetching summary:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchSummary();
-  }, []);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const formatNumber = (value: number) => {
-    return new Intl.NumberFormat("id-ID").format(value);
-  };
-
-  const stats = [
+const stats = [
   {
+    key: "totalSales",
     label: "Total Sales",
-     value: data ? formatCurrency(data.totalSales) : "—",
+    format: formatCurrency,
     change: "12.5%",
     trend: "up" as const,
     sub: "vs last month",
     icon: DollarSign,
-    iconBg: "bg-blue-50 dark:bg-blue-900/20",
-    iconColor: "text-blue-600 dark:text-blue-400",
+    color: "sky",
   },
   {
+    key: "totalPurchases",
     label: "Total Purchases",
-     value: data ? formatCurrency(data.totalPurchases) : "—",
+    format: formatCurrency,
     change: "2.3%",
     trend: "down" as const,
     sub: "vs last month",
     icon: ShoppingBag,
-    iconBg: "bg-orange-50 dark:bg-orange-900/20",
-    iconColor: "text-orange-600 dark:text-orange-400",
+    color: "orange",
   },
   {
+    key: "totalItems",
     label: "Inventory Items",
-     value: data ? formatNumber(data.totalItems) : "—",
+    format: formatNumber,
     change: "84",
     trend: "add" as const,
     sub: "new items added",
     icon: Package,
-    iconBg: "bg-purple-50 dark:bg-purple-900/20",
-    iconColor: "text-purple-600 dark:text-purple-400",
+    color: "violet",
   },
   {
+    key: "totalCustomers",
     label: "Active Customers",
-     value: data ? formatNumber(data.totalCustomers) : "—",
+    format: formatNumber,
     change: "5.4%",
     trend: "up" as const,
     sub: "vs last month",
     icon: Users,
-    iconBg: "bg-teal-50 dark:bg-teal-900/20",
-    iconColor: "text-teal-600 dark:text-teal-400",
+    color: "emerald",
   },
-    ];
+] as const;
+
+const colorMap = {
+  sky: {
+    accent: "bg-sky-500",
+    iconBg: "bg-sky-50 dark:bg-sky-500/10",
+    iconText: "text-sky-600 dark:text-sky-300",
+  },
+  orange: {
+    accent: "bg-orange-500",
+    iconBg: "bg-orange-50 dark:bg-orange-500/10",
+    iconText: "text-orange-600 dark:text-orange-300",
+  },
+  violet: {
+    accent: "bg-violet-500",
+    iconBg: "bg-violet-50 dark:bg-violet-500/10",
+    iconText: "text-violet-600 dark:text-violet-300",
+  },
+  emerald: {
+    accent: "bg-emerald-500",
+    iconBg: "bg-emerald-50 dark:bg-emerald-500/10",
+    iconText: "text-emerald-600 dark:text-emerald-300",
+  },
+} as const;
+
+const TrendIcon = {
+  up: TrendingUp,
+  down: TrendingDown,
+  add: Plus,
+};
+
+export function SummaryCards() {
+  const { data, isLoading } = useFetch<SummaryData>("/api/dashboard/summary");
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      {stats.map((stat) => (
-        <div
-          key={stat.label}
-          className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700"
-        >
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                {stat.label}
-              </p>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                {isLoading ? (
-                  <Loader className="h-6 w-6 animate-spin text-gray-400" />
-                ) : (
-                  stat.value
-                )}
-              </h3>
-            </div>
-            <div className={`p-2 rounded-lg ${stat.iconBg}`}>
-              <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
-            </div>
-          </div>
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {stats.map((stat) => {
+        const colors = colorMap[stat.color];
+        const Icon = stat.icon;
+        const Trend = TrendIcon[stat.trend];
+        const value = data
+          ? stat.format(data[stat.key as keyof SummaryData] as number)
+          : "—";
 
-          <div className="mt-4 flex items-center text-sm">
-            <span
-              className={`flex items-center font-medium ${
-                stat.trend === "down"
-                  ? "text-red-500"
-                  : "text-emerald-500"
-              }`}
-            >
-              {stat.trend === "up" && <TrendingUp className="h-4 w-4 mr-0.5" />}
-              {stat.trend === "down" && <TrendingDown className="h-4 w-4 mr-0.5" />}
-              {stat.trend === "add" && <Plus className="h-4 w-4 mr-0.5" />}
-              {stat.change}
-            </span>
-            <span className="text-gray-400 ml-2">{stat.sub}</span>
+        return (
+          <div
+            key={stat.label}
+            className={cn(
+              "group relative overflow-hidden rounded-2xl border border-slate-200/60 bg-white/80 p-5 backdrop-blur-lg",
+              "shadow-md shadow-slate-200/40 transition-all duration-200",
+              "hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/50",
+              "dark:border-slate-800/60 dark:bg-slate-900/60 dark:shadow-slate-950/30",
+            )}
+          >
+            {/* Top accent bar */}
+            <div className={cn("absolute inset-x-0 top-0 h-0.5", colors.accent)} />
+
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
+                  {stat.label}
+                </p>
+
+                {isLoading ? (
+                  <div className="mt-3 space-y-2.5 animate-pulse">
+                    <div className="h-8 w-32 rounded-xl bg-slate-100 dark:bg-slate-800" />
+                    <div className="h-3.5 w-24 rounded-full bg-slate-100 dark:bg-slate-800" />
+                  </div>
+                ) : (
+                  <>
+                    <h3 className="mt-2 text-2xl font-bold tracking-tight text-slate-800 dark:text-white">
+                      {value}
+                    </h3>
+                    <div className="mt-2 flex items-center gap-1.5 text-xs">
+                      <span
+                        className={cn(
+                          "flex items-center gap-1 font-semibold",
+                          stat.trend === "down"
+                            ? "text-rose-500"
+                            : "text-emerald-500",
+                        )}
+                      >
+                        <Trend className="h-3.5 w-3.5" />
+                        {stat.change}
+                      </span>
+                      <span className="text-slate-400 dark:text-slate-500">
+                        {stat.sub}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className={cn("rounded-xl p-2.5", colors.iconBg)}>
+                <Icon className={cn("h-4.5 w-4.5", colors.iconText)} />
+              </div>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

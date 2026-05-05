@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import { getDiscountById, updateDiscount, deleteDiscount } from '@/lib/services/discounts.service'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -7,8 +6,7 @@ type RouteParams = { params: Promise<{ id: string }> }
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
-    const supabase = await createClient()
-    const { data, error } = await getDiscountById(supabase, Number(id))
+    const { data, error } = await getDiscountById(Number(id))
 
     if (error) return NextResponse.json({ error: error.message }, { status: 404 })
     return NextResponse.json(data)
@@ -20,10 +18,9 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
-    const supabase = await createClient()
     const { discount, itemIds } = await request.json()
 
-    const { data, error } = await updateDiscount(supabase, Number(id), discount, itemIds)
+    const { data, error } = await updateDiscount(Number(id), discount, itemIds)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
     return NextResponse.json(data)
@@ -35,8 +32,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
-    const supabase = await createClient()
-    const { error } = await deleteDiscount(supabase, Number(id))
+    const { error } = await deleteDiscount(Number(id))
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
     return NextResponse.json({ message: 'Discount deleted' })

@@ -1,10 +1,27 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { db } from '@/lib/db'
+import { suppliers } from '@/lib/db/schema'
+import { eq, ilike, or, desc, sql } from 'drizzle-orm'
 import type {
   Supplier,
   SupplierInsert,
   SupplierUpdate,
   PaginatedResponse,
 } from '@/lib/types/database'
+
+type DbSupplier = {
+  id: number
+  name: string
+  phone: string | null
+  address: string | null
+  created_at: Date
+  updated_at: Date
+}
+
+const mapSupplier = (row: DbSupplier): Supplier => ({
+  ...row,
+  created_at: row.created_at.toISOString(),
+  updated_at: row.updated_at.toISOString(),
+})
 
 type SupplierFilters = {
   search?: string
@@ -13,61 +30,90 @@ type SupplierFilters = {
 }
 
 export async function getSuppliers(
-  supabase: SupabaseClient,
   filters: SupplierFilters = {},
 ): Promise<{ data: PaginatedResponse<Supplier> | null; error: Error | null }> {
-  const { search, page = 1, limit = 10 } = filters
-  const from = (page - 1) * limit
-  const to = from + limit - 1
+  try {
+    const { search, page = 1, limit = 10 } = filters
+    const offset = (page - 1) * limit
 
-  let query = supabase.from('suppliers').select('*', { count: 'exact' })
+    const where = search
+      ? or(ilike(suppliers.name, `%${search}%`), ilike(suppliers.phone, `%${search}%`))
+      : undefined
 
-  if (search) {
-    query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`)
-  }
+    const [rows, [{ count }]] = await Promise.all([
+      db
+        .select()
+        .from(suppliers)
+        .where(where)
+        .orderBy(desc(suppliers.created_at))
+        .limit(limit)
+        .offset(offset),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(suppliers)
+        .where(where),
+    ])
 
-  const { data, error, count } = await query
-    .order('created_at', { ascending: false })
-    .range(from, to)
-
-  if (error) return { data: null, error }
-
-  return {
-    data: {
-      data: data as Supplier[],
-      total: count ?? 0,
-      page,
-      limit,
-      totalPages: Math.ceil((count ?? 0) / limit),
-    },
-    error: null,
+    return {
+      data: {
+        data: (rows as DbSupplier[]).map(mapSupplier),
+        total: count,
+        page,
+        limit,
+        totalPages: Math.ceil(count / limit),
+      },
+      error: null,
+    }
+  } catch (err) {
+    return { data: null, error: err as Error }
   }
 }
 
-export async function getSupplierById(supabase: SupabaseClient, id: number) {
-  return supabase.from('suppliers').select('*').eq('id', id).single<Supplier>()
+export async function getSupplierById(
+  id: number,
+): Promise<{ data: Supplier | null; error: Error | null }> {
+  try {
+    const [row] = await db.select().from(suppliers).where(eq(suppliers.id, id))
+    if (!row) return { data: null, error: new Error('Supplier not found') }
+    return { data: mapSupplier(row as DbSupplier), error: null }
+  } catch (err) {
+    return { data: null, error: err as Error }
+  }
 }
 
 export async function createSupplier(
-  supabase: SupabaseClient,
   data: SupplierInsert,
-) {
-  return supabase.from('suppliers').insert(data).select().single<Supplier>()
+): Promise<{ data: Supplier | null; error: Error | null }> {
+  try {
+    const [row] = await db.insert(suppliers).values(data).returning()
+    return { data: mapSupplier(row as DbSupplier), error: null }
+  } catch (err) {
+    return { data: null, error: err as Error }
+  }
 }
 
 export async function updateSupplier(
-  supabase: SupabaseClient,
   id: number,
   data: SupplierUpdate,
-) {
-  return supabase
-    .from('suppliers')
-    .update({ ...data, updated_at: new Date().toISOString() })
-    .eq('id', id)
-    .select()
-    .single<Supplier>()
+): Promise<{ data: Supplier | null; error: Error | null }> {
+  try {
+    const [row] = await db
+      .update(suppliers)
+      .set({ ...data, updated_at: new Date() })
+      .where(eq(suppliers.id, id))
+      .returning()
+    if (!row) return { data: null, error: new Error('Supplier not found') }
+    return { data: mapSupplier(row as DbSupplier), error: null }
+  } catch (err) {
+    return { data: null, error: err as Error }
+  }
 }
 
-export async function deleteSupplier(supabase: SupabaseClient, id: number) {
-  return supabase.from('suppliers').delete().eq('id', id)
+export async function deleteSupplier(id: number): Promise<{ error: Error | null }> {
+  try {
+    await db.delete(suppliers).where(eq(suppliers.id, id))
+    return { error: null }
+  } catch (err) {
+    return { error: err as Error }
+  }
 }

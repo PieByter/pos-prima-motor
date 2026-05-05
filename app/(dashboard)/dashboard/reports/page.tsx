@@ -5,6 +5,14 @@ import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import {
+  DashboardCard,
+  SectionHeader,
+} from "@/components/dashboard/ui/dashboard-card";
+import { formatCurrency } from "@/lib/format";
+import { cn } from "@/lib/utils";
+
+/* ───── Types ───── */
 
 type SalesReport = {
   total_sales: number;
@@ -26,13 +34,7 @@ type ProfitLossReport = {
   net_profit: number;
 };
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(value ?? 0);
-}
+/* ───── Helpers ───── */
 
 function toInputDate(value: Date) {
   return value.toISOString().slice(0, 10);
@@ -42,11 +44,45 @@ function getDefaultRange() {
   const end = new Date();
   const start = new Date();
   start.setDate(end.getDate() - 30);
-  return {
-    startDate: toInputDate(start),
-    endDate: toInputDate(end),
-  };
+  return { startDate: toInputDate(start), endDate: toInputDate(end) };
 }
+
+/* ───── Stat Card ───── */
+
+function ReportStat({
+  label,
+  value,
+  sub,
+  icon: Icon,
+  iconColor,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  icon: React.ElementType;
+  iconColor: string;
+}) {
+  return (
+    <DashboardCard className="p-5">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
+          {label}
+        </p>
+        <Icon className={cn("h-4 w-4", iconColor)} />
+      </div>
+      <p className="mt-2 text-2xl font-bold tracking-tight text-slate-800 dark:text-white">
+        {value}
+      </p>
+      {sub && (
+        <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
+          {sub}
+        </p>
+      )}
+    </DashboardCard>
+  );
+}
+
+/* ───── Main Component ───── */
 
 export default function ReportsPage() {
   const defaults = useMemo(() => getDefaultRange(), []);
@@ -131,11 +167,12 @@ export default function ReportsPage() {
         subtitle="Laporan penjualan, pembelian, dan laba rugi."
       />
 
-      <div className="space-y-6">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-          <div className="flex items-end gap-4">
-            <div className="w-52 space-y-1.5">
-              <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
+      <div className="space-y-5">
+        {/* Date Filters */}
+        <DashboardCard className="p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+            <div className="w-full space-y-1.5 lg:max-w-xs">
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                 Start Date
               </label>
               <Input
@@ -144,8 +181,8 @@ export default function ReportsPage() {
                 onChange={(e) => setStartDate(e.target.value)}
               />
             </div>
-            <div className="w-52 space-y-1.5">
-              <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
+            <div className="w-full space-y-1.5 lg:max-w-xs">
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                 End Date
               </label>
               <Input
@@ -155,13 +192,13 @@ export default function ReportsPage() {
               />
             </div>
             <Button
-              className="bg-sky-500 text-white hover:bg-sky-600"
+              className="h-9 bg-sky-500 text-white hover:bg-sky-600"
               onClick={loadReports}
               disabled={loading}
             >
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                   Loading
                 </>
               ) : (
@@ -170,90 +207,62 @@ export default function ReportsPage() {
             </Button>
           </div>
           {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
+        </DashboardCard>
+
+        {/* Stat Cards */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <ReportStat
+            label="Total Sales"
+            value={formatCurrency(sales?.total_sales ?? 0)}
+            sub={`${sales?.total_transactions ?? 0} transaksi`}
+            icon={TrendingUp}
+            iconColor="text-emerald-500"
+          />
+          <ReportStat
+            label="Total Purchases"
+            value={formatCurrency(purchases?.total_purchases ?? 0)}
+            sub={`${purchases?.total_transactions ?? 0} transaksi`}
+            icon={TrendingDown}
+            iconColor="text-orange-500"
+          />
+          <ReportStat
+            label="Gross Profit"
+            value={formatCurrency(profitLoss?.gross_profit ?? 0)}
+            sub={`Service fee: ${formatCurrency(profitLoss?.total_service_fees ?? 0)}`}
+            icon={Wallet}
+            iconColor="text-sky-500"
+          />
+          <ReportStat
+            label="Net Profit"
+            value={formatCurrency(profitLoss?.net_profit ?? 0)}
+            sub="Setelah biaya pembelian"
+            icon={Wallet}
+            iconColor="text-indigo-500"
+          />
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Total Sales
-              </p>
-              <TrendingUp className="h-4 w-4 text-emerald-500" />
-            </div>
-            <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
-              {formatCurrency(sales?.total_sales ?? 0)}
-            </p>
-            <p className="mt-1 text-sm text-slate-500">
-              {sales?.total_transactions ?? 0} transaksi
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Total Purchases
-              </p>
-              <TrendingDown className="h-4 w-4 text-orange-500" />
-            </div>
-            <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
-              {formatCurrency(purchases?.total_purchases ?? 0)}
-            </p>
-            <p className="mt-1 text-sm text-slate-500">
-              {purchases?.total_transactions ?? 0} transaksi
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Gross Profit
-              </p>
-              <Wallet className="h-4 w-4 text-sky-500" />
-            </div>
-            <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
-              {formatCurrency(profitLoss?.gross_profit ?? 0)}
-            </p>
-            <p className="mt-1 text-sm text-slate-500">
-              Service fee: {formatCurrency(profitLoss?.total_service_fees ?? 0)}
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Net Profit
-              </p>
-              <Wallet className="h-4 w-4 text-indigo-500" />
-            </div>
-            <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
-              {formatCurrency(profitLoss?.net_profit ?? 0)}
-            </p>
-            <p className="mt-1 text-sm text-slate-500">Setelah biaya pembelian</p>
-          </div>
-        </div>
-
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-          <div className="border-b border-slate-200 px-6 py-4 dark:border-slate-700">
-            <h3 className="font-semibold text-slate-900 dark:text-white">
-              Daily Breakdown
-            </h3>
-          </div>
+        {/* Daily Breakdown Table */}
+        <DashboardCard>
+          <SectionHeader label="Analytics table" title="Daily Breakdown" />
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
-              <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-900/40 dark:text-slate-400">
+              <thead className="bg-slate-50/60 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 dark:bg-slate-900/30 dark:text-slate-500">
                 <tr>
-                  <th className="px-6 py-3">Date</th>
-                  <th className="px-6 py-3 text-right">Sales Amount</th>
-                  <th className="px-6 py-3 text-right">Sales Tx</th>
-                  <th className="px-6 py-3 text-right">Purchase Amount</th>
-                  <th className="px-6 py-3 text-right">Purchase Tx</th>
-                  <th className="px-6 py-3 text-right">Daily Margin</th>
+                  <th className="px-5 py-2.5">Date</th>
+                  <th className="px-5 py-2.5 text-right">Sales Amount</th>
+                  <th className="px-5 py-2.5 text-right">Sales Tx</th>
+                  <th className="px-5 py-2.5 text-right">Purchase Amount</th>
+                  <th className="px-5 py-2.5 text-right">Purchase Tx</th>
+                  <th className="px-5 py-2.5 text-right">Daily Margin</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                 {dailyRows.length === 0 ? (
                   <tr>
-                    <td className="px-6 py-10 text-center text-slate-500" colSpan={6}>
+                    <td
+                      className="px-5 py-8 text-center text-slate-400"
+                      colSpan={6}
+                    >
                       No data in selected date range.
                     </td>
                   </tr>
@@ -261,20 +270,32 @@ export default function ReportsPage() {
                   dailyRows.map((row) => {
                     const margin = row.salesAmount - row.purchasesAmount;
                     return (
-                      <tr key={row.date} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                        <td className="px-6 py-3 text-slate-700 dark:text-slate-200">{row.date}</td>
-                        <td className="px-6 py-3 text-right font-medium text-slate-700 dark:text-slate-200">
+                      <tr
+                        key={row.date}
+                        className="transition-colors hover:bg-slate-50/60 dark:hover:bg-slate-800/30"
+                      >
+                        <td className="px-5 py-2.5 text-slate-600 dark:text-slate-300">
+                          {row.date}
+                        </td>
+                        <td className="px-5 py-2.5 text-right font-medium text-slate-700 dark:text-slate-200">
                           {formatCurrency(row.salesAmount)}
                         </td>
-                        <td className="px-6 py-3 text-right text-slate-600 dark:text-slate-300">{row.salesCount}</td>
-                        <td className="px-6 py-3 text-right font-medium text-slate-700 dark:text-slate-200">
+                        <td className="px-5 py-2.5 text-right text-slate-500 dark:text-slate-400">
+                          {row.salesCount}
+                        </td>
+                        <td className="px-5 py-2.5 text-right font-medium text-slate-700 dark:text-slate-200">
                           {formatCurrency(row.purchasesAmount)}
                         </td>
-                        <td className="px-6 py-3 text-right text-slate-600 dark:text-slate-300">{row.purchasesCount}</td>
+                        <td className="px-5 py-2.5 text-right text-slate-500 dark:text-slate-400">
+                          {row.purchasesCount}
+                        </td>
                         <td
-                          className={`px-6 py-3 text-right font-semibold ${
-                            margin >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
-                          }`}
+                          className={cn(
+                            "px-5 py-2.5 text-right font-bold",
+                            margin >= 0
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-red-600 dark:text-red-400",
+                          )}
                         >
                           {formatCurrency(margin)}
                         </td>
@@ -285,7 +306,7 @@ export default function ReportsPage() {
               </tbody>
             </table>
           </div>
-        </div>
+        </DashboardCard>
       </div>
     </>
   );

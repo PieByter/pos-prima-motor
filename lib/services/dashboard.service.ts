@@ -1,4 +1,6 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { db } from '@/lib/db'
+import { sales, purchases, items, customers, saleDetails, stockSummary } from '@/lib/db/schema'
+import { eq, gte, lte, desc, sql, inArray, and } from 'drizzle-orm'
 import type {
   DashboardSummary,
   SalesChartData,
@@ -7,189 +9,211 @@ import type {
   Sale,
 } from '@/lib/types/database'
 
+type DbSale = {
+  id: number
+  customer_id: number | null
+  mechanic_id: string
+  invoice_number: string
+  sale_date: Date | string
+  total_amount: string
+  status: Sale['status']
+  created_by: string
+  created_at: Date
+  updated_at: Date
+}
+
+type SaleWithCustomer = Sale & { customer?: { name: string | null } | null }
+
+const mapSale = (row: DbSale): Sale => ({
+  ...row,
+  sale_date: row.sale_date instanceof Date ? row.sale_date.toISOString().split('T')[0] : row.sale_date,
+  total_amount: Number(row.total_amount),
+  created_at: row.created_at.toISOString(),
+  updated_at: row.updated_at.toISOString(),
+})
+
 export async function getSummaryCards(
-  supabase: SupabaseClient,
   dateRange?: { start: string; end: string },
 ): Promise<{ data: DashboardSummary | null; error: Error | null }> {
-  // Total sales in period
-  let salesQuery = supabase
-    .from('sales')
-    .select('total_amount', { count: 'exact' })
-    .eq('status', 'completed')
+  try {
+    const salesConditions = [eq(sales.status, 'completed')]
+    const purchasesConditions = [eq(purchases.status, 'completed')]
+    if (dateRange) {
+      salesConditions.push(gte(sales.sale_date, dateRange.start))
+      salesConditions.push(lte(sales.sale_date, dateRange.end))
+      purchasesConditions.push(gte(purchases.purchase_date, dateRange.start))
+      purchasesConditions.push(lte(purchases.purchase_date, dateRange.end))
+    }
 
-  if (dateRange) {
-    salesQuery = salesQuery
-      .gte('sale_date', dateRange.start)
-      .lte('sale_date', dateRange.end)
-  }
+    const [salesData, purchasesData, [{ totalItems }], [{ totalCustomers }]] = await Promise.all([
+      db
+        .select({ total_amount: sales.total_amount })
+        .from(sales)
+        .where(and(...salesConditions)),
+      db
+        .select({ total_amount: purchases.total_amount })
+        .from(purchases)
+        .where(and(...purchasesConditions)),
+      db.select({ totalItems: sql<number>`count(*)::int` }).from(items),
+      db.select({ totalCustomers: sql<number>`count(*)::int` }).from(customers),
+    ])
 
-  const { data: salesData, count: salesCount } = await salesQuery
+    const totalSales = salesData.reduce((sum, s) => sum + Number(s.total_amount), 0)
+    const totalPurchases = purchasesData.reduce((sum, p) => sum + Number(p.total_amount), 0)
 
-  const totalSales = (salesData ?? []).reduce(
-    (sum: number, s: { total_amount: number }) => sum + s.total_amount,
-    0,
-  )
-
-  // Total purchases in period
-  let purchasesQuery = supabase
-    .from('purchases')
-    .select('total_amount')
-    .eq('status', 'completed')
-
-  if (dateRange) {
-    purchasesQuery = purchasesQuery
-      .gte('purchase_date', dateRange.start)
-      .lte('purchase_date', dateRange.end)
-  }
-
-  const { data: purchasesData } = await purchasesQuery
-
-  const totalPurchases = (purchasesData ?? []).reduce(
-    (sum: number, p: { total_amount: number }) => sum + p.total_amount,
-    0,
-  )
-
-  // Total items
-  const { count: totalItems } = await supabase
-    .from('items')
-    .select('*', { count: 'exact', head: true })
-
-  // Total customers
-  const { count: totalCustomers } = await supabase
-    .from('customers')
-    .select('*', { count: 'exact', head: true })
-
-  return {
-    data: {
-      totalSales,
-      totalPurchases,
-      totalItems: totalItems ?? 0,
-      totalCustomers: totalCustomers ?? 0,
-      salesGrowth: 0, // Calculate by comparing periods
-      purchasesGrowth: 0,
-    },
-    error: null,
+    return {
+      data: {
+        totalSales,
+        totalPurchases,
+        totalItems,
+        totalCustomers,
+        salesGrowth: 0,
+        purchasesGrowth: 0,
+      },
+      error: null,
+    }
+  } catch (err) {
+    return { data: null, error: err as Error }
   }
 }
 
 export async function getSalesChart(
-  supabase: SupabaseClient,
   dateRange: { start: string; end: string },
 ): Promise<{ data: SalesChartData[] | null; error: Error | null }> {
-  const { data, error } = await supabase
-    .from('sales')
-    .select('sale_date, total_amount')
-    .eq('status', 'completed')
-    .gte('sale_date', dateRange.start)
-    .lte('sale_date', dateRange.end)
-    .order('sale_date', { ascending: true })
+  try {
+    const rows = await db
+      .select({ sale_date: sales.sale_date, total_amount: sales.total_amount })
+      .from(sales)
+      .where(
+        and(
+          eq(sales.status, 'completed'),
+          gte(sales.sale_date, dateRange.start),
+          lte(sales.sale_date, dateRange.end),
+        ),
+      )
+      .orderBy(sales.sale_date)
 
-  if (error) return { data: [], error: null }
+    const grouped: Record<string, { amount: number; count: number }> = {}
+    for (const row of rows) {
+      const date = row.sale_date
+      if (!grouped[date]) grouped[date] = { amount: 0, count: 0 }
+      grouped[date].amount += Number(row.total_amount)
+      grouped[date].count += 1
+    }
 
-  // Group by date
-  const grouped: Record<string, { amount: number; count: number }> = {}
-  for (const sale of data ?? []) {
-    const date = sale.sale_date
-    if (!grouped[date]) grouped[date] = { amount: 0, count: 0 }
-    grouped[date].amount += sale.total_amount
-    grouped[date].count += 1
+    const chartData: SalesChartData[] = Object.entries(grouped).map(([date, { amount, count }]) => ({
+      date,
+      amount,
+      count,
+    }))
+
+    return { data: chartData, error: null }
+  } catch (err) {
+    return { data: [], error: err as Error }
   }
-
-  const chartData: SalesChartData[] = Object.entries(grouped).map(
-    ([date, { amount, count }]) => ({ date, amount, count }),
-  )
-
-  return { data: chartData, error: null }
 }
 
 export async function getTopSellingItems(
-  supabase: SupabaseClient,
   limit: number = 5,
   dateRange?: { start: string; end: string },
 ): Promise<{ data: TopSellingItem[] | null; error: Error | null }> {
-  // Fetch completed sale IDs first (handles optional date range safely)
-  let salesQuery = supabase
-    .from('sales')
-    .select('id')
-    .eq('status', 'completed')
-
-  if (dateRange) {
-    salesQuery = salesQuery
-      .gte('sale_date', dateRange.start)
-      .lte('sale_date', dateRange.end)
-  }
-
-  const { data: salesRows, error: salesErr } = await salesQuery
-  if (salesErr) return { data: [], error: null }
-
-  const saleIds = (salesRows ?? []).map((s: { id: number }) => s.id)
-  if (saleIds.length === 0) return { data: [], error: null }
-
-  const { data: detailRows, error: detailsErr } = await supabase
-    .from('sale_details')
-    .select('item_id, quantity, subtotal')
-    .in('sale_id', saleIds)
-
-  if (detailsErr) return { data: [], error: null }
-
-  const itemIds = [...new Set((detailRows ?? []).map((d) => d.item_id))]
-  const { data: itemRows } = await supabase
-    .from('items')
-    .select('id, name')
-    .in('id', itemIds)
-
-  const itemNameById = new Map<number, string>(
-    (itemRows ?? []).map((i: { id: number; name: string }) => [i.id, i.name]),
-  )
-
-  // Aggregate
-  const aggregated: Record<number, TopSellingItem> = {}
-  for (const detail of detailRows ?? []) {
-    const id = detail.item_id
-    if (!aggregated[id]) {
-      aggregated[id] = {
-        item_id: id,
-        name: itemNameById.get(id) ?? 'Unknown',
-        total_sold: 0,
-        total_revenue: 0,
-      }
+  try {
+    const salesConditions = [eq(sales.status, 'completed')]
+    if (dateRange) {
+      salesConditions.push(gte(sales.sale_date, dateRange.start))
+      salesConditions.push(lte(sales.sale_date, dateRange.end))
     }
-    aggregated[id].total_sold += detail.quantity
-    aggregated[id].total_revenue += detail.subtotal
+
+    const saleIds = (
+      await db.select({ id: sales.id }).from(sales).where(and(...salesConditions))
+    ).map((s) => s.id)
+
+    if (saleIds.length === 0) return { data: [], error: null }
+
+    const detailRows = await db
+      .select({
+        item_id: saleDetails.item_id,
+        quantity: saleDetails.quantity,
+        subtotal: saleDetails.subtotal,
+      })
+      .from(saleDetails)
+      .where(inArray(saleDetails.sale_id, saleIds))
+
+    const itemIds = [...new Set(detailRows.map((d) => d.item_id))]
+    const itemRows = await db
+      .select({ id: items.id, name: items.name })
+      .from(items)
+      .where(inArray(items.id, itemIds))
+
+    const itemNameById = new Map(itemRows.map((i) => [i.id, i.name]))
+
+    const aggregated: Record<number, TopSellingItem> = {}
+    for (const detail of detailRows) {
+      const id = detail.item_id
+      if (!aggregated[id]) {
+        aggregated[id] = {
+          item_id: id,
+          name: itemNameById.get(id) ?? 'Unknown',
+          total_sold: 0,
+          total_revenue: 0,
+        }
+      }
+      aggregated[id].total_sold += detail.quantity
+      aggregated[id].total_revenue += Number(detail.subtotal)
+    }
+
+    const sorted = Object.values(aggregated)
+      .sort((a, b) => b.total_sold - a.total_sold)
+      .slice(0, limit)
+
+    return { data: sorted, error: null }
+  } catch (err) {
+    return { data: [], error: err as Error }
   }
-
-  const sorted = Object.values(aggregated)
-    .sort((a, b) => b.total_sold - a.total_sold)
-    .slice(0, limit)
-
-  return { data: sorted, error: null }
 }
 
 export async function getLowStockAlerts(
-  supabase: SupabaseClient,
   threshold: number = 5,
 ): Promise<{ data: LowStockAlert[] | null; error: Error | null }> {
-  const { data, error } = await supabase
-    .from('stock_summary')
-    .select('item_id, name, sku, current_stock')
-    .lte('current_stock', threshold)
-    .order('current_stock', { ascending: true })
-    .limit(10)
+  try {
+    const rows = await db
+      .select({
+        item_id: stockSummary.item_id,
+        name: stockSummary.name,
+        sku: stockSummary.sku,
+        current_stock: stockSummary.current_stock,
+      })
+      .from(stockSummary)
+      .where(lte(stockSummary.current_stock, threshold))
+      .orderBy(stockSummary.current_stock)
+      .limit(10)
 
-  if (error) return { data: null, error }
-  return { data: data as LowStockAlert[], error: null }
+    return { data: rows as LowStockAlert[], error: null }
+  } catch (err) {
+    return { data: null, error: err as Error }
+  }
 }
 
 export async function getRecentTransactions(
-  supabase: SupabaseClient,
-  limit: number = 5,
-): Promise<{ data: Sale[] | null; error: Error | null }> {
-  const { data, error } = await supabase
-    .from('sales')
-    .select('*, customer:customers(name)')
-    .order('created_at', { ascending: false })
-    .limit(limit)
+  limitCount: number = 5,
+): Promise<{ data: SaleWithCustomer[] | null; error: Error | null }> {
+  try {
+    const rows = await db
+      .select({
+        sale: sales,
+        customer: { name: customers.name },
+      })
+      .from(sales)
+      .leftJoin(customers, eq(sales.customer_id, customers.id))
+      .orderBy(desc(sales.created_at))
+      .limit(limitCount)
 
-  if (error) return { data: null, error }
-  return { data: data as Sale[], error: null }
+    const data: SaleWithCustomer[] = rows.map((r) => ({
+      ...mapSale(r.sale as DbSale),
+      customer: r.customer ?? null,
+    }))
+    return { data, error: null }
+  } catch (err) {
+    return { data: null, error: err as Error }
+  }
 }

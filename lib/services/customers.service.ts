@@ -1,10 +1,27 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { db } from '@/lib/db'
+import { customers } from '@/lib/db/schema'
+import { eq, ilike, or, desc, sql } from 'drizzle-orm'
 import type {
   Customer,
   CustomerInsert,
   CustomerUpdate,
   PaginatedResponse,
 } from '@/lib/types/database'
+
+type DbCustomer = {
+  id: number
+  name: string
+  phone: string | null
+  address: string | null
+  created_at: Date
+  updated_at: Date
+}
+
+const mapCustomer = (row: DbCustomer): Customer => ({
+  ...row,
+  created_at: row.created_at.toISOString(),
+  updated_at: row.updated_at.toISOString(),
+})
 
 type CustomerFilters = {
   search?: string
@@ -13,61 +30,90 @@ type CustomerFilters = {
 }
 
 export async function getCustomers(
-  supabase: SupabaseClient,
   filters: CustomerFilters = {},
 ): Promise<{ data: PaginatedResponse<Customer> | null; error: Error | null }> {
-  const { search, page = 1, limit = 10 } = filters
-  const from = (page - 1) * limit
-  const to = from + limit - 1
+  try {
+    const { search, page = 1, limit = 10 } = filters
+    const offset = (page - 1) * limit
 
-  let query = supabase.from('customers').select('*', { count: 'exact' })
+    const where = search
+      ? or(ilike(customers.name, `%${search}%`), ilike(customers.phone, `%${search}%`))
+      : undefined
 
-  if (search) {
-    query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`)
-  }
+    const [rows, [{ count }]] = await Promise.all([
+      db
+        .select()
+        .from(customers)
+        .where(where)
+        .orderBy(desc(customers.created_at))
+        .limit(limit)
+        .offset(offset),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(customers)
+        .where(where),
+    ])
 
-  const { data, error, count } = await query
-    .order('created_at', { ascending: false })
-    .range(from, to)
-
-  if (error) return { data: null, error }
-
-  return {
-    data: {
-      data: data as Customer[],
-      total: count ?? 0,
-      page,
-      limit,
-      totalPages: Math.ceil((count ?? 0) / limit),
-    },
-    error: null,
+    return {
+      data: {
+        data: (rows as DbCustomer[]).map(mapCustomer),
+        total: count,
+        page,
+        limit,
+        totalPages: Math.ceil(count / limit),
+      },
+      error: null,
+    }
+  } catch (err) {
+    return { data: null, error: err as Error }
   }
 }
 
-export async function getCustomerById(supabase: SupabaseClient, id: number) {
-  return supabase.from('customers').select('*').eq('id', id).single<Customer>()
+export async function getCustomerById(
+  id: number,
+): Promise<{ data: Customer | null; error: Error | null }> {
+  try {
+    const [row] = await db.select().from(customers).where(eq(customers.id, id))
+    if (!row) return { data: null, error: new Error('Customer not found') }
+    return { data: mapCustomer(row as DbCustomer), error: null }
+  } catch (err) {
+    return { data: null, error: err as Error }
+  }
 }
 
 export async function createCustomer(
-  supabase: SupabaseClient,
   data: CustomerInsert,
-) {
-  return supabase.from('customers').insert(data).select().single<Customer>()
+): Promise<{ data: Customer | null; error: Error | null }> {
+  try {
+    const [row] = await db.insert(customers).values(data).returning()
+    return { data: mapCustomer(row as DbCustomer), error: null }
+  } catch (err) {
+    return { data: null, error: err as Error }
+  }
 }
 
 export async function updateCustomer(
-  supabase: SupabaseClient,
   id: number,
   data: CustomerUpdate,
-) {
-  return supabase
-    .from('customers')
-    .update({ ...data, updated_at: new Date().toISOString() })
-    .eq('id', id)
-    .select()
-    .single<Customer>()
+): Promise<{ data: Customer | null; error: Error | null }> {
+  try {
+    const [row] = await db
+      .update(customers)
+      .set({ ...data, updated_at: new Date() })
+      .where(eq(customers.id, id))
+      .returning()
+    if (!row) return { data: null, error: new Error('Customer not found') }
+    return { data: mapCustomer(row as DbCustomer), error: null }
+  } catch (err) {
+    return { data: null, error: err as Error }
+  }
 }
 
-export async function deleteCustomer(supabase: SupabaseClient, id: number) {
-  return supabase.from('customers').delete().eq('id', id)
+export async function deleteCustomer(id: number): Promise<{ error: Error | null }> {
+  try {
+    await db.delete(customers).where(eq(customers.id, id))
+    return { error: null }
+  } catch (err) {
+    return { error: err as Error }
+  }
 }

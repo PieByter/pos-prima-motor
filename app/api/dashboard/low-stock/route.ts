@@ -4,8 +4,8 @@ import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    const supabase = await createClient()
-    const { data, error } = await getLowStockAlerts(supabase)
+    await createClient()
+    const { data, error } = await getLowStockAlerts()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json(data)

@@ -75,27 +75,28 @@ export function MobileSidebar() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <button className="sm:hidden p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer">
+        <button className="sm:hidden rounded-xl border border-slate-200/80 bg-white/80 p-2.5 text-slate-600 shadow-sm backdrop-blur transition-colors hover:bg-white dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:bg-slate-900">
           <Menu className="h-5 w-5" />
         </button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-64 p-0">
+      <SheetContent side="left" className="w-72 p-0 bg-white/95 backdrop-blur-xl dark:bg-slate-950/95">
         <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
 
-        {/* Logo */}
-        <div className="h-16 flex items-center px-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex h-16 items-center border-b border-slate-200/80 px-6 dark:border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="bg-sky-500 text-white p-1.5 rounded-lg">
+            <div
+              className="rounded-2xl p-1.5 text-white shadow-lg shadow-sky-500/25"
+              style={{ backgroundColor: "#0ea5e9" }}
+            >
               <Bike className="h-5 w-5" />
             </div>
-            <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+            <span className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
               Prima<span className="text-sky-500">Motor</span>
             </span>
           </div>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
           {sidebarNav.map((item, idx) => {
             if ("href" in item) {
               const Icon = item.icon;
@@ -105,21 +106,21 @@ export function MobileSidebar() {
                   href={item.href}
                   onClick={() => setOpen(false)}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
+                    "flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-medium transition-all",
                     isActive(item.href)
-                      ? "bg-sky-500/10 text-sky-500"
-                      : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+                      ? "bg-sky-500/10 text-sky-700 ring-1 ring-inset ring-sky-500/10 dark:text-sky-300"
+                      : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/80 dark:hover:text-slate-100"
                   )}
                 >
-                  <Icon className="h-5 w-5" />
-                  <span className="font-medium">{item.label}</span>
+                  <Icon className="h-5 w-5 text-slate-400" />
+                  <span>{item.label}</span>
                 </Link>
               );
             }
 
             return (
               <div key={idx}>
-                <div className="pt-4 pb-2 px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                <div className="px-3 pb-2 pt-5 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
                   {item.group}
                 </div>
                 {item.items.map((subItem) => {
@@ -130,14 +131,14 @@ export function MobileSidebar() {
                       href={subItem.href}
                       onClick={() => setOpen(false)}
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
+                        "flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-medium transition-all",
                         isActive(subItem.href)
-                          ? "bg-sky-500/10 text-sky-500"
-                          : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+                          ? "bg-sky-500/10 text-sky-700 ring-1 ring-inset ring-sky-500/10 dark:text-sky-300"
+                          : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/80 dark:hover:text-slate-100"
                       )}
                     >
-                      <SubIcon className="h-5 w-5" />
-                      <span className="font-medium">{subItem.label}</span>
+                      <SubIcon className="h-5 w-5 text-slate-400" />
+                      <span>{subItem.label}</span>
                     </Link>
                   );
                 })}
@@ -146,26 +147,28 @@ export function MobileSidebar() {
           })}
         </nav>
 
-        {/* User */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-9 w-9">
-              <AvatarFallback className="bg-sky-500 text-white text-sm font-medium">
+        <div className="border-t border-slate-200/80 p-4 dark:border-slate-800">
+          <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-slate-50/90 px-3 py-3 dark:border-slate-800 dark:bg-slate-900/60">
+            <Avatar className="h-10 w-10">
+              <AvatarFallback
+                className="text-sm font-semibold text-white"
+                style={{ backgroundColor: "#0ea5e9" }}
+              >
                 A
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
                 Administrator
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+              <p className="truncate text-xs text-slate-500 dark:text-slate-400">
                 admin@primamotor.com
               </p>
             </div>
             <button
               type="button"
               onClick={handleLogout}
-              className="text-gray-400 hover:text-gray-500 cursor-pointer"
+              className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-200/80 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
             >
               <LogOut className="h-5 w-5" />
             </button>

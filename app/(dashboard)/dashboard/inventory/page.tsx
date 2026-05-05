@@ -208,40 +208,42 @@ export default function InventoryPage() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                Stock Status
-              </label>
-              <select
-                className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:w-44"
-                value={status}
-                onChange={(e) => {
-                  setStatus(e.target.value as "all" | "low" | "critical");
+            <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row sm:items-center sm:gap-6">
+              <div className="flex items-center gap-3">
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                  Stock Status
+                </label>
+                <select
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:w-44"
+                  value={status}
+                  onChange={(e) => {
+                    setStatus(e.target.value as "all" | "low" | "critical");
+                    setPage(1);
+                  }}
+                >
+                  <option value="all">All</option>
+                  <option value="low">Low (&lt;= 5)</option>
+                  <option value="critical">Critical (&lt;= 2)</option>
+                </select>
+              </div>
+              <Button
+                className="h-9 bg-sky-500 text-white hover:bg-sky-600"
+                onClick={() => {
                   setPage(1);
+                  loadInventory();
                 }}
+                disabled={loading}
               >
-                <option value="all">All</option>
-                <option value="low">Low (&lt;= 5)</option>
-                <option value="critical">Critical (&lt;= 2)</option>
-              </select>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    Loading
+                  </>
+                ) : (
+                  "Apply"
+                )}
+              </Button>
             </div>
-            <Button
-              className="h-9 bg-sky-500 text-white hover:bg-sky-600"
-              onClick={() => {
-                setPage(1);
-                loadInventory();
-              }}
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                  Loading
-                </>
-              ) : (
-                "Apply"
-              )}
-            </Button>
           </div>
           {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
         </DashboardCard>

@@ -79,6 +79,10 @@ export function ItemsTable() {
           } catch {
             // Fall back to status-only error message
           }
+          if (response.status === 500) {
+            setItems([]);
+            return;
+          }
           throw new Error(errorMessage);
         }
         const result = await response.json();

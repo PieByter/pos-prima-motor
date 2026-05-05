@@ -1,25 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Database,
   ShoppingCart,
-  Truck,
   Package,
   BarChart3,
   Settings,
   LogOut,
   Bike,
   Users,
+  Building2,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { LucideIcon } from "lucide-react";
 
-type NavLink = { label: string; href: string; icon: LucideIcon };
+type NavLink = { label: string; href: string; icon: LucideIcon; color?: string };
 type NavGroup = { group: string; items: NavLink[] };
 type NavItem = NavLink | NavGroup;
 
@@ -30,59 +30,46 @@ const sidebarNav: NavItem[] = [
     icon: LayoutDashboard,
   },
   {
-    group: "Management",
+    group: "Data Master",
     items: [
-      { label: "Master Data", href: "/dashboard/master-data", icon: Database },
-      { label: "Customers", href: "/dashboard/customers", icon: Users },
-      { label: "Suppliers", href: "/dashboard/suppliers", icon: Truck },
+      { label: "Data Produk", href: "/dashboard/master-data", icon: Database },
+      { label: "Data Customer", href: "/dashboard/customers", icon: Users },
+      { label: "Data Supplier", href: "/dashboard/suppliers", icon: Building2 },
+    ],
+  },
+  {
+    group: "Transaksi",
+    items: [
       { label: "Penjualan", href: "/dashboard/transactions/sales", icon: ShoppingCart },
-      { label: "Pembelian", href: "/dashboard/transactions/purchases", icon: Truck },
+      { label: "Pembelian", href: "/dashboard/transactions/purchases", icon: ClipboardList },
       { label: "Inventory", href: "/dashboard/inventory", icon: Package },
     ],
   },
   {
-    group: "Analytics & Tools",
+    group: "Laporan & Pengaturan",
     items: [
-      { label: "Reports", href: "/dashboard/reports", icon: BarChart3 },
-      { label: "Settings", href: "/dashboard/settings", icon: Settings },
+      { label: "Laporan", href: "/dashboard/reports", icon: BarChart3 },
+      { label: "Pengaturan", href: "/dashboard/settings", icon: Settings },
     ],
   },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
-  const [userName, setUserName] = useState("Username");
-  const [userEmail, setUserEmail] = useState("email@example.com");
-
-  useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        const response = await fetch("/api/auth/me", { cache: "no-store" });
-        if (!response.ok) return;
-        const data = await response.json();
-        const name = data?.profile?.name ?? "Username";
-        const email = data?.user?.email ?? "email@example.com";
-        setUserName(name);
-        setUserEmail(email);
-      } catch (error) {
-        console.error("Failed to load profile:", error);
-      }
-    };
-
-    loadProfile();
-  }, []);
-
-  const initials = userName
-    .split(" ")
-    .filter(Boolean)
-    .map((part: string) => part[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+  const router = useRouter();
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
     return pathname.startsWith(href);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      router.replace("/login");
+      router.refresh();
+    }
   };
 
   return (
@@ -90,7 +77,7 @@ export function Sidebar() {
       {/* Logo */}
       <div className="h-16 flex items-center px-6 border-b border-slate-200 dark:border-slate-800 shrink-0">
         <Link href="/dashboard" className="flex items-center gap-3">
-          <div className="bg-sky-500 text-white p-1.5 rounded-lg">
+          <div className="bg-sky-500 text-white p-1.5 rounded-lg shadow-sm shadow-sky-500/40">
             <Bike className="h-5 w-5" />
           </div>
           <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -100,50 +87,59 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 py-6 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {sidebarNav.map((item, idx) => {
           if ("href" in item) {
             const Icon = item.icon;
+            const active = isActive(item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group",
-                  isActive(item.href)
-                    ? "bg-sky-500/10 text-sky-500"
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 group",
+                  active
+                    ? "bg-sky-500/10 text-sky-600 dark:text-sky-400 font-semibold"
                     : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
                 )}
               >
-                <Icon className="h-5 w-5 shrink-0" />
-                <span className="font-medium text-sm">{item.label}</span>
+                <Icon
+                  className={cn(
+                    "h-4.5 w-4.5 shrink-0 transition-colors",
+                    active ? "text-sky-500" : "group-hover:text-sky-500"
+                  )}
+                />
+                <span className="text-sm">{item.label}</span>
               </Link>
             );
           }
 
           return (
-            <div key={idx}>
-              <div className="pt-4 pb-2 px-3 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+            <div key={idx} className="pt-4 pb-1">
+              <p className="px-3 pb-1.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                 {item.group}
-              </div>
+              </p>
               {item.items.map((subItem) => {
                 const SubIcon = subItem.icon;
+                const active = isActive(subItem.href);
                 return (
                   <Link
                     key={subItem.href}
                     href={subItem.href}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group",
-                      isActive(subItem.href)
-                        ? "bg-sky-500/10 text-sky-500"
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 group",
+                      active
+                        ? "bg-sky-500/10 text-sky-600 dark:text-sky-400 font-semibold"
                         : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
                     )}
                   >
-                    <SubIcon className={cn(
-                      "h-5 w-5 shrink-0 transition-colors",
-                      !isActive(subItem.href) && "group-hover:text-sky-500"
-                    )} />
-                    <span className="font-medium text-sm">{subItem.label}</span>
+                    <SubIcon
+                      className={cn(
+                        "h-4.5 w-4.5 shrink-0 transition-colors",
+                        active ? "text-sky-500" : "group-hover:text-sky-500"
+                      )}
+                    />
+                    <span className="text-sm">{subItem.label}</span>
                   </Link>
                 );
               })}
@@ -153,23 +149,28 @@ export function Sidebar() {
       </nav>
 
       {/* User Footer */}
-      <div className="p-4 border-t border-slate-200 dark:border-slate-800 shrink-0">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-9 w-9 shrink-0">
-            <AvatarFallback className="bg-sky-500 text-white text-sm font-medium">
-              {initials || "A"}
+      <div className="p-3 border-t border-slate-200 dark:border-slate-800 shrink-0">
+        <div className="flex items-center gap-3 px-2 py-2">
+          <Avatar className="h-8 w-8 shrink-0">
+            <AvatarFallback className="bg-sky-500 text-white text-xs font-bold">
+              A
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-              {userName}
+            <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+              Administrator
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-              {userEmail}
+              admin@primamotor.com
             </p>
           </div>
-          <button className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer shrink-0">
-            <LogOut className="h-5 w-5" />
+          <button
+            className="text-slate-400 hover:text-red-500 cursor-pointer shrink-0 p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+            title="Keluar"
+            onClick={handleLogout}
+            aria-label="Keluar"
+          >
+            <LogOut className="h-4 w-4" />
           </button>
         </div>
       </div>

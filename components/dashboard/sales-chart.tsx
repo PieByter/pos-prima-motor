@@ -37,7 +37,14 @@ export function SalesChart() {
         const response = await fetch(
           `/api/dashboard/chart?start=${start.toISOString().split("T")[0]}&end=${end.toISOString().split("T")[0]}`,
         );
-        if (!response.ok) throw new Error("Failed to fetch");
+        if (!response.ok) {
+          if (response.status === 500) {
+            setData([]);
+            return;
+          }
+          throw new Error("Failed to fetch");
+        }
+        
         const result = await response.json();
         const mapped = (result ?? []).map(
           (row: { date: string; amount: number }) => ({

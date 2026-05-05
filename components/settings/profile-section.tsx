@@ -26,9 +26,9 @@ export function ProfileSection() {
     loadProfile();
   }, []);
 
-  const name = data?.profile?.name ?? "User";
-  const email = data?.user?.email ?? "-";
-  const role = data?.profile?.role ?? "-";
+  const name = data?.profile?.name ?? "Username";
+  const email = data?.user?.email ?? "email@example.com";
+  const role = data?.profile?.role ?? "User";
   const initials = name
     .split(" ")
     .filter(Boolean)

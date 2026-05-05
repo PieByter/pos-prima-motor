@@ -6,7 +6,6 @@ import {
   Plus,
   Pencil,
   Trash2,
-  Truck,
   ChevronLeft,
   ChevronRight,
   Phone,

@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ImageIcon,
+  Package2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -33,7 +34,7 @@ import { formatRupiah, getStockStatus, CATEGORIES, type Item } from "@/lib/data/
 import { Loader } from "lucide-react";
 import { ItemFormDialog } from "./item-form-dialog";
 
-const ITEMS_PER_PAGE = 5;
+const ITEMS_PER_PAGE = 10;
 
 type ApiItem = {
   id: number;
@@ -69,7 +70,17 @@ export function ItemsTable() {
         params.append("limit", ITEMS_PER_PAGE.toString());
 
         const response = await fetch(`/api/items?${params}`);
-        if (!response.ok) throw new Error("Failed to fetch items");
+        if (!response.ok) {
+          let errorMessage = `Failed to fetch items (${response.status})`;
+          try {
+            const errorText = await response.text();
+            const parsed = errorText ? JSON.parse(errorText) : null;
+            if (parsed?.error) errorMessage += `: ${parsed.error}`;
+          } catch {
+            // Fall back to status-only error message
+          }
+          throw new Error(errorMessage);
+        }
         const result = await response.json();
         const rows: ApiItem[] = result.data || result || [];
         const mapped: Item[] = rows.map((row) => ({
@@ -96,11 +107,9 @@ export function ItemsTable() {
     fetchItems();
   }, [search, categoryFilter, currentPage]);
 
-  // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
 
-  // Apply stock filter on frontend (API doesn't handle this)
   const filteredItems = items.filter((item) => {
     if (stockFilter === "all") return true;
     if (stockFilter === "critical") return item.stock <= 5;
@@ -125,6 +134,7 @@ export function ItemsTable() {
   }
 
   async function handleDeleteItem(id: number) {
+    if (!confirm("Yakin ingin menghapus item ini?")) return;
     try {
       const response = await fetch(`/api/items/${id}`, { method: "DELETE" });
       if (!response.ok) throw new Error("Failed to delete item");
@@ -167,7 +177,6 @@ export function ItemsTable() {
       setEditingItem(null);
       setCurrentPage(1);
 
-      // Refresh list from API to keep table consistent with DB state.
       const refresh = await fetch(`/api/items?page=1&limit=${ITEMS_PER_PAGE}`, {
         cache: "no-store",
       });
@@ -195,40 +204,45 @@ export function ItemsTable() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Master Data - Items
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Manage your sparepart inventory items
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-sky-500 rounded-xl">
+            <Package2 className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              Daftar Barang
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {isLoading ? "Memuat..." : `${filteredItems.length} item ditemukan`}
+            </p>
+          </div>
         </div>
         <Button
           onClick={handleAddItem}
-          className="bg-sky-500 hover:bg-sky-600 text-white gap-2 self-start sm:self-auto"
+          className="bg-sky-500 hover:bg-sky-600 text-white gap-2 self-start sm:self-auto shadow-sm shadow-sky-500/30"
         >
           <Plus className="h-4 w-4" />
-          Add Item
+          Tambah Item
         </Button>
       </div>
 
       {/* Search & Filters */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
         <div className="flex flex-col sm:flex-row gap-3">
           {/* Search */}
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
-              placeholder="Search by name or SKU..."
+              placeholder="Cari nama atau SKU..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setCurrentPage(1);
               }}
-              className="pl-9"
+              className="pl-9 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
             />
           </div>
 
@@ -240,11 +254,11 @@ export function ItemsTable() {
               setCurrentPage(1);
             }}
           >
-            <SelectTrigger className="w-full sm:w-45">
-              <SelectValue placeholder="All Categories" />
+            <SelectTrigger className="w-full sm:w-44 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+              <SelectValue placeholder="Semua Kategori" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value="all">Semua Kategori</SelectItem>
               {CATEGORIES.map((cat) => (
                 <SelectItem key={cat} value={cat}>
                   {cat}
@@ -261,120 +275,144 @@ export function ItemsTable() {
               setCurrentPage(1);
             }}
           >
-            <SelectTrigger className="w-full sm:w-40">
-              <SelectValue placeholder="All Status" />
+            <SelectTrigger className="w-full sm:w-40 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+              <SelectValue placeholder="Semua Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="safe">In Stock</SelectItem>
-              <SelectItem value="warning">Low Stock</SelectItem>
-              <SelectItem value="critical">Critical</SelectItem>
+              <SelectItem value="all">Semua Status</SelectItem>
+              <SelectItem value="safe">Stok Aman</SelectItem>
+              <SelectItem value="warning">Stok Rendah</SelectItem>
+              <SelectItem value="critical">Kritis</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50 dark:bg-slate-700/50">
-                <TableHead className="w-15">Photo</TableHead>
-                <TableHead>Item Name</TableHead>
-                <TableHead>
-                  SKU / Code
+              <TableRow className="bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700">
+                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 w-14">
+                  Foto
                 </TableHead>
-                <TableHead>
-                  Category
+                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Nama Barang
                 </TableHead>
-                <TableHead className="text-right">
-                  Purchase Price
+                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  SKU
                 </TableHead>
-                <TableHead className="text-right">Selling Price</TableHead>
-                <TableHead className="text-center">Stock</TableHead>
-                <TableHead className="text-center w-25">
-                  Actions
+                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Kategori
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">
+                  Harga Beli
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">
+                  Harga Jual
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center">
+                  Stok
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center w-24">
+                  Aksi
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedItems.length === 0 ? (
+              {isLoading ? (
                 <TableRow>
-                  <TableCell
-                    colSpan={8}
-                    className="text-center py-12 text-gray-500 dark:text-gray-400 flex items-center justify-center"
-                  >
-                    {isLoading ? (
-                      <Loader className="h-6 w-6 animate-spin text-gray-400 mx-auto" />
-                    ) : (
-                      "No items found."
-                    )}
+                  <TableCell colSpan={8} className="text-center py-16">
+                    <div className="flex flex-col items-center gap-3">
+                      <Loader className="h-7 w-7 animate-spin text-sky-500" />
+                      <span className="text-sm text-slate-500 dark:text-slate-400">
+                        Memuat data...
+                      </span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : paginatedItems.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-16">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-full">
+                        <Package2 className="h-6 w-6 text-slate-400" />
+                      </div>
+                      <span className="text-sm text-slate-500 dark:text-slate-400">
+                        Tidak ada item ditemukan
+                      </span>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (
                 paginatedItems.map((item) => {
                   const stockStatus = getStockStatus(item.stock);
+                  const stockBadgeClass =
+                    stockStatus.variant === "critical"
+                      ? "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-400"
+                      : stockStatus.variant === "warning"
+                      ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+                      : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400";
+
                   return (
                     <TableRow
                       key={item.id}
-                      className="hover:bg-gray-50 dark:hover:bg-slate-700/30"
+                      className="border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                     >
                       {/* Thumbnail */}
                       <TableCell>
-                        <div className="h-10 w-10 rounded-lg bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+                        <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
                           {item.picture ? (
                             <Image
                               src={item.picture}
                               alt={item.name}
                               width={40}
                               height={40}
-                              className="h-10 w-10 rounded-lg object-cover"
+                              className="h-10 w-10 object-cover"
                             />
                           ) : (
-                            <ImageIcon className="h-5 w-5 text-gray-400" />
+                            <ImageIcon className="h-4 w-4 text-slate-400" />
                           )}
                         </div>
                       </TableCell>
 
                       {/* Name & Description */}
                       <TableCell>
-                        <div>
-                          <p className="font-medium text-gray-900 dark:text-white">
-                            {item.name}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        <p className="font-semibold text-slate-900 dark:text-white text-sm">
+                          {item.name}
+                        </p>
+                        {item.description && (
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-48 truncate">
                             {item.description}
                           </p>
-                          {/* Mobile: show SKU below name */}
-                          <p className="hidden">
-                            {item.sku}
-                          </p>
-                        </div>
+                        )}
                       </TableCell>
 
                       {/* SKU */}
-                      <TableCell className="font-mono text-sm text-gray-600 dark:text-gray-300">
-                        {item.sku}
+                      <TableCell>
+                        <span className="font-mono text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                          {item.sku}
+                        </span>
                       </TableCell>
 
                       {/* Category */}
                       <TableCell>
                         <Badge
                           variant="secondary"
-                          className="text-xs font-normal"
+                          className="text-xs font-medium bg-sky-50 text-sky-700 border border-sky-200 dark:bg-sky-900/20 dark:text-sky-400 dark:border-sky-800"
                         >
                           {item.category}
                         </Badge>
                       </TableCell>
 
                       {/* Purchase Price */}
-                      <TableCell className="text-right text-sm text-gray-600 dark:text-gray-300">
+                      <TableCell className="text-right text-sm text-slate-600 dark:text-slate-400 font-mono">
                         {formatRupiah(item.purchasePrice)}
                       </TableCell>
 
                       {/* Selling Price */}
-                      <TableCell className="text-right text-sm font-medium text-gray-900 dark:text-white">
+                      <TableCell className="text-right text-sm font-semibold text-slate-900 dark:text-white font-mono">
                         {formatRupiah(item.sellingPrice)}
                       </TableCell>
 
@@ -382,13 +420,7 @@ export function ItemsTable() {
                       <TableCell className="text-center">
                         <Badge
                           variant="outline"
-                          className={`text-xs ${
-                            stockStatus.variant === "critical"
-                              ? "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-400"
-                              : stockStatus.variant === "warning"
-                              ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
-                              : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400"
-                          }`}
+                          className={`text-xs font-medium ${stockBadgeClass}`}
                         >
                           {stockStatus.label}
                         </Badge>
@@ -400,7 +432,7 @@ export function ItemsTable() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-gray-500 hover:text-sky-500"
+                            className="h-8 w-8 text-slate-400 hover:text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-900/20"
                             onClick={() => handleEditItem(item)}
                           >
                             <Pencil className="h-4 w-4" />
@@ -408,7 +440,7 @@ export function ItemsTable() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-gray-500 hover:text-red-500"
+                            className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
                             onClick={() => handleDeleteItem(item.id)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -425,33 +457,33 @@ export function ItemsTable() {
 
         {/* Pagination */}
         {filteredItems.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Showing{" "}
-              <span className="font-medium text-gray-900 dark:text-white">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Menampilkan{" "}
+              <span className="font-semibold text-slate-900 dark:text-white">
                 {startIndex}
               </span>{" "}
-              to{" "}
-              <span className="font-medium text-gray-900 dark:text-white">
+              –{" "}
+              <span className="font-semibold text-slate-900 dark:text-white">
                 {endIndex}
               </span>{" "}
-              of{" "}
-              <span className="font-medium text-gray-900 dark:text-white">
+              dari{" "}
+              <span className="font-semibold text-slate-900 dark:text-white">
                 {filteredItems.length}
               </span>{" "}
-              results
+              item
             </p>
             <div className="flex items-center gap-1">
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8"
+                className="h-8 w-8 border-slate-200 dark:border-slate-700"
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage((p) => p - 1)}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+              {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1).map(
                 (page) => (
                   <Button
                     key={page}
@@ -459,8 +491,8 @@ export function ItemsTable() {
                     size="icon"
                     className={`h-8 w-8 ${
                       currentPage === page
-                        ? "bg-sky-500 hover:bg-sky-600 text-white"
-                        : ""
+                        ? "bg-sky-500 hover:bg-sky-600 text-white border-sky-500"
+                        : "border-slate-200 dark:border-slate-700"
                     }`}
                     onClick={() => setCurrentPage(page)}
                   >
@@ -471,8 +503,8 @@ export function ItemsTable() {
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8"
-                disabled={currentPage === totalPages}
+                className="h-8 w-8 border-slate-200 dark:border-slate-700"
+                disabled={currentPage === totalPages || totalPages === 0}
                 onClick={() => setCurrentPage((p) => p + 1)}
               >
                 <ChevronRight className="h-4 w-4" />

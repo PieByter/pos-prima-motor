@@ -99,6 +99,18 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const getResponseError = async (response: Response) => {
+    let errorMessage = `Request failed (${response.status})`;
+    try {
+      const errorText = await response.text();
+      const parsed = errorText ? JSON.parse(errorText) : null;
+      if (parsed?.error) errorMessage += `: ${parsed.error}`;
+    } catch {
+      // Fall back to status-only error message
+    }
+    return errorMessage;
+  };
+
   const loadInventory = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -118,7 +130,24 @@ export default function InventoryPage() {
       ]);
 
       if (!stockRes.ok || !lowStockRes.ok || !movementRes.ok) {
-        throw new Error("Gagal mengambil data inventory.");
+        if (
+          stockRes.status === 500 ||
+          lowStockRes.status === 500 ||
+          movementRes.status === 500
+        ) {
+          setStock({ data: [], total: 0, page: 1, limit: 12, totalPages: 1 });
+          setLowStock([]);
+          setMovements({ data: [], total: 0, page: 1, limit: 8, totalPages: 1 });
+          return;
+        }
+
+        const errors = await Promise.all([
+          stockRes.ok ? null : getResponseError(stockRes),
+          lowStockRes.ok ? null : getResponseError(lowStockRes),
+          movementRes.ok ? null : getResponseError(movementRes),
+        ]);
+        const message = errors.filter(Boolean).join(" | ");
+        throw new Error(message || "Gagal mengambil data inventory.");
       }
 
       const [stockData, lowStockData, movementData] = await Promise.all([

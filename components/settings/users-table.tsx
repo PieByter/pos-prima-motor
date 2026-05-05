@@ -51,7 +51,21 @@ export function UsersTable() {
       setIsLoading(true);
       try {
         const response = await fetch("/api/users", { cache: "no-store" });
-        if (!response.ok) throw new Error("Failed to fetch users");
+        if (!response.ok) {
+          let errorMessage = `Failed to fetch users (${response.status})`;
+          try {
+            const errorText = await response.text();
+            const parsed = errorText ? JSON.parse(errorText) : null;
+            if (parsed?.error) errorMessage += `: ${parsed.error}`;
+          } catch {
+            // Fall back to status-only error message
+          }
+          if (response.status === 500) {
+            setUsers([]);
+            return;
+          }
+          throw new Error(errorMessage);
+        }
 
         const json = await response.json();
         const rows = (json ?? []) as Array<{

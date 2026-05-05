@@ -12,10 +12,10 @@ export default function SettingsPage() {
         subtitle="Kelola profil dan pengguna sistem."
       />
 
-      <div className="max-w-5xl space-y-8">
+      <div className="w-full space-y-8">
         {/* Tabs */}
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="bg-transparent border-b border-slate-200 dark:border-slate-700 rounded-none w-full justify-start h-auto p-0 gap-8">
+          <TabsList className="bg-transparent border-b border-slate-200 dark:border-slate-700 rounded-none w-full justify-start h-auto p-0 gap-0">
             <TabsTrigger
               value="profile"
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-sky-500 data-[state=active]:text-sky-500 data-[state=active]:shadow-none bg-transparent px-1 pb-4 pt-2 font-medium text-sm gap-2"

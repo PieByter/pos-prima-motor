@@ -3,7 +3,7 @@ import { TransactionTable } from "@/components/transactions/transaction-table";
 
 export default function SalesPage() {
   return (
-    <>
+    <div className="space-y-6">
       <Navbar
         title="Penjualan"
         subtitle="Kelola dan lihat semua catatan penjualan."
@@ -14,6 +14,6 @@ export default function SalesPage() {
         entityLabel="Customer"
         showMechanic
       />
-    </>
+    </div>
   );
 }

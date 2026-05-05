@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -52,6 +52,34 @@ export function MobileSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [userName, setUserName] = useState("Username");
+  const [userEmail, setUserEmail] = useState("email@example.com");
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const response = await fetch("/api/auth/me", { cache: "no-store" });
+        if (!response.ok) return;
+        const data = await response.json();
+        const name = data?.profile?.name ?? "Username";
+        const email = data?.user?.email ?? "email@example.com";
+        setUserName(name);
+        setUserEmail(email);
+      } catch (error) {
+        console.error("Failed to load profile:", error);
+      }
+    };
+
+    loadProfile();
+  }, []);
+
+  const initials = userName
+    .split(" ")
+    .filter(Boolean)
+    .map((part: string) => part[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   const handleLogout = async () => {
     try {
@@ -154,15 +182,15 @@ export function MobileSidebar() {
                 className="text-sm font-semibold text-white"
                 style={{ backgroundColor: "#0ea5e9" }}
               >
-                A
+                {initials || "A"}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
-                Administrator
+                {userName}
               </p>
               <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                admin@primamotor.com
+                {userEmail}
               </p>
             </div>
             <button

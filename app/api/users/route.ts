@@ -8,7 +8,8 @@ export async function GET() {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json(data)
-  } catch {
+  } catch (error) {
+    console.error('Users GET failed:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -28,7 +29,8 @@ export async function POST(request: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
     return NextResponse.json(data, { status: 201 })
-  } catch {
+  } catch (error) {
+    console.error('Users POST failed:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

@@ -3,7 +3,7 @@ import { TransactionTable } from "@/components/transactions/transaction-table";
 
 export default function PurchasesPage() {
   return (
-    <>
+    <div className="space-y-6">
       <Navbar
         title="Pembelian"
         subtitle="Kelola dan lihat semua catatan pembelian dari supplier."
@@ -14,6 +14,6 @@ export default function PurchasesPage() {
         entityLabel="Supplier"
         showMechanic={false}
       />
-    </>
+    </div>
   );
 }

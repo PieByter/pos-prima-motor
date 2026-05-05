@@ -108,6 +108,23 @@ export default function ReportsPage() {
       ]);
 
       if (!salesRes.ok || !purchasesRes.ok || !profitLossRes.ok) {
+        if (
+          salesRes.status === 500 ||
+          purchasesRes.status === 500 ||
+          profitLossRes.status === 500
+        ) {
+          setSales({ total_sales: 0, total_transactions: 0, daily_breakdown: [] });
+          setPurchases({ total_purchases: 0, total_transactions: 0, daily_breakdown: [] });
+          setProfitLoss({
+            total_sales: 0,
+            total_purchases: 0,
+            gross_profit: 0,
+            total_service_fees: 0,
+            net_profit: 0,
+          });
+          return;
+        }
+
         throw new Error("Gagal mengambil data report.");
       }
 

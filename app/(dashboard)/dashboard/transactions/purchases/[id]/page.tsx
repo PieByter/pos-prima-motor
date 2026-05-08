@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
 import { TransactionDetail } from "@/components/transactions/transaction-detail";
 import type { InvoiceDetail } from "@/lib/data/invoice-details";
-import { createClient } from "@/lib/supabase/server";
 import { getPurchaseById } from "@/lib/services/purchases.service";
 
 type PageProps = {
@@ -11,8 +10,7 @@ type PageProps = {
 
 export default async function PurchaseDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const supabase = await createClient();
-  const { data: purchase } = await getPurchaseById(supabase, Number(id));
+  const { data: purchase } = await getPurchaseById(Number(id));
 
   if (!purchase) {
     notFound();

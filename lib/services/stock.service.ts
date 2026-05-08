@@ -1,6 +1,4 @@
-import { db } from '@/lib/db'
-import { stockMovements, stockSummary, items } from '@/lib/db/schema'
-import { eq, lte, desc, sql } from 'drizzle-orm'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { StockSummary, StockMovement, LowStockAlert, PaginatedResponse } from '@/lib/types/database'
 
 type StockFilters = {
@@ -11,44 +9,40 @@ type StockFilters = {
 }
 
 export async function getStockSummary(
+  supabase: SupabaseClient,
   filters: StockFilters = {},
 ): Promise<{ data: PaginatedResponse<StockSummary> | null; error: Error | null }> {
   try {
     const { search, stock_status, page = 1, limit = 10 } = filters
-    const offset = (page - 1) * limit
+    const from = (page - 1) * limit
+    const to = from + limit - 1
 
-    const conditions = []
+    let query = supabase
+      .from('stock_summary')
+      .select('*', { count: 'exact' })
+      .order('current_stock', { ascending: true })
+      .range(from, to)
+
     if (search) {
-      conditions.push(
-        sql`(${stockSummary.name} ilike ${'%' + search + '%'} OR ${stockSummary.sku} ilike ${'%' + search + '%'})`,
-      )
+      query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%`)
     }
-    if (stock_status === 'low') conditions.push(lte(stockSummary.current_stock, 5))
-    else if (stock_status === 'critical') conditions.push(lte(stockSummary.current_stock, 2))
+    if (stock_status === 'low') {
+      query = query.lte('current_stock', 5)
+    } else if (stock_status === 'critical') {
+      query = query.lte('current_stock', 2)
+    }
 
-    const where = conditions.length === 0 ? undefined : conditions.length === 1 ? conditions[0] : sql`${conditions[0]} AND ${conditions[1]}`
+    const { data, error, count } = await query
 
-    const [rows, [{ count }]] = await Promise.all([
-      db
-        .select()
-        .from(stockSummary)
-        .where(where)
-        .orderBy(stockSummary.current_stock)
-        .limit(limit)
-        .offset(offset),
-      db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(stockSummary)
-        .where(where),
-    ])
+    if (error) return { data: null, error: new Error(error.message) }
 
     return {
       data: {
-        data: rows as StockSummary[],
-        total: count,
+        data: (data ?? []) as StockSummary[],
+        total: count ?? 0,
         page,
         limit,
-        totalPages: Math.ceil(count / limit),
+        totalPages: Math.ceil((count ?? 0) / limit),
       },
       error: null,
     }
@@ -58,46 +52,43 @@ export async function getStockSummary(
 }
 
 export async function getStockMovements(
+  supabase: SupabaseClient,
   itemId?: number,
   page: number = 1,
   limit: number = 20,
 ): Promise<{ data: PaginatedResponse<StockMovement & { item: { name: string; sku: string } }> | null; error: Error | null }> {
   try {
-    const offset = (page - 1) * limit
+    const from = (page - 1) * limit
+    const to = from + limit - 1
 
-    const where = itemId ? eq(stockMovements.item_id, itemId) : undefined
+    let query = supabase
+      .from('stock_movements')
+      .select('*, items(name, sku)', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(from, to)
 
-    const [rows, [{ count }]] = await Promise.all([
-      db
-        .select({
-          movement: stockMovements,
-          item: { name: items.name, sku: items.sku },
-        })
-        .from(stockMovements)
-        .leftJoin(items, eq(stockMovements.item_id, items.id))
-        .where(where)
-        .orderBy(desc(stockMovements.created_at))
-        .limit(limit)
-        .offset(offset),
-      db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(stockMovements)
-        .where(where),
-    ])
+    if (itemId) {
+      query = query.eq('item_id', itemId)
+    }
 
-    const data = rows.map((r) => ({
-      ...r.movement,
-      item: { name: r.item?.name ?? '', sku: r.item?.sku ?? '' },
-      created_at: r.movement.created_at.toISOString(),
+    const { data, error, count } = await query
+
+    if (error) return { data: null, error: new Error(error.message) }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mapped = (data ?? []).map((r: any) => ({
+      ...r,
+      item: { name: r.items?.name ?? '', sku: r.items?.sku ?? '' },
+      items: undefined,
     }))
 
     return {
       data: {
-        data: data as (StockMovement & { item: { name: string; sku: string } })[],
-        total: count,
+        data: mapped as (StockMovement & { item: { name: string; sku: string } })[],
+        total: count ?? 0,
         page,
         limit,
-        totalPages: Math.ceil(count / limit),
+        totalPages: Math.ceil((count ?? 0) / limit),
       },
       error: null,
     }
@@ -107,21 +98,18 @@ export async function getStockMovements(
 }
 
 export async function getLowStockItems(
+  supabase: SupabaseClient,
   threshold: number = 5,
 ): Promise<{ data: LowStockAlert[] | null; error: Error | null }> {
   try {
-    const rows = await db
-      .select({
-        item_id: stockSummary.item_id,
-        name: stockSummary.name,
-        sku: stockSummary.sku,
-        current_stock: stockSummary.current_stock,
-      })
-      .from(stockSummary)
-      .where(lte(stockSummary.current_stock, threshold))
-      .orderBy(stockSummary.current_stock)
+    const { data, error } = await supabase
+      .from('stock_summary')
+      .select('item_id, name, sku, current_stock')
+      .lte('current_stock', threshold)
+      .order('current_stock', { ascending: true })
 
-    return { data: rows as LowStockAlert[], error: null }
+    if (error) return { data: null, error: new Error(error.message) }
+    return { data: (data ?? []) as LowStockAlert[], error: null }
   } catch (err) {
     return { data: null, error: err as Error }
   }

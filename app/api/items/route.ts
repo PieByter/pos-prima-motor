@@ -1,34 +1,49 @@
-import { getItems, createItem } from '@/lib/services/items.service'
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getItems, createItem } from '@/lib/services/items.service'
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
 
-    const { data, error } = await getItems({
+    const admin = createAdminClient()
+    const { data, error } = await getItems(admin, {
       search: searchParams.get('search') ?? undefined,
       category: searchParams.get('category') ?? undefined,
       page: Number(searchParams.get('page') ?? 1),
       limit: Number(searchParams.get('limit') ?? 10),
     })
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error || !data) {
+      console.error('Items GET failed:', error)
+      return NextResponse.json({ error: 'Failed to fetch items' }, { status: 500 })
+    }
     return NextResponse.json(data)
-  } catch (error) {
-    console.error('Items GET failed:', error)
+  } catch (err) {
+    console.error('Items GET unexpected error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { data, error } = await createItem(body)
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    const body = await request.json()
+
+    const admin = createAdminClient()
+    const { data, error } = await createItem(admin, body)
+
+    if (error || !data) {
+      console.error('Items POST failed:', error)
+      return NextResponse.json({ error: error?.message ?? 'Failed to create item' }, { status: 400 })
+    }
     return NextResponse.json(data, { status: 201 })
-  } catch (error) {
-    console.error('Items POST failed:', error)
+  } catch (err) {
+    console.error('Items POST unexpected error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

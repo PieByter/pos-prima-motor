@@ -13,8 +13,9 @@ export async function signIn(
   })
   if (error) return { data: null, error }
 
-  // Fetch profile for role info
-  const { data: profile } = await supabase
+  // Fetch profile using admin client to bypass RLS
+  const admin = createAdminClient()
+  const { data: profile } = await admin
     .from('profiles')
     .select('*')
     .eq('id', data.user.id)
@@ -41,40 +42,27 @@ export async function signUp(
   })
   if (error) return { data: null, error }
 
-  // Auto-confirm email using admin client (for development/testing)
-  if (data.user && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (data.user) {
+    const admin = createAdminClient()
+
+    // Auto-confirm email using admin client
     try {
-      const admin = createAdminClient()
       await admin.auth.admin.updateUserById(data.user.id, {
         email_confirm: true,
       })
     } catch (confirmError) {
       console.warn("Could not auto-confirm email:", confirmError)
-      // Continue anyway - user can still be created
-    }
-  }
-
-  // Create profile record
-  if (data.user) {
-    const profilePayload = {
-      id: data.user.id,
-      name: metadata.name,
-      role: metadata.role,
-      is_active: true,
     }
 
-    let { error: profileError } = await supabase
+    // Create profile record using admin client (bypasses RLS)
+    const { error: profileError } = await admin
       .from('profiles')
-      .insert(profilePayload)
-
-    // Fallback with service-role client when RLS blocks anon/session insert.
-    if (profileError && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      const admin = createAdminClient()
-      const { error: adminProfileError } = await admin
-        .from('profiles')
-        .upsert(profilePayload)
-      profileError = adminProfileError ?? null
-    }
+      .upsert({
+        id: data.user.id,
+        name: metadata.name,
+        role: metadata.role,
+        is_active: true,
+      })
 
     if (profileError) return { data: null, error: profileError }
   }
@@ -93,7 +81,9 @@ export async function getCurrentUser(supabase: SupabaseClient) {
   } = await supabase.auth.getUser()
   if (error || !user) return { data: null, error }
 
-  const { data: profile } = await supabase
+  // Fetch profile using admin client to bypass RLS
+  const admin = createAdminClient()
+  const { data: profile } = await admin
     .from('profiles')
     .select('*')
     .eq('id', user.id)
@@ -103,7 +93,9 @@ export async function getCurrentUser(supabase: SupabaseClient) {
 }
 
 export async function getProfile(supabase: SupabaseClient, userId: string) {
-  return supabase
+  // Use admin for profile reads to bypass RLS
+  const admin = createAdminClient()
+  return admin
     .from('profiles')
     .select('*')
     .eq('id', userId)
@@ -115,7 +107,9 @@ export async function updateProfile(
   userId: string,
   data: Partial<Pick<Profile, 'name' | 'profile_picture'>>,
 ) {
-  return supabase
+  // Use admin for profile updates to bypass RLS
+  const admin = createAdminClient()
+  return admin
     .from('profiles')
     .update({ ...data, updated_at: new Date().toISOString() })
     .eq('id', userId)

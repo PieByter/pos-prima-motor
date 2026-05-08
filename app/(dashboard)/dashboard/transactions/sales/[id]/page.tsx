@@ -3,6 +3,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { TransactionDetail } from "@/components/transactions/transaction-detail";
 import type { InvoiceDetail } from "@/lib/data/invoice-details";
 import { getSaleById } from "@/lib/services/sales.service";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -10,7 +11,8 @@ type PageProps = {
 
 export default async function SaleDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const { data: sale } = await getSaleById(Number(id));
+  const admin = createAdminClient();
+  const { data: sale } = await getSaleById(admin, Number(id));
 
   if (!sale) {
     notFound();

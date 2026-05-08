@@ -1,5 +1,6 @@
-import { getSummaryCards } from '@/lib/services/dashboard.service'
 import { NextRequest, NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getSummaryCards } from '@/lib/services/dashboard.service'
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,11 +9,17 @@ export async function GET(request: NextRequest) {
     const end = searchParams.get('end') ?? undefined
 
     const dateRange = start && end ? { start, end } : undefined
-    const { data, error } = await getSummaryCards(dateRange)
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    const admin = createAdminClient()
+    const { data, error } = await getSummaryCards(admin, dateRange)
+
+    if (error || !data) {
+      console.error('Dashboard summary GET failed:', error)
+      return NextResponse.json({ error: 'Failed to fetch summary' }, { status: 500 })
+    }
     return NextResponse.json(data)
-  } catch {
+  } catch (err) {
+    console.error('Dashboard summary GET unexpected error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

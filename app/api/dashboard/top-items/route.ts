@@ -1,5 +1,6 @@
-import { getTopSellingItems } from '@/lib/services/dashboard.service'
 import { NextRequest, NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getTopSellingItems } from '@/lib/services/dashboard.service'
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,11 +10,17 @@ export async function GET(request: NextRequest) {
     const end = searchParams.get('end') ?? undefined
 
     const dateRange = start && end ? { start, end } : undefined
-    const { data, error } = await getTopSellingItems(limit, dateRange)
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    const admin = createAdminClient()
+    const { data, error } = await getTopSellingItems(admin, limit, dateRange)
+
+    if (error) {
+      console.error('Dashboard top-items GET failed:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
     return NextResponse.json(data)
-  } catch {
+  } catch (err) {
+    console.error('Dashboard top-items GET unexpected error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

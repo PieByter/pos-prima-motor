@@ -3,6 +3,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { TransactionDetail } from "@/components/transactions/transaction-detail";
 import type { InvoiceDetail } from "@/lib/data/invoice-details";
 import { getPurchaseById } from "@/lib/services/purchases.service";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -10,7 +11,8 @@ type PageProps = {
 
 export default async function PurchaseDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const { data: purchase } = await getPurchaseById(Number(id));
+  const admin = createAdminClient();
+  const { data: purchase } = await getPurchaseById(admin, Number(id));
 
   if (!purchase) {
     notFound();

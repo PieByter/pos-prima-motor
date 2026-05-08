@@ -42,6 +42,18 @@ export function CustomersTable() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
+  async function readApiErrorMessage(res: Response, fallback: string) {
+    try {
+      const text = await res.text();
+      if (!text) return fallback;
+
+      const parsed = JSON.parse(text) as { error?: string; message?: string };
+      return parsed.error || parsed.message || fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
   const pageInfo = useMemo(
     () => ({
       start: total === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1,
@@ -111,11 +123,14 @@ export function CustomersTable() {
     if (!confirm("Yakin ingin menghapus customer ini?")) return;
     try {
       const res = await fetch(`/api/customers/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Gagal menghapus");
+      if (!res.ok) {
+        throw new Error(await readApiErrorMessage(res, "Gagal menghapus"));
+      }
       setCurrentPage(1);
       await fetchCustomers(1);
     } catch (err) {
       console.error(err);
+      setError(err instanceof Error ? err.message : "Gagal menghapus customer.");
     }
   }
 
@@ -127,14 +142,18 @@ export function CustomersTable() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
         });
-        if (!res.ok) throw new Error("Gagal update");
+        if (!res.ok) {
+          throw new Error(await readApiErrorMessage(res, "Gagal update"));
+        }
       } else {
         const res = await fetch("/api/customers", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
         });
-        if (!res.ok) throw new Error("Gagal tambah");
+        if (!res.ok) {
+          throw new Error(await readApiErrorMessage(res, "Gagal tambah"));
+        }
       }
       setDialogOpen(false);
       setEditingCustomer(null);
@@ -142,6 +161,7 @@ export function CustomersTable() {
       await fetchCustomers(1);
     } catch (err) {
       console.error(err);
+      setError(err instanceof Error ? err.message : "Gagal menyimpan customer.");
     }
   }
 

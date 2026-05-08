@@ -1,32 +1,49 @@
-import { getDiscounts, createDiscount } from '@/lib/services/discounts.service'
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getDiscounts, createDiscount } from '@/lib/services/discounts.service'
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
 
-    const { data, error } = await getDiscounts({
+    const admin = createAdminClient()
+    const { data, error } = await getDiscounts(admin, {
       search: searchParams.get('search') ?? undefined,
       is_active: searchParams.get('is_active') ? searchParams.get('is_active') === 'true' : undefined,
       page: Number(searchParams.get('page') ?? 1),
       limit: Number(searchParams.get('limit') ?? 10),
     })
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error || !data) {
+      console.error('Discounts GET failed:', error)
+      return NextResponse.json({ error: 'Failed to fetch discounts' }, { status: 500 })
+    }
     return NextResponse.json(data)
-  } catch {
+  } catch (err) {
+    console.error('Discounts GET unexpected error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { discount, itemIds } = await request.json()
-    const { data, error } = await createDiscount(discount, itemIds ?? [])
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    const { discount, itemIds } = await request.json()
+
+    const admin = createAdminClient()
+    const { data, error } = await createDiscount(admin, discount, itemIds ?? [])
+
+    if (error || !data) {
+      console.error('Discounts POST failed:', error)
+      return NextResponse.json({ error: error?.message ?? 'Failed to create discount' }, { status: 400 })
+    }
     return NextResponse.json(data, { status: 201 })
-  } catch {
+  } catch (err) {
+    console.error('Discounts POST unexpected error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

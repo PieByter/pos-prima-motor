@@ -1,42 +1,67 @@
-import { getPurchaseById, updatePurchase, deletePurchase } from '@/lib/services/purchases.service'
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getPurchaseById, updatePurchase, deletePurchase } from '@/lib/services/purchases.service'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
-  try {
-    const { id } = await params
-    const { data, error } = await getPurchaseById(Number(id))
+  const { id } = await params
+  const numericId = Number(id)
+  if (isNaN(numericId)) return NextResponse.json({ error: 'Invalid purchase ID' }, { status: 400 })
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 404 })
-    return NextResponse.json(data)
-  } catch {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
+  const admin = createAdminClient()
+  const { data, error } = await getPurchaseById(admin, numericId)
+
+  if (error || !data) return NextResponse.json({ error: 'Purchase not found' }, { status: 404 })
+  return NextResponse.json(data)
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await params
+    const numericId = Number(id)
+    if (isNaN(numericId)) return NextResponse.json({ error: 'Invalid purchase ID' }, { status: 400 })
+
     const body = await request.json()
+    const admin = createAdminClient()
+    const { data, error } = await updatePurchase(admin, numericId, body)
 
-    const { data, error } = await updatePurchase(Number(id), body)
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    if (error || !data) {
+      console.error('Purchases PATCH failed:', error)
+      return NextResponse.json({ error: error?.message ?? 'Failed to update purchase' }, { status: 400 })
+    }
     return NextResponse.json(data)
-  } catch {
+  } catch (err) {
+    console.error('Purchases PATCH unexpected error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = await params
-    const { error } = await deletePurchase(Number(id))
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    const { id } = await params
+    const numericId = Number(id)
+    if (isNaN(numericId)) return NextResponse.json({ error: 'Invalid purchase ID' }, { status: 400 })
+
+    const admin = createAdminClient()
+    const { error } = await deletePurchase(admin, numericId)
+
+    if (error) {
+      console.error('Purchases DELETE failed:', error)
+      return NextResponse.json({ error: error.message ?? 'Failed to delete purchase' }, { status: 400 })
+    }
     return NextResponse.json({ message: 'Purchase deleted' })
-  } catch {
+  } catch (err) {
+    console.error('Purchases DELETE unexpected error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

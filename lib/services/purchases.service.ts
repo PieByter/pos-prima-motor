@@ -1,6 +1,4 @@
-import { db } from '@/lib/db'
-import { purchases, purchaseDetails, suppliers, stockMovements } from '@/lib/db/schema'
-import { eq, ilike, desc, sql, and, gte, lte, inArray } from 'drizzle-orm'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type {
   Purchase,
   PurchaseInsert,
@@ -20,131 +18,52 @@ type PurchaseFilters = {
   limit?: number
 }
 
-type DbPurchase = {
-  id: number
-  supplier_id: number
-  invoice_number: string
-  purchase_date: Date | string
-  total_amount: string
-  status: Purchase['status']
-  created_by: string
-  created_at: Date
-  updated_at: Date
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapPurchase(row: any): Purchase {
+  return {
+    ...row,
+    total_amount: Number(row.total_amount),
+  }
 }
-
-type DbPurchaseDetail = {
-  id: number
-  purchase_id: number
-  item_id: number
-  quantity: number
-  price: string
-  subtotal: string
-}
-
-type DbSupplier = {
-  id: number
-  name: string
-  phone: string | null
-  address: string | null
-  created_at: Date
-  updated_at: Date
-}
-
-const mapPurchase = (row: DbPurchase): Purchase => ({
-  ...row,
-  purchase_date:
-    row.purchase_date instanceof Date
-      ? row.purchase_date.toISOString().split('T')[0]
-      : row.purchase_date,
-  total_amount: Number(row.total_amount),
-  created_at: row.created_at.toISOString(),
-  updated_at: row.updated_at.toISOString(),
-})
-
-const mapPurchaseDetail = (row: DbPurchaseDetail) => ({
-  ...row,
-  price: Number(row.price),
-  subtotal: Number(row.subtotal),
-})
-
-const mapSupplier = (row: DbSupplier) => ({
-  ...row,
-  created_at: row.created_at.toISOString(),
-  updated_at: row.updated_at.toISOString(),
-})
-
-const toDbPurchaseInsert = (header: PurchaseInsert) => ({
-  ...header,
-  total_amount: header.total_amount.toString(),
-})
-
-const toDbPurchaseUpdate = (header: PurchaseUpdate) => ({
-  ...header,
-  total_amount: header.total_amount !== undefined ? header.total_amount.toString() : undefined,
-})
-
-const toDbPurchaseDetailInsert = (
-  detail: Omit<PurchaseDetailInsert, 'purchase_id'> & { purchase_id: number },
-) => ({
-  ...detail,
-  price: detail.price.toString(),
-  subtotal: detail.subtotal.toString(),
-})
 
 export async function getPurchases(
+  supabase: SupabaseClient,
   filters: PurchaseFilters = {},
 ): Promise<{ data: PaginatedResponse<Purchase> | null; error: Error | null }> {
   try {
     const { search, supplier_id, status, start_date, end_date, page = 1, limit = 10 } = filters
-    const offset = (page - 1) * limit
+    const from = (page - 1) * limit
+    const to = from + limit - 1
 
-    const conditions = []
-    if (search) conditions.push(ilike(purchases.invoice_number, `%${search}%`))
-    if (supplier_id) conditions.push(eq(purchases.supplier_id, supplier_id))
-    if (status) conditions.push(eq(purchases.status, status as 'completed' | 'pending' | 'cancelled'))
-    if (start_date) conditions.push(gte(purchases.purchase_date, start_date))
-    if (end_date) conditions.push(lte(purchases.purchase_date, end_date))
+    let query = supabase
+      .from('purchases')
+      .select('*, suppliers(name)', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(from, to)
 
-    const where = conditions.length === 0 ? undefined : and(...conditions)
+    if (search) query = query.ilike('invoice_number', `%${search}%`)
+    if (supplier_id) query = query.eq('supplier_id', supplier_id)
+    if (status) query = query.eq('status', status)
+    if (start_date) query = query.gte('purchase_date', start_date)
+    if (end_date) query = query.lte('purchase_date', end_date)
 
-    const [rows, [{ count }]] = await Promise.all([
-      db
-        .select()
-        .from(purchases)
-        .where(where)
-        .orderBy(desc(purchases.created_at))
-        .limit(limit)
-        .offset(offset),
-      db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(purchases)
-        .where(where),
-    ])
+    const { data, error, count } = await query
+    if (error) return { data: null, error: new Error(error.message) }
 
-    // Enrich with supplier names
-    const mappedRows = (rows as DbPurchase[]).map(mapPurchase)
-    const supplierIds = [...new Set(mappedRows.map((r) => r.supplier_id).filter(Boolean))]
-    const supplierMap = new Map<number, { name: string | null }>()
-    if (supplierIds.length > 0) {
-      const sRows = await db
-        .select({ id: suppliers.id, name: suppliers.name })
-        .from(suppliers)
-        .where(inArray(suppliers.id, supplierIds))
-      for (const s of sRows) supplierMap.set(s.id, { name: s.name })
-    }
-
-    const enriched = mappedRows.map((r) => ({
-      ...r,
-      supplier: supplierMap.get(r.supplier_id) ?? null,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const enriched = (data ?? []).map((r: any) => ({
+      ...mapPurchase(r),
+      supplier: r.suppliers ?? null,
+      suppliers: undefined,
     }))
 
     return {
       data: {
         data: enriched as Purchase[],
-        total: count,
+        total: count ?? 0,
         page,
         limit,
-        totalPages: Math.ceil(count / limit),
+        totalPages: Math.ceil((count ?? 0) / limit),
       },
       error: null,
     }
@@ -154,31 +73,36 @@ export async function getPurchases(
 }
 
 export async function getPurchaseById(
+  supabase: SupabaseClient,
   id: number,
 ): Promise<{ data: PurchaseWithDetails | null; error: Error | null }> {
   try {
-    const [purchase] = await db
-      .select()
-      .from(purchases)
-      .where(eq(purchases.id, id))
+    const { data: purchase, error } = await supabase
+      .from('purchases')
+      .select('*, suppliers(*)')
+      .eq('id', id)
+      .single()
 
-    if (!purchase) return { data: null, error: new Error('Purchase not found') }
+    if (error || !purchase) return { data: null, error: new Error('Purchase not found') }
 
-    const [supplier] = await db
-      .select()
-      .from(suppliers)
-      .where(eq(suppliers.id, purchase.supplier_id))
+    const { data: detailRows } = await supabase
+      .from('purchase_details')
+      .select('*')
+      .eq('purchase_id', id)
 
-    const detailRows = await db
-      .select()
-      .from(purchaseDetails)
-      .where(eq(purchaseDetails.purchase_id, id))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const details = (detailRows ?? []).map((d: any) => ({
+      ...d,
+      price: Number(d.price),
+      subtotal: Number(d.subtotal),
+    }))
 
     return {
       data: {
-        ...mapPurchase(purchase as DbPurchase),
-        supplier: supplier ? mapSupplier(supplier as DbSupplier) : undefined,
-        details: detailRows.map((d) => mapPurchaseDetail(d as DbPurchaseDetail)),
+        ...mapPurchase(purchase),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        supplier: (purchase as any).suppliers ?? undefined,
+        details,
       } as PurchaseWithDetails,
       error: null,
     }
@@ -188,69 +112,97 @@ export async function getPurchaseById(
 }
 
 export async function createPurchase(
+  supabase: SupabaseClient,
   header: PurchaseInsert,
   details: Omit<PurchaseDetailInsert, 'purchase_id'>[],
 ): Promise<{ data: Purchase | null; error: Error | null }> {
   try {
-    return await db.transaction(async (tx) => {
-      const [purchase] = await tx.insert(purchases).values(toDbPurchaseInsert(header)).returning()
+    // 1. Insert purchase header
+    const { data: purchase, error: purchaseError } = await supabase
+      .from('purchases')
+      .insert(header)
+      .select()
+      .single()
 
-      const detailsWithId = details.map((d) => toDbPurchaseDetailInsert({ ...d, purchase_id: purchase.id }))
-      await tx.insert(purchaseDetails).values(detailsWithId)
+    if (purchaseError || !purchase) {
+      return { data: null, error: new Error(purchaseError?.message ?? 'Failed to create purchase') }
+    }
 
-      const stockMovs: typeof stockMovements.$inferInsert[] = details.map((d) => ({
-        item_id: d.item_id,
-        type: 'IN' as const,
-        quantity: d.quantity,
-        reference_type: 'purchase' as const,
-        reference_id: purchase.id,
-      }))
-      await tx.insert(stockMovements).values(stockMovs)
+    // 2. Insert purchase details
+    const detailsWithId = details.map((d) => ({ ...d, purchase_id: purchase.id }))
+    const { error: detailsError } = await supabase.from('purchase_details').insert(detailsWithId)
 
-      return { data: mapPurchase(purchase as DbPurchase), error: null }
-    })
+    if (detailsError) {
+      await supabase.from('purchases').delete().eq('id', purchase.id)
+      return { data: null, error: new Error(detailsError.message) }
+    }
+
+    // 3. Insert stock movements (IN)
+    const stockMovs = details.map((d) => ({
+      item_id: d.item_id,
+      type: 'IN' as const,
+      quantity: d.quantity,
+      reference_type: 'purchase' as const,
+      reference_id: purchase.id,
+    }))
+    const { error: stockError } = await supabase.from('stock_movements').insert(stockMovs)
+
+    if (stockError) {
+      await supabase.from('purchase_details').delete().eq('purchase_id', purchase.id)
+      await supabase.from('purchases').delete().eq('id', purchase.id)
+      return { data: null, error: new Error(stockError.message) }
+    }
+
+    return { data: mapPurchase(purchase), error: null }
   } catch (err) {
     return { data: null, error: err as Error }
   }
 }
 
 export async function updatePurchase(
+  supabase: SupabaseClient,
   id: number,
   header: PurchaseUpdate,
 ): Promise<{ data: Purchase | null; error: Error | null }> {
   try {
-    const [row] = await db
-      .update(purchases)
-      .set({ ...toDbPurchaseUpdate(header), updated_at: new Date() })
-      .where(eq(purchases.id, id))
-      .returning()
-    if (!row) return { data: null, error: new Error('Purchase not found') }
-    return { data: mapPurchase(row as DbPurchase), error: null }
+    const { data: row, error } = await supabase
+      .from('purchases')
+      .update({ ...header, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error || !row) return { data: null, error: new Error('Purchase not found') }
+    return { data: mapPurchase(row), error: null }
   } catch (err) {
     return { data: null, error: err as Error }
   }
 }
 
-export async function deletePurchase(id: number): Promise<{ error: Error | null }> {
+export async function deletePurchase(
+  supabase: SupabaseClient,
+  id: number,
+): Promise<{ error: Error | null }> {
   try {
-    await db.transaction(async (tx) => {
-      await tx
-        .delete(stockMovements)
-        .where(and(eq(stockMovements.reference_type, 'purchase'), eq(stockMovements.reference_id, id)))
-      await tx.delete(purchases).where(eq(purchases.id, id))
-    })
-    return { error: null }
+    await supabase.from('stock_movements').delete().eq('reference_type', 'purchase').eq('reference_id', id)
+    await supabase.from('purchase_details').delete().eq('purchase_id', id)
+    const { error } = await supabase.from('purchases').delete().eq('id', id)
+    return { error: error ? new Error(error.message) : null }
   } catch (err) {
     return { error: err as Error }
   }
 }
 
-export async function generateInvoiceNumber(prefix: string = 'PO'): Promise<string> {
+export async function generateInvoiceNumber(
+  supabase: SupabaseClient,
+  prefix: string = 'PO',
+): Promise<string> {
   const year = new Date().getFullYear()
-  const [{ count }] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(purchases)
-    .where(ilike(purchases.invoice_number, `${prefix}-${year}-%`))
-  const nextNum = count + 1
+  const { count } = await supabase
+    .from('purchases')
+    .select('*', { count: 'exact', head: true })
+    .ilike('invoice_number', `${prefix}-${year}-%`)
+
+  const nextNum = (count ?? 0) + 1
   return `${prefix}-${year}-${String(nextNum).padStart(3, '0')}`
 }

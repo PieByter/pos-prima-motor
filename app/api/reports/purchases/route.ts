@@ -1,9 +1,9 @@
-import { getPurchasesReport } from '@/lib/services/reports.service'
 import { NextRequest, NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getPurchasesReport } from '@/lib/services/reports.service'
 
 export async function GET(request: NextRequest) {
   try {
-
     const searchParams = request.nextUrl.searchParams
     const start_date = searchParams.get('start_date')
     const end_date = searchParams.get('end_date')
@@ -12,11 +12,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'start_date and end_date are required' }, { status: 400 })
     }
 
-    const { data, error } = await getPurchasesReport({ start_date, end_date })
+    const admin = createAdminClient()
+    const { data, error } = await getPurchasesReport(admin, { start_date, end_date })
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error || !data) {
+      console.error('Purchases report GET failed:', error)
+      return NextResponse.json({ error: 'Failed to fetch purchases report' }, { status: 500 })
+    }
     return NextResponse.json(data)
-  } catch {
+  } catch (err) {
+    console.error('Purchases report GET unexpected error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

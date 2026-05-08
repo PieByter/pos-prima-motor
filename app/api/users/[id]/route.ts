@@ -1,42 +1,63 @@
-import { getUserById, updateUser, deleteUser } from '@/lib/services/users.service'
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getUserById, updateUser, deleteUser } from '@/lib/services/users.service'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
-  try {
-    const { id } = await params
-    const { data, error } = await getUserById(id)
+  const { id } = await params
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 404 })
-    return NextResponse.json(data)
-  } catch {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  const admin = createAdminClient()
+  const { data, error } = await getUserById(admin, id)
+
+  if (error || !data) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 })
   }
+  return NextResponse.json(data)
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await params
     const body = await request.json()
 
-    const { data, error } = await updateUser(id, body)
+    const admin = createAdminClient()
+    const { data, error } = await updateUser(admin, id, body)
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    if (error || !data) {
+      console.error('Users PATCH failed:', error)
+      return NextResponse.json({ error: error?.message ?? 'Failed to update user' }, { status: 400 })
+    }
     return NextResponse.json(data)
-  } catch {
+  } catch (err) {
+    console.error('Users PATCH unexpected error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = await params
-    const { error } = await deleteUser(id)
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    const { id } = await params
+
+    const admin = createAdminClient()
+    const { error } = await deleteUser(admin, id)
+
+    if (error) {
+      console.error('Users DELETE failed:', error)
+      return NextResponse.json({ error: error.message ?? 'Failed to delete user' }, { status: 400 })
+    }
     return NextResponse.json({ message: 'User deleted' })
-  } catch {
+  } catch (err) {
+    console.error('Users DELETE unexpected error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

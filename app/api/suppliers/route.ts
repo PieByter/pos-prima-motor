@@ -1,31 +1,64 @@
-import { getSuppliers, createSupplier } from '@/lib/services/suppliers.service'
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getSuppliers, createSupplier } from '@/lib/services/suppliers.service'
+import type { SupplierInsert } from '@/lib/types/database'
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
+    const search = searchParams.get('search')?.trim() ?? ''
+    const page = Number(searchParams.get('page') ?? 1)
+    const limit = Number(searchParams.get('limit') ?? 10)
 
-    const { data, error } = await getSuppliers({
-      search: searchParams.get('search') ?? undefined,
-      page: Number(searchParams.get('page') ?? 1),
-      limit: Number(searchParams.get('limit') ?? 10),
-    })
+    // Use admin client for reads — bypasses RLS on trusted server route
+    const admin = createAdminClient()
+    const { data, error } = await getSuppliers(admin, { search, page, limit })
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error || !data) {
+      console.error('Suppliers GET failed:', error)
+      return NextResponse.json({ error: 'Failed to fetch suppliers' }, { status: 500 })
+    }
     return NextResponse.json(data)
-  } catch {
+  } catch (err) {
+    console.error('Suppliers GET unexpected error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { data, error } = await createSupplier(body)
+    // Verify the user is authenticated using the anon/user client
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = (await request.json()) as SupplierInsert
+
+    if (!body.name?.trim()) {
+      return NextResponse.json({ error: 'Name is required' }, { status: 422 })
+    }
+
+    // Use admin client for writes — bypasses RLS safely on the server
+    const admin = createAdminClient()
+    const { data, error } = await createSupplier(admin, body)
+
+    if (error || !data) {
+      console.error('Suppliers POST failed:', error)
+      return NextResponse.json(
+        { error: error?.message ?? 'Failed to create supplier' },
+        { status: 400 },
+      )
+    }
+
     return NextResponse.json(data, { status: 201 })
-  } catch {
+  } catch (err) {
+    console.error('Suppliers POST unexpected error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

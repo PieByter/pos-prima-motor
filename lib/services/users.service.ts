@@ -1,112 +1,120 @@
-import { db } from '@/lib/db'
-import { profiles } from '@/lib/db/schema'
-import { eq, desc } from 'drizzle-orm'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Profile } from '@/lib/types/database'
-import { createAdminClient } from '@/lib/supabase/admin'
 
-type DbProfile = {
-  id: string
-  name: string
-  role: 'admin' | 'mekanik'
-  is_active: boolean
-  profile_picture: string | null
-  created_at: Date
-  updated_at: Date
-}
-
-const mapProfile = (row: DbProfile): Profile => ({
-  ...row,
-  created_at: row.created_at.toISOString(),
-  updated_at: row.updated_at.toISOString(),
-})
-
-export async function getUsers(): Promise<{ data: Profile[] | null; error: Error | null }> {
+export async function getUsers(
+  supabase: SupabaseClient,
+): Promise<{ data: Profile[] | null; error: Error | null }> {
   try {
-    const rows = await db.select().from(profiles).orderBy(desc(profiles.created_at))
-    return { data: (rows as DbProfile[]).map(mapProfile), error: null }
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) return { data: null, error: new Error(error.message) }
+    return { data: (data ?? []) as Profile[], error: null }
   } catch (err) {
     return { data: null, error: err as Error }
   }
 }
 
 export async function getUserById(
+  supabase: SupabaseClient,
   userId: string,
 ): Promise<{ data: Profile | null; error: Error | null }> {
   try {
-    const [row] = await db.select().from(profiles).where(eq(profiles.id, userId))
-    if (!row) return { data: null, error: new Error('User not found') }
-    return { data: mapProfile(row as DbProfile), error: null }
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+
+    if (error || !data) return { data: null, error: new Error('User not found') }
+    return { data: data as Profile, error: null }
   } catch (err) {
     return { data: null, error: err as Error }
   }
 }
 
 export async function createUser(
+  supabase: SupabaseClient,
   email: string,
   password: string,
   name: string,
   role: Profile['role'],
 ): Promise<{ data: Profile | null; error: Error | null }> {
-  const adminClient = createAdminClient()
-
   // 1. Create auth user via Supabase Admin Auth
-  const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
+  const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
     user_metadata: { name, role },
   })
 
-  if (authError || !authData.user) return { data: null, error: authError ?? new Error('Failed to create auth user') }
+  if (authError || !authData.user) {
+    return { data: null, error: authError ?? new Error('Failed to create auth user') }
+  }
 
-  // 2. Create profile via Drizzle
+  // 2. Create profile record
   try {
-    const [profile] = await db
-      .insert(profiles)
-      .values({ id: authData.user.id, name, role, is_active: true })
-      .returning()
-    return { data: mapProfile(profile as DbProfile), error: null }
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .insert({ id: authData.user.id, name, role, is_active: true })
+      .select()
+      .single()
+
+    if (error || !profile) {
+      return { data: null, error: new Error(error?.message ?? 'Failed to create profile') }
+    }
+    return { data: profile as Profile, error: null }
   } catch (err) {
     return { data: null, error: err as Error }
   }
 }
 
 export async function updateUser(
+  supabase: SupabaseClient,
   userId: string,
   data: Partial<Pick<Profile, 'name' | 'role' | 'is_active' | 'profile_picture'>>,
 ): Promise<{ data: Profile | null; error: Error | null }> {
   try {
-    const [row] = await db
-      .update(profiles)
-      .set({ ...data, updated_at: new Date() })
-      .where(eq(profiles.id, userId))
-      .returning()
-    if (!row) return { data: null, error: new Error('User not found') }
-    return { data: mapProfile(row as DbProfile), error: null }
+    const { data: row, error } = await supabase
+      .from('profiles')
+      .update({ ...data, updated_at: new Date().toISOString() })
+      .eq('id', userId)
+      .select()
+      .single()
+
+    if (error || !row) return { data: null, error: new Error('User not found') }
+    return { data: row as Profile, error: null }
   } catch (err) {
     return { data: null, error: err as Error }
   }
 }
 
 export async function deactivateUser(
+  supabase: SupabaseClient,
   userId: string,
 ): Promise<{ data: Profile | null; error: Error | null }> {
   try {
-    const [row] = await db
-      .update(profiles)
-      .set({ is_active: false, updated_at: new Date() })
-      .where(eq(profiles.id, userId))
-      .returning()
-    if (!row) return { data: null, error: new Error('User not found') }
-    return { data: mapProfile(row as DbProfile), error: null }
+    const { data: row, error } = await supabase
+      .from('profiles')
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq('id', userId)
+      .select()
+      .single()
+
+    if (error || !row) return { data: null, error: new Error('User not found') }
+    return { data: row as Profile, error: null }
   } catch (err) {
     return { data: null, error: err as Error }
   }
 }
 
-export async function deleteUser(userId: string): Promise<{ error: Error | null }> {
-  const adminClient = createAdminClient()
+export async function deleteUser(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<{ error: Error | null }> {
   // Auth delete will cascade the profile via FK trigger in Supabase
-  const { error } = await adminClient.auth.admin.deleteUser(userId)
+  const { error } = await supabase.auth.admin.deleteUser(userId)
   return { error }
 }

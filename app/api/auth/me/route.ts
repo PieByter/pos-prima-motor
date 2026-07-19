@@ -1,9 +1,14 @@
+import { requireAuth } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/services/auth.service'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
+    const { user, errorResponse } = await requireAuth()
+    if (errorResponse) return errorResponse
+    void user
+
     const supabase = await createClient()
     const { data, error } = await getCurrentUser(supabase)
 

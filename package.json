@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "dotenv -e .env.local tsx lib/db/migrate.ts && next dev",
+    "dev": "next dev",
     "build": "next build",
-    "start": "dotenv -e .env.local tsx lib/db/migrate.ts && next start",
+    "start": "next start",
     "lint": "eslint",
     "db:generate": "dotenv -e .env.local drizzle-kit generate",
     "db:migrate": "dotenv -e .env.local tsx lib/db/migrate.ts",

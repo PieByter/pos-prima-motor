@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { requireAuth } from '@/lib/auth'
 import { getStockSummary } from '@/lib/services/stock.service'
 
 export async function GET(request: NextRequest) {
   try {
+    const { user, errorResponse } = await requireAuth()
+    if (errorResponse) return errorResponse
+    void user
+
     const searchParams = request.nextUrl.searchParams
 
     const admin = createAdminClient()

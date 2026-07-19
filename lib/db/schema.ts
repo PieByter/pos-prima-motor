@@ -149,3 +149,112 @@ export const stockSummary = pgView('stock_summary', {
   total_out: integer('total_out'),
   current_stock: integer('current_stock'),
 }).existing()
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Relations
+// ═══════════════════════════════════════════════════════════════════════════════
+
+import { relations } from 'drizzle-orm'
+
+// ─── profiles ───────────────────────────────────────────────────────────────
+export const profilesRelations = relations(profiles, ({ many }) => ({
+  purchases: many(purchases),
+  sales: many(sales),
+}))
+
+// ─── items ───────────────────────────────────────────────────────────────────
+export const itemsRelations = relations(items, ({ many }) => ({
+  purchaseDetails: many(purchaseDetails),
+  saleDetails: many(saleDetails),
+  stockMovements: many(stockMovements),
+  discountItems: many(discountItems),
+}))
+
+// ─── customers ───────────────────────────────────────────────────────────────
+export const customersRelations = relations(customers, ({ many }) => ({
+  sales: many(sales),
+}))
+
+// ─── suppliers ───────────────────────────────────────────────────────────────
+export const suppliersRelations = relations(suppliers, ({ many }) => ({
+  purchases: many(purchases),
+}))
+
+// ─── purchases ───────────────────────────────────────────────────────────────
+export const purchasesRelations = relations(purchases, ({ one, many }) => ({
+  supplier: one(suppliers, {
+    fields: [purchases.supplier_id],
+    references: [suppliers.id],
+  }),
+  createdBy: one(profiles, {
+    fields: [purchases.created_by],
+    references: [profiles.id],
+  }),
+  details: many(purchaseDetails),
+}))
+
+// ─── purchase_details ─────────────────────────────────────────────────────────
+export const purchaseDetailsRelations = relations(purchaseDetails, ({ one }) => ({
+  purchase: one(purchases, {
+    fields: [purchaseDetails.purchase_id],
+    references: [purchases.id],
+  }),
+  item: one(items, {
+    fields: [purchaseDetails.item_id],
+    references: [items.id],
+  }),
+}))
+
+// ─── sales ───────────────────────────────────────────────────────────────────
+export const salesRelations = relations(sales, ({ one, many }) => ({
+  customer: one(customers, {
+    fields: [sales.customer_id],
+    references: [customers.id],
+  }),
+  mechanic: one(profiles, {
+    fields: [sales.mechanic_id],
+    references: [profiles.id],
+  }),
+  createdBy: one(profiles, {
+    fields: [sales.created_by],
+    references: [profiles.id],
+  }),
+  details: many(saleDetails),
+}))
+
+// ─── sale_details ─────────────────────────────────────────────────────────────
+export const saleDetailsRelations = relations(saleDetails, ({ one }) => ({
+  sale: one(sales, {
+    fields: [saleDetails.sale_id],
+    references: [sales.id],
+  }),
+  item: one(items, {
+    fields: [saleDetails.item_id],
+    references: [items.id],
+  }),
+}))
+
+// ─── stock_movements ──────────────────────────────────────────────────────────
+export const stockMovementsRelations = relations(stockMovements, ({ one }) => ({
+  item: one(items, {
+    fields: [stockMovements.item_id],
+    references: [items.id],
+  }),
+}))
+
+// ─── discounts ───────────────────────────────────────────────────────────────
+export const discountsRelations = relations(discounts, ({ many }) => ({
+  items: many(discountItems),
+}))
+
+// ─── discount_items ───────────────────────────────────────────────────────────
+export const discountItemsRelations = relations(discountItems, ({ one }) => ({
+  discount: one(discounts, {
+    fields: [discountItems.discount_id],
+    references: [discounts.id],
+  }),
+  item: one(items, {
+    fields: [discountItems.item_id],
+    references: [items.id],
+  }),
+}))

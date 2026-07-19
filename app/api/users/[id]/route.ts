@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { requireAuth } from '@/lib/auth'
 import { getUserById, updateUser, deleteUser } from '@/lib/services/users.service'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
+  const { user, errorResponse } = await requireAuth()
+  if (errorResponse) return errorResponse
+  void user
+
   const { id } = await params
 
   const admin = createAdminClient()
@@ -19,9 +23,9 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, errorResponse } = await requireAuth()
+    if (errorResponse) return errorResponse
+    void user
 
     const { id } = await params
     const body = await request.json()
@@ -42,9 +46,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, errorResponse } = await requireAuth()
+    if (errorResponse) return errorResponse
+    void user
 
     const { id } = await params
 

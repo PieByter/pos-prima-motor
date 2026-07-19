@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { requireAuth } from '@/lib/auth'
 import { getCustomers, createCustomer } from '@/lib/services/customers.service'
 import type { CustomerInsert } from '@/lib/types/database'
 
 export async function GET(request: NextRequest) {
   try {
+    const { user, errorResponse } = await requireAuth()
+    if (errorResponse) return errorResponse
+    void user
+
     const searchParams = request.nextUrl.searchParams
     const search = searchParams.get('search')?.trim() ?? ''
     const page = Number(searchParams.get('page') ?? 1)
@@ -29,15 +33,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify the user is authenticated using the anon/user client
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { user, errorResponse } = await requireAuth()
+    if (errorResponse) return errorResponse
+    void user
 
     const body = (await request.json()) as CustomerInsert
 

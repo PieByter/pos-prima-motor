@@ -35,21 +35,32 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   // Redirect unauthenticated users to /login
-  // Allow access to /login, /register, and /api/auth/* without auth
+  // Allow access to auth pages and auth API without session
   const pathname = request.nextUrl.pathname
-  const isAuthRoute =
-    pathname.startsWith('/login') || pathname.startsWith('/register')
-  const isAuthApi = request.nextUrl.pathname.startsWith('/api/auth')
-  const isApiRoute = pathname.startsWith('/api')
+  const isPublicRoute =
+    pathname === '/login' ||
+    pathname === '/register' ||
+    pathname === '/forgot-password' ||
+    pathname === '/reset-password'
+  const isAuthApi = pathname.startsWith('/api/auth')
+  const isProtectedApi = pathname.startsWith('/api/') && !isAuthApi
+  const isProtectedPage = pathname.startsWith('/dashboard')
 
-  if (!user && !isAuthRoute && !isAuthApi && !isApiRoute) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
+  if (!user) {
+    // Protected pages → redirect to login
+    if (isProtectedPage) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
+    }
+    // Protected API routes → return 401
+    if (isProtectedApi) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
   }
 
   // Redirect authenticated users away from auth pages
-  if (user && isAuthRoute) {
+  if (user && isPublicRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)

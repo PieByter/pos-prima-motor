@@ -1,7 +1,8 @@
 "use client";
 
-import { Search, Bell } from "lucide-react";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { NotificationDropdown } from "@/components/layout/notification-dropdown";
 
 interface NavbarProps {
   title: string;
@@ -35,10 +36,7 @@ export function Navbar({ title, subtitle }: NavbarProps) {
         </div>
 
         {/* Notification */}
-        <button className="relative p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
-          <Bell className="h-5 w-5" />
-          <span className="absolute top-2 right-2 h-2 w-2 bg-red-500 rounded-full ring-2 ring-white dark:ring-slate-950" />
-        </button>
+        <NotificationDropdown />
       </div>
     </header>
   );

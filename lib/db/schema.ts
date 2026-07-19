@@ -150,6 +150,18 @@ export const stockSummary = pgView('stock_summary', {
   current_stock: integer('current_stock'),
 }).existing()
 
+// ─── notifications ───────────────────────────────────────────────────────────
+export const notifications = pgTable('notifications', {
+  id: serial('id').primaryKey(),
+  user_id: uuid('user_id').notNull(),
+  title: text('title').notNull(),
+  message: text('message').notNull(),
+  type: text('type', { enum: ['info', 'success', 'warning', 'error'] }).notNull().default('info'),
+  is_read: boolean('is_read').notNull().default(false),
+  link: text('link'),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Relations
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -160,6 +172,7 @@ import { relations } from 'drizzle-orm'
 export const profilesRelations = relations(profiles, ({ many }) => ({
   purchases: many(purchases),
   sales: many(sales),
+  notifications: many(notifications),
 }))
 
 // ─── items ───────────────────────────────────────────────────────────────────
@@ -256,5 +269,13 @@ export const discountItemsRelations = relations(discountItems, ({ one }) => ({
   item: one(items, {
     fields: [discountItems.item_id],
     references: [items.id],
+  }),
+}))
+
+// ─── notifications ───────────────────────────────────────────────────────────
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(profiles, {
+    fields: [notifications.user_id],
+    references: [profiles.id],
   }),
 }))

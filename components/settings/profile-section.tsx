@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Camera, Pencil, KeyRound, Lock, Eye, EyeOff, CheckCircle } from "lucide-react";
+import { Camera, Pencil, KeyRound, Lock, Eye, EyeOff, CheckCircle, Loader } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +17,7 @@ import {
 import { useToasts } from "@/components/ui/toast";
 
 type ProfileData = {
-  user?: { email?: string | null };
+  user?: { id?: string; email?: string | null };
   profile?: { name?: string; role?: string };
 };
 
@@ -213,21 +213,119 @@ function ChangePasswordDialog({
   );
 }
 
+function EditProfileDialog({
+  open,
+  onOpenChange,
+  data,
+  onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  data: ProfileData | null;
+  onSaved: () => void;
+}) {
+  const { showToast } = useToasts();
+  const [name, setName] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setName(data?.profile?.name ?? "");
+    }
+  }, [open, data]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) {
+      showToast("Nama tidak boleh kosong.", "error", 3000);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const userId = data?.user?.id;
+      if (!userId) throw new Error("User ID not found");
+
+      const response = await fetch(`/api/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        showToast(result?.error || "Gagal menyimpan.", "error", 3000);
+        return;
+      }
+
+      showToast("Profil berhasil diperbarui.", "success", 1500);
+      onSaved();
+      onOpenChange(false);
+    } catch {
+      showToast("Terjadi kesalahan jaringan.", "error", 3000);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Profil</DialogTitle>
+          <DialogDescription>Perbarui nama tampilan Anda.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Nama Lengkap</Label>
+              <Input
+                id="edit-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Nama Anda"
+                required
+                className="bg-slate-50 dark:bg-slate-800"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={isSaving}>
+                Batal
+              </Button>
+            </DialogClose>
+            <Button
+              type="submit"
+              disabled={isSaving || !name.trim()}
+              className="bg-sky-500 hover:bg-sky-600 text-white"
+            >
+              {isSaving && <Loader className="h-4 w-4 animate-spin mr-2" />}
+              Simpan
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function ProfileSection() {
   const [data, setData] = useState<ProfileData | null>(null);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+
+  async function loadProfile() {
+    try {
+      const response = await fetch("/api/auth/me", { cache: "no-store" });
+      if (!response.ok) return;
+      setData(await response.json());
+    } catch (error) {
+      console.error("Failed to load profile:", error);
+    }
+  }
 
   useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        const response = await fetch("/api/auth/me", { cache: "no-store" });
-        if (!response.ok) return;
-        setData(await response.json());
-      } catch (error) {
-        console.error("Failed to load profile:", error);
-      }
-    };
-
     loadProfile();
   }, []);
 
@@ -276,7 +374,10 @@ export function ProfileSection() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-3 pt-2">
-                <Button className="bg-sky-500 hover:bg-sky-600 text-white gap-2">
+                <Button
+                  onClick={() => setShowEditProfile(true)}
+                  className="bg-sky-500 hover:bg-sky-600 text-white gap-2"
+                >
                   <Pencil className="h-4 w-4" />
                   Edit Profil
                 </Button>
@@ -297,6 +398,13 @@ export function ProfileSection() {
       <ChangePasswordDialog
         open={showChangePassword}
         onOpenChange={setShowChangePassword}
+      />
+
+      <EditProfileDialog
+        open={showEditProfile}
+        onOpenChange={setShowEditProfile}
+        data={data}
+        onSaved={loadProfile}
       />
     </>
   );

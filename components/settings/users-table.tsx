@@ -26,6 +26,7 @@ import {
   getInitials,
   AVATAR_COLORS,
 } from "@/lib/data/users";
+import { UserFormDialog } from "./user-form-dialog";
 
 const USERS_PER_PAGE = 3;
 
@@ -45,6 +46,8 @@ export function UsersTable() {
   const [users, setUsers] = useState<UiUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UiUser | null>(null);
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -138,6 +141,63 @@ export function UsersTable() {
     }
   }
 
+  async function handleSaveUser(data: {
+    name: string;
+    role: "admin" | "mekanik";
+    is_active: boolean;
+    password?: string;
+  }) {
+    if (editingUser) {
+      // Edit existing user — send only provided fields
+      const payload: Record<string, unknown> = {
+        name: data.name,
+        role: data.role,
+        is_active: data.is_active,
+      }
+      if (data.password) payload.password = data.password
+
+      const res = await fetch(`/api/users/${editingUser.apiId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        console.error("Failed to save user:", err.error)
+        return // stop — don't refresh list on error
+      }
+    }
+    // Refresh list
+    const res = await fetch("/api/users", { cache: "no-store" });
+    if (res.ok) {
+      const json = await res.json();
+      const rows = (json ?? []) as Array<{
+        id: string;
+        name: string;
+        role: "admin" | "mekanik";
+        is_active: boolean;
+        created_at: string;
+      }>;
+      const mapped: UiUser[] = rows.map((u, idx) => ({
+        id: idx + 1,
+        apiId: u.id,
+        name: u.name,
+        email: `${u.name.toLowerCase().replace(/\s+/g, ".")}@primamotor.com`,
+        role: u.role === "admin" ? "Admin" : "Mekanik",
+        status: u.is_active ? "Aktif" : "Inactive",
+        lastLogin: "-",
+        initials: getInitials(u.name),
+        avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
+      }));
+      setUsers(mapped);
+    }
+  }
+
+  function openEdit(user: UiUser) {
+    setEditingUser(user);
+    setDialogOpen(true);
+  }
+
   return (
     <section className="space-y-4">
       {/* Header */}
@@ -150,7 +210,13 @@ export function UsersTable() {
             Kelola akses dan akun karyawan
           </p>
         </div>
-        <Button className="bg-slate-900 dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 text-white gap-2 self-start sm:self-auto">
+        <Button
+          onClick={() => {
+            setEditingUser(null);
+            setDialogOpen(true);
+          }}
+          className="bg-slate-900 dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 text-white gap-2 self-start sm:self-auto"
+        >
           <Plus className="h-4 w-4" />
           Tambah Pengguna
         </Button>
@@ -268,7 +334,10 @@ export function UsersTable() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem className="gap-2 cursor-pointer">
+                        <DropdownMenuItem
+                          className="gap-2 cursor-pointer"
+                          onClick={() => openEdit(user)}
+                        >
                           <Pencil className="h-4 w-4" />
                           Edit Pengguna
                         </DropdownMenuItem>
@@ -375,6 +444,13 @@ export function UsersTable() {
           </div>
         </div>
       </div>
+
+      <UserFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        user={editingUser}
+        onSave={handleSaveUser}
+      />
     </section>
   );
 }

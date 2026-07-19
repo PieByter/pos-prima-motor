@@ -74,17 +74,35 @@ export async function createUser(
 export async function updateUser(
   supabase: SupabaseClient,
   userId: string,
-  data: Partial<Pick<Profile, 'name' | 'role' | 'is_active' | 'profile_picture'>>,
+  data: Partial<Pick<Profile, 'name' | 'role' | 'is_active' | 'profile_picture'>> & { password?: string },
 ): Promise<{ data: Profile | null; error: Error | null }> {
   try {
+    // If password is provided, update auth password via admin API
+    if (data.password) {
+      const { error: authError } = await supabase.auth.admin.updateUserById(userId, {
+        password: data.password,
+      })
+      if (authError) return { data: null, error: new Error(authError.message) }
+    }
+
+    // Build profile update payload — only include fields that were actually provided
+    const profileData: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (data.name !== undefined) profileData.name = data.name
+    if (data.role !== undefined) profileData.role = data.role
+    if (data.is_active !== undefined) profileData.is_active = data.is_active
+    if (data.profile_picture !== undefined) profileData.profile_picture = data.profile_picture
+
     const { data: row, error } = await supabase
       .from('profiles')
-      .update({ ...data, updated_at: new Date().toISOString() })
+      .update(profileData)
       .eq('id', userId)
       .select()
       .single()
 
-    if (error || !row) return { data: null, error: new Error('User not found') }
+    if (error || !row) {
+      console.error('updateUser failed:', error?.message ?? 'User not found', 'for userId:', userId)
+      return { data: null, error: new Error(error?.message ?? 'User not found') }
+    }
     return { data: row as Profile, error: null }
   } catch (err) {
     return { data: null, error: err as Error }

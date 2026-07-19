@@ -326,7 +326,10 @@ export function ProfileSection() {
   }
 
   useEffect(() => {
-    loadProfile();
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => data && setData(data))
+      .catch((err) => console.error("Failed to load profile:", err));
   }, []);
 
   const name = data?.profile?.name ?? "Username";

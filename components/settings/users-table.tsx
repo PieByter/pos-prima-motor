@@ -10,6 +10,7 @@ import {
   Trash2,
   ShieldCheck,
   ShieldOff,
+  KeyRound,
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ import {
   AVATAR_COLORS,
 } from "@/lib/data/users";
 import { UserFormDialog } from "./user-form-dialog";
+import { ResetPasswordDialog } from "./reset-password-dialog";
 
 const USERS_PER_PAGE = 3;
 
@@ -48,6 +50,8 @@ export function UsersTable() {
   const [currentPage, setCurrentPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UiUser | null>(null);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resettingUser, setResettingUser] = useState<UiUser | null>(null);
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -196,6 +200,23 @@ export function UsersTable() {
   function openEdit(user: UiUser) {
     setEditingUser(user);
     setDialogOpen(true);
+  }
+
+  function openReset(user: UiUser) {
+    setResettingUser(user);
+    setResetDialogOpen(true);
+  }
+
+  async function handleResetPassword(userId: string, newPassword: string) {
+    const res = await fetch(`/api/users/${userId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: newPassword }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error ?? "Gagal mereset password");
+    }
   }
 
   return (
@@ -357,6 +378,13 @@ export function UsersTable() {
                             </>
                           )}
                         </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="gap-2 cursor-pointer"
+                          onClick={() => openReset(user)}
+                        >
+                          <KeyRound className="h-4 w-4" />
+                          Reset Password
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="gap-2 cursor-pointer text-red-600 focus:text-red-600"
@@ -450,6 +478,13 @@ export function UsersTable() {
         onOpenChange={setDialogOpen}
         user={editingUser}
         onSave={handleSaveUser}
+      />
+
+      <ResetPasswordDialog
+        open={resetDialogOpen}
+        onOpenChange={setResetDialogOpen}
+        user={resettingUser ? { apiId: resettingUser.apiId, name: resettingUser.name } : null}
+        onReset={handleResetPassword}
       />
     </section>
   );

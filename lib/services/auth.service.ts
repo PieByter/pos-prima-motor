@@ -116,3 +116,56 @@ export async function updateProfile(
     .select()
     .single<Profile>()
 }
+
+// ─── Password Reset ──────────────────────────────────────────────────────────
+
+/**
+ * Direct password reset using admin (service role) client.
+ * No email/Gmail/OTP required — looks up user by email via listUsers(),
+ * then updates the password directly. Returns { data, error }.
+ */
+export async function adminResetPassword(email: string, newPassword: string) {
+  const admin = createAdminClient()
+
+  // 1. Find user by email
+  const { data: users, error: listError } = await admin.auth.admin.listUsers()
+  if (listError) return { data: null, error: listError }
+
+  const user = users?.users?.find(
+    (u) => u.email?.toLowerCase() === email.toLowerCase(),
+  )
+  if (!user) {
+    return { data: null, error: new Error('Email tidak ditemukan.') }
+  }
+
+  // 2. Update password directly
+  const { data, error } = await admin.auth.admin.updateUserById(user.id, {
+    password: newPassword,
+  })
+  return { data, error }
+}
+
+/**
+ * Change own password while logged in.
+ * Verifies current password first, then updates.
+ */
+export async function changeOwnPassword(
+  supabase: SupabaseClient,
+  currentPassword: string,
+  newPassword: string,
+) {
+  // Re-authenticate to verify current password
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: (await supabase.auth.getUser()).data.user?.email ?? '',
+    password: currentPassword,
+  })
+  if (signInError) {
+    return { data: null, error: new Error('Password saat ini salah.') }
+  }
+
+  // Update to new password
+  const { data, error } = await supabase.auth.updateUser({
+    password: newPassword,
+  })
+  return { data, error }
+}

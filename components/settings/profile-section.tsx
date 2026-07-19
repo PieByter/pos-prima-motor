@@ -1,16 +1,221 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Camera, Pencil, KeyRound } from "lucide-react";
+import { Camera, Pencil, KeyRound, Lock, Eye, EyeOff, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { useToasts } from "@/components/ui/toast";
 
 type ProfileData = {
   user?: { email?: string | null };
   profile?: { name?: string; role?: string };
 };
 
+function ChangePasswordDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { showToast } = useToasts();
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const formData = new FormData(e.currentTarget);
+    const currentPassword = String(formData.get("currentPassword") ?? "");
+    const newPassword = String(formData.get("newPassword") ?? "");
+    const confirmPassword = String(formData.get("confirmPassword") ?? "");
+
+    if (!currentPassword) {
+      showToast("Masukkan password saat ini.", "error", 3000);
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      showToast("Password baru minimal 6 karakter.", "error", 3000);
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      showToast("Password dan konfirmasi harus sama.", "error", 3000);
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        showToast(result?.error || "Gagal mengubah password.", "error", 3000);
+        return;
+      }
+
+      setIsSuccess(true);
+      setTimeout(() => {
+        onOpenChange(false);
+        setIsSuccess(false);
+        e.currentTarget.reset();
+      }, 2000);
+    } catch {
+      showToast("Terjadi kesalahan jaringan.", "error", 3000);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {isSuccess ? "Password Diubah" : "Ganti Password"}
+          </DialogTitle>
+          <DialogDescription>
+            {isSuccess
+              ? "Password berhasil diubah."
+              : "Masukkan password saat ini dan password baru Anda."}
+          </DialogDescription>
+        </DialogHeader>
+
+        {isSuccess ? (
+          <div className="flex flex-col items-center py-6 space-y-3">
+            <div className="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+              <CheckCircle className="h-7 w-7 text-green-600 dark:text-green-400" />
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Password berhasil diubah!
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="currentPassword">Password Saat Ini</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  <Input
+                    id="currentPassword"
+                    name="currentPassword"
+                    type={showCurrent ? "text" : "password"}
+                    placeholder="Password saat ini"
+                    required
+                    className="pl-10 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrent(!showCurrent)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                    aria-label={showCurrent ? "Hide" : "Show"}
+                  >
+                    {showCurrent ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">Password Baru</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  <Input
+                    id="newPassword"
+                    name="newPassword"
+                    type={showNew ? "text" : "password"}
+                    placeholder="Minimal 6 karakter"
+                    required
+                    minLength={6}
+                    className="pl-10 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNew(!showNew)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                    aria-label={showNew ? "Hide" : "Show"}
+                  >
+                    {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Konfirmasi Password Baru</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirm ? "text" : "password"}
+                    placeholder="••••••••"
+                    required
+                    minLength={6}
+                    className="pl-10 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(!showConfirm)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                    aria-label={showConfirm ? "Hide" : "Show"}
+                  >
+                    {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">
+                  Batal
+                </Button>
+              </DialogClose>
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="bg-sky-500 hover:bg-sky-600 text-white"
+              >
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Menyimpan...
+                  </span>
+                ) : (
+                  "Simpan Password"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function ProfileSection() {
   const [data, setData] = useState<ProfileData | null>(null);
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -38,50 +243,61 @@ export function ProfileSection() {
     .slice(0, 2);
 
   return (
-    <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-      <div className="p-8">
-        <div className="flex flex-row items-center gap-8">
-          {/* Avatar */}
-          <div className="relative group">
-            <div className="size-32 rounded-full bg-slate-200 dark:bg-slate-700 ring-4 ring-slate-50 dark:ring-slate-700 flex items-center justify-center">
-              <span className="text-4xl font-bold text-slate-500 dark:text-slate-400">
-                {initials || "U"}
-              </span>
-            </div>
-            <button
-              aria-label="Ganti foto"
-              className="absolute bottom-0 right-0 p-2 bg-sky-500 text-white rounded-full shadow-lg hover:bg-sky-600 transition-colors border-4 border-white dark:border-slate-800"
-            >
-              <Camera className="h-4 w-4" />
-            </button>
-          </div>
-
-          {/* Info */}
-          <div className="flex-1 space-y-4">
-            <div>
-              <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
-                {name}
-              </h3>
-              <p className="text-slate-500 dark:text-slate-400">
-                {email}
-              </p>
-              <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                {role}
+    <>
+      <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <div className="p-8">
+          <div className="flex flex-row items-center gap-8">
+            {/* Avatar */}
+            <div className="relative group">
+              <div className="size-32 rounded-full bg-slate-200 dark:bg-slate-700 ring-4 ring-slate-50 dark:ring-slate-700 flex items-center justify-center">
+                <span className="text-4xl font-bold text-slate-500 dark:text-slate-400">
+                  {initials || "U"}
+                </span>
               </div>
+              <button
+                aria-label="Ganti foto"
+                className="absolute bottom-0 right-0 p-2 bg-sky-500 text-white rounded-full shadow-lg hover:bg-sky-600 transition-colors border-4 border-white dark:border-slate-800"
+              >
+                <Camera className="h-4 w-4" />
+              </button>
             </div>
-            <div className="flex flex-wrap gap-3 pt-2">
-              <Button className="bg-sky-500 hover:bg-sky-600 text-white gap-2">
-                <Pencil className="h-4 w-4" />
-                Edit Profil
-              </Button>
-              <Button variant="outline" className="gap-2">
-                <KeyRound className="h-4 w-4" />
-                Ganti Password
-              </Button>
+
+            {/* Info */}
+            <div className="flex-1 space-y-4">
+              <div>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
+                  {name}
+                </h3>
+                <p className="text-slate-500 dark:text-slate-400">
+                  {email}
+                </p>
+                <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                  {role}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3 pt-2">
+                <Button className="bg-sky-500 hover:bg-sky-600 text-white gap-2">
+                  <Pencil className="h-4 w-4" />
+                  Edit Profil
+                </Button>
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => setShowChangePassword(true)}
+                >
+                  <KeyRound className="h-4 w-4" />
+                  Ganti Password
+                </Button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      <ChangePasswordDialog
+        open={showChangePassword}
+        onOpenChange={setShowChangePassword}
+      />
+    </>
   );
 }

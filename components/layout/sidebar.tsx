@@ -20,6 +20,9 @@ import {
   Download,
   Tag,
   History,
+  PlusCircle,
+  TrendingUp,
+  ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -51,6 +54,9 @@ const sidebarNav: NavItem[] = [
       { label: "Penjualan", href: "/dashboard/transactions/sales", icon: ShoppingCart },
       { label: "Pembelian", href: "/dashboard/transactions/purchases", icon: ClipboardList },
       { label: "Inventory", href: "/dashboard/inventory", icon: Package },
+      { label: "Adjust Stok", href: "/dashboard/inventory/adjust", icon: PlusCircle },
+      { label: "Riwayat Harga", href: "/dashboard/inventory/price-history", icon: TrendingUp },
+      { label: "Stok Opname", href: "/dashboard/inventory/opname", icon: ClipboardCheck },
     ],
   },
   {

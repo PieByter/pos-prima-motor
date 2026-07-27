@@ -46,6 +46,19 @@ export function Navbar({ title, subtitle }: NavbarProps) {
     }
   }, [searchOpen]);
 
+  // Global keyboard shortcut: Ctrl+K / ⌘K
+  useEffect(() => {
+    function handleGlobalKey(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+        setTimeout(() => inputRef.current?.focus(), 50);
+      }
+    }
+    document.addEventListener("keydown", handleGlobalKey);
+    return () => document.removeEventListener("keydown", handleGlobalKey);
+  }, []);
+
   // Debounced search
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -128,10 +141,13 @@ export function Navbar({ title, subtitle }: NavbarProps) {
         {/* Search */}
         <div ref={searchRef} className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center gap-0.5 rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-medium text-slate-400 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-500">
+            <span className="text-[9px]">⌘</span>K
+          </kbd>
           <Input
             ref={inputRef}
             placeholder="Cari barang, customer..."
-            className="w-52 pl-10 pr-4 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-sm"
+            className="w-56 pl-10 pr-12 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-sm"
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);

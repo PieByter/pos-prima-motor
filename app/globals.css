@@ -144,3 +144,24 @@
 .animate-scan {
   animation: scan 2s ease-in-out infinite;
 }
+
+/* ── Dashboard Print Styles ── */
+@media print {
+  body.printing-dashboard {
+    @apply bg-white text-black;
+  }
+  body.printing-dashboard .no-print,
+  body.printing-dashboard nav,
+  body.printing-dashboard aside,
+  body.printing-dashboard header:not(.print-header) {
+    display: none !important;
+  }
+  body.printing-dashboard main {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+  body.printing-dashboard .space-y-6 > * {
+    break-inside: avoid;
+  }
+}

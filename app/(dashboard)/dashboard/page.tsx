@@ -7,6 +7,11 @@ import { SalesChart } from "@/components/dashboard/sales-chart";
 import { TopSellingItems } from "@/components/dashboard/top-selling-items";
 import { LowStockAlert } from "@/components/dashboard/low-stock-alert";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
+import { TodaySummary } from "@/components/dashboard/today-summary";
+import { RestockRecommendations } from "@/components/dashboard/restock-recommendations";
+import { DashboardPrintButton } from "@/components/dashboard/dashboard-print-button";
+import { useUserRole } from "@/lib/hooks/use-user-role";
+import { EyeOff } from "lucide-react";
 
 function toInputDate(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -20,21 +25,16 @@ export default function DashboardPage() {
 
   const [startDate, setStartDate] = useState(toInputDate(thirtyDaysAgo));
   const [endDate, setEndDate] = useState(toInputDate(today));
-
-  const dateQuery = `start=${startDate}&end=${endDate}`;
-
-  const todayLabel = new Intl.DateTimeFormat("id-ID", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(new Date());
+  const { isAdmin } = useUserRole();
 
   return (
     <div className="space-y-6">
       <Navbar
-        title="Dashboard Overview"
-        subtitle="Welcome back, here's what's happening at Prima Motor today."
+        title={isAdmin ? "Dashboard Overview" : "Dashboard Mekanik"}
+        subtitle={isAdmin
+          ? "Welcome back, here's what's happening at Prima Motor today."
+          : "Pantau transaksi dan stok yang Anda tangani."
+        }
       />
 
       {/* Date Range Filter */}
@@ -69,6 +69,9 @@ export default function DashboardPage() {
             Reset
           </button>
         )}
+        <div className="ml-auto no-print">
+          <DashboardPrintButton />
+        </div>
       </section>
 
       {/* Hero Banner */}
@@ -92,10 +95,7 @@ export default function DashboardPage() {
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-sky-200/70">Status sistem</p>
               <p className="mt-1.5 text-sm font-semibold">Online & tersinkron</p>
             </div>
-            <div className="rounded-xl border border-white/10 bg-white/5 p-3.5 backdrop-blur">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-sky-200/70">Hari ini</p>
-              <p className="mt-1.5 text-sm font-semibold">{todayLabel}</p>
-            </div>
+            <TodaySummary />
           </div>
         </div>
       </section>
@@ -104,18 +104,30 @@ export default function DashboardPage() {
       <SummaryCards dateRange={{ start: startDate, end: endDate }} />
 
       {/* Chart + Top Items */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <SalesChart dateRange={{ start: startDate, end: endDate }} />
+      {isAdmin && (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <SalesChart dateRange={{ start: startDate, end: endDate }} />
+          </div>
+          <TopSellingItems />
         </div>
-        <TopSellingItems />
-      </div>
+      )}
+
+      {!isAdmin && (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white py-12 dark:border-slate-700 dark:bg-slate-800">
+          <EyeOff className="mb-3 h-10 w-10 text-slate-300" />
+          <p className="text-sm font-medium text-slate-500">Grafik penjualan hanya untuk Admin</p>
+        </div>
+      )}
 
       {/* Low Stock + Recent Transactions */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <LowStockAlert />
         <RecentTransactions />
       </div>
+
+      {/* Auto Restock Recommendation */}
+      {isAdmin && <RestockRecommendations />}
 
       {/* Footer */}
       <footer className="pb-2 text-center text-xs text-slate-400 dark:text-slate-500">

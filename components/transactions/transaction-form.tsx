@@ -17,6 +17,7 @@ import {
   Smartphone,
   Landmark,
   Barcode,
+  ScanLine,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { type TransactionType } from "@/lib/data/transactions";
 import { formatRupiah } from "@/lib/data/items";
+import { CameraBarcodeScanner } from "@/components/transactions/camera-barcode-scanner";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -162,6 +164,7 @@ export function TransactionForm({
   const [cashAmount, setCashAmount] = useState<string>("");
   const [barcodeInput, setBarcodeInput] = useState("");
   const [barcodeMsg, setBarcodeMsg] = useState<string | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [isOptionsLoading, setIsOptionsLoading] = useState(true);
@@ -578,7 +581,7 @@ export function TransactionForm({
             <div className="border-t border-slate-200 dark:border-slate-700" />
 
             {/* Barcode Scanner */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <div className="relative flex-1 max-w-sm">
                 <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                 <Input
@@ -595,12 +598,31 @@ export function TransactionForm({
                   className="pl-9 font-mono text-sm"
                 />
               </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => setScannerOpen(true)}
+                className="shrink-0 h-10 w-10"
+                title="Scan pakai kamera"
+              >
+                <ScanLine className="h-4 w-4 text-sky-500" />
+              </Button>
               {barcodeMsg && (
                 <span className={`text-xs font-medium ${barcodeMsg.startsWith("✅") ? "text-emerald-600" : "text-amber-600"}`}>
                   {barcodeMsg}
                 </span>
               )}
             </div>
+
+            <CameraBarcodeScanner
+              open={scannerOpen}
+              onOpenChange={setScannerOpen}
+              onDetected={(code) => {
+                handleBarcode(code);
+                setScannerOpen(false);
+              }}
+            />
 
             {/* Items Table */}
             <div className="overflow-x-auto -mx-6">

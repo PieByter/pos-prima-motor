@@ -129,3 +129,18 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ── Barcode scanner scanning line animation ── */
+@keyframes scan {
+  0%,
+  100% {
+    top: 25%;
+  }
+  50% {
+    top: 75%;
+  }
+}
+
+.animate-scan {
+  animation: scan 2s ease-in-out infinite;
+}

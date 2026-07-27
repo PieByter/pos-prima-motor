@@ -227,11 +227,14 @@ export default function ReportsPage() {
           </div>
           {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
           <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => window.open(`/api/export?type=profit-loss&start_date=${startDate}&end_date=${endDate}`, "_blank")}>
+              <Download className="h-4 w-4" /> Export Laba/Rugi (.xlsx)
+            </Button>
             <Button variant="outline" size="sm" className="gap-2" onClick={() => window.open(`/api/export?type=sales&start_date=${startDate}&end_date=${endDate}`, "_blank")}>
-              <Download className="h-4 w-4" /> Export Sales CSV
+              <Download className="h-4 w-4" /> Export Penjualan (.xlsx)
             </Button>
             <Button variant="outline" size="sm" className="gap-2" onClick={() => window.open(`/api/export?type=purchases&start_date=${startDate}&end_date=${endDate}`, "_blank")}>
-              <Download className="h-4 w-4" /> Export Purchases CSV
+              <Download className="h-4 w-4" /> Export Pembelian (.xlsx)
             </Button>
           </div>
         </DashboardCard>

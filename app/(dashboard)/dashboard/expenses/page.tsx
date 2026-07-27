@@ -105,7 +105,7 @@ export default function ExpensesPage() {
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" className="gap-2" onClick={() => window.open("/api/export?type=expenses", "_blank")}>
-              <Download className="h-4 w-4" /> Export CSV
+              <Download className="h-4 w-4" /> Export (.xlsx)
             </Button>
             <Button size="sm" className="gap-2 bg-sky-500 hover:bg-sky-600" onClick={() => setShowForm(true)}>
               <Plus className="h-4 w-4" /> Tambah

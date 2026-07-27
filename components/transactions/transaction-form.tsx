@@ -16,6 +16,7 @@ import {
   CreditCard,
   Smartphone,
   Landmark,
+  Barcode,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -159,6 +160,8 @@ export function TransactionForm({
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodOption[]>([]);
   const [paymentMethodId, setPaymentMethodId] = useState<string>("");
   const [cashAmount, setCashAmount] = useState<string>("");
+  const [barcodeInput, setBarcodeInput] = useState("");
+  const [barcodeMsg, setBarcodeMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [isOptionsLoading, setIsOptionsLoading] = useState(true);
@@ -299,6 +302,51 @@ export function TransactionForm({
     },
     [updateLine, isSale, itemOptions]
   );
+
+  /* ---- barcode scanner ---- */
+  const handleBarcode = useCallback(async (sku: string) => {
+    if (!sku.trim()) return;
+    setBarcodeMsg(null);
+    try {
+      // Search item by SKU via API
+      const res = await fetch(`/api/items?search=${encodeURIComponent(sku.trim())}&limit=1`);
+      if (!res.ok) {
+        setBarcodeMsg(`Tidak ditemukan: ${sku}`);
+        return;
+      }
+      const json = await res.json();
+      const items = json?.data ?? [];
+      if (items.length === 0) {
+        setBarcodeMsg(`SKU tidak dikenal: ${sku}`);
+        return;
+      }
+      const item = items[0];
+      const newLine = {
+        key: newKey(),
+        itemId: item.id,
+        name: item.name,
+        qty: 1,
+        unitPrice: isSale ? Number(item.selling_price) : Number(item.purchase_price),
+        discountPercent: 0,
+        serviceFee: isSale ? Number(item.service_fee) : 0,
+        subtotal: isSale ? Number(item.selling_price) : Number(item.purchase_price),
+      };
+      setLines((prev) => {
+        // Check if item already exists in list → increment qty
+        const existing = prev.find((l) => l.itemId === item.id);
+        if (existing) {
+          return prev.map((l) =>
+            l.key === existing.key ? { ...l, qty: l.qty + 1, subtotal: calcSubtotal({ ...l, qty: l.qty + 1 }) } : l
+          );
+        }
+        return [...prev, newLine];
+      });
+      setBarcodeMsg(`✅ ${item.name} ditambahkan`);
+      setTimeout(() => setBarcodeMsg(null), 2000);
+    } catch {
+      setBarcodeMsg("Gagal mencari item");
+    }
+  }, [isSale]);
 
   /* ---- handlers ---- */
   const backHref = isSale
@@ -528,6 +576,31 @@ export function TransactionForm({
 
             {/* Divider */}
             <div className="border-t border-slate-200 dark:border-slate-700" />
+
+            {/* Barcode Scanner */}
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1 max-w-sm">
+                <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                <Input
+                  placeholder="Scan barcode / ketik SKU..."
+                  value={barcodeInput}
+                  onChange={(e) => setBarcodeInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleBarcode(barcodeInput);
+                      setBarcodeInput("");
+                    }
+                  }}
+                  className="pl-9 font-mono text-sm"
+                />
+              </div>
+              {barcodeMsg && (
+                <span className={`text-xs font-medium ${barcodeMsg.startsWith("✅") ? "text-emerald-600" : "text-amber-600"}`}>
+                  {barcodeMsg}
+                </span>
+              )}
+            </div>
 
             {/* Items Table */}
             <div className="overflow-x-auto -mx-6">

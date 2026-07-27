@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Camera, Pencil, KeyRound, Lock, Eye, EyeOff, CheckCircle, Loader } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Camera, Pencil, KeyRound, Lock, Eye, EyeOff, CheckCircle, Loader, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +18,7 @@ import { useToasts } from "@/components/ui/toast";
 
 type ProfileData = {
   user?: { id?: string; email?: string | null };
-  profile?: { name?: string; role?: string };
+  profile?: { name?: string; role?: string; profile_picture?: string | null };
 };
 
 function ChangePasswordDialog({
@@ -314,6 +314,8 @@ export function ProfileSection() {
   const [data, setData] = useState<ProfileData | null>(null);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function loadProfile() {
     try {
@@ -322,6 +324,47 @@ export function ProfileSection() {
       setData(await response.json());
     } catch (error) {
       console.error("Failed to load profile:", error);
+    }
+  }
+
+  async function handleAvatarUpload(file: File) {
+    if (!file.type.startsWith("image/")) return;
+    if (file.size > 2 * 1024 * 1024) {
+      showToast("Maksimal 2MB", "error", 3000);
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!uploadRes.ok) {
+        showToast("Gagal upload foto", "error", 3000);
+        return;
+      }
+
+      const { url } = await uploadRes.json();
+      const userId = data?.user?.id;
+      if (userId) {
+        await fetch(`/api/users/${userId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ profile_picture: url }),
+        });
+      }
+
+      showToast("Foto profil diperbarui", "success", 1500);
+      loadProfile();
+    } catch {
+      showToast("Gagal upload foto", "error", 3000);
+    } finally {
+      setIsUploading(false);
     }
   }
 
@@ -347,12 +390,36 @@ export function ProfileSection() {
           <div className="flex flex-row items-center gap-8">
             {/* Avatar */}
             <div className="relative group">
-              <div className="size-32 rounded-full bg-slate-200 dark:bg-slate-700 ring-4 ring-slate-50 dark:ring-slate-700 flex items-center justify-center">
-                <span className="text-4xl font-bold text-slate-500 dark:text-slate-400">
-                  {initials || "U"}
-                </span>
+              <div className="size-32 rounded-full bg-slate-200 dark:bg-slate-700 ring-4 ring-slate-50 dark:ring-slate-700 flex items-center justify-center overflow-hidden">
+                {data?.profile?.profile_picture ? (
+                  <img
+                    src={data.profile.profile_picture}
+                    alt={name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-4xl font-bold text-slate-500 dark:text-slate-400">
+                    {initials || "U"}
+                  </span>
+                )}
               </div>
+              {isUploading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
+                  <Loader2 className="h-6 w-6 animate-spin text-white" />
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleAvatarUpload(file);
+                }}
+              />
               <button
+                onClick={() => fileInputRef.current?.click()}
                 aria-label="Ganti foto"
                 className="absolute bottom-0 right-0 p-2 bg-sky-500 text-white rounded-full shadow-lg hover:bg-sky-600 transition-colors border-4 border-white dark:border-slate-800"
               >

@@ -14,14 +14,7 @@ export async function middleware(request: NextRequest) {
 // Static assets and public files are excluded.
 export const config = {
     matcher: [
-        /*
-         * Match all request paths EXCEPT:
-         * - _next/static (static files)
-         * - _next/image (image optimization)
-         * - favicon.ico
-         * - public images / fonts (svg, png, jpg, jpeg, gif, webp)
-         * - robots.txt / sitemap.xml etc.
-         */
-        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+        // Only run on pages that need auth or could have auth cookies
+        '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff2?|ttf|eot)$).*)',
     ],
 }

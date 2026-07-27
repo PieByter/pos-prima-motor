@@ -70,12 +70,15 @@ function ItemFormContent({
   const [previewUrl, setPreviewUrl] = useState<string | null>(
     item?.picture ?? null
   );
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
   function handleFile(file: File) {
     if (!file.type.startsWith("image/")) return;
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
+    setSelectedFile(file);
   }
 
   function handleDrop(e: React.DragEvent) {
@@ -85,8 +88,36 @@ function ItemFormContent({
     if (file) handleFile(file);
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setIsUploading(true);
+
+    let pictureUrl: string | null = previewUrl;
+
+    // Upload file to Supabase Storage if a new file was selected
+    if (selectedFile) {
+      try {
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          pictureUrl = uploadData.url;
+        } else {
+          console.warn("Upload failed, using local preview");
+        }
+      } catch (err) {
+        console.error("Upload error:", err);
+      }
+    }
+
+    setIsUploading(false);
+
     onSave({
       name,
       description: "",
@@ -96,7 +127,7 @@ function ItemFormContent({
       sellingPrice: Number(sellingPrice) || 0,
       serviceFee: Number(serviceFee) || 0,
       stock: item?.stock ?? 0,
-      picture: previewUrl,
+      picture: pictureUrl,
     });
   }
 
@@ -342,10 +373,23 @@ function ItemFormContent({
         </Button>
         <Button
           type="submit"
+          disabled={isUploading}
           className="bg-sky-500 hover:bg-sky-600 text-white px-5 gap-2 shadow-md shadow-sky-500/20"
         >
-          <Save className="h-4 w-4" />
-          {isEdit ? "Simpan Perubahan" : "Simpan Barang"}
+          {isUploading ? (
+            <span className="inline-flex items-center gap-2">
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Mengupload...
+            </span>
+          ) : (
+            <>
+              <Save className="h-4 w-4" />
+              {isEdit ? "Simpan Perubahan" : "Simpan Barang"}
+            </>
+          )}
         </Button>
       </div>
     </form>

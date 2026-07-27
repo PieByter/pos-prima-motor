@@ -27,16 +27,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { type TransactionType } from "@/lib/data/transactions";
 import { formatRupiah } from "@/lib/data/items";
 
@@ -75,6 +65,12 @@ type ItemOption = {
 type MechanicOption = {
   id: string;
   name: string;
+};
+
+type CustomerOption = {
+  id: number;
+  name: string;
+  phone: string | null;
 };
 
 type PaymentMethodOption = {
@@ -147,6 +143,9 @@ export function TransactionForm({
 
   /* ---- state ---- */
   const [customer, setCustomer] = useState(initialData?.customer ?? "");
+  const [customerId, setCustomerId] = useState<string>("");
+  const [customerOptions, setCustomerOptions] = useState<CustomerOption[]>([]);
+  const [supplierOptions, setSupplierOptions] = useState<CustomerOption[]>([]);
   const [mechanicId, setMechanicId] = useState<string>(
     initialData?.mechanicId?.toString() ?? ""
   );
@@ -161,16 +160,18 @@ export function TransactionForm({
   const [paymentMethodId, setPaymentMethodId] = useState<string>("");
   const [cashAmount, setCashAmount] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [isOptionsLoading, setIsOptionsLoading] = useState(true);
 
   useEffect(() => {
     const loadOptions = async () => {
       setIsOptionsLoading(true);
       try {
-        const [itemsRes, usersRes, paymentRes] = await Promise.all([
+        const [itemsRes, usersRes, paymentRes, customersRes] = await Promise.all([
           fetch("/api/items?page=1&limit=200", { cache: "no-store" }),
           fetch("/api/users", { cache: "no-store" }),
           fetch("/api/payment-methods", { cache: "no-store" }),
+          fetch(`/api/${isSale ? "customers" : "suppliers"}?limit=500`, { cache: "no-store" }),
         ]);
 
         if (itemsRes.ok) {
@@ -197,6 +198,16 @@ export function TransactionForm({
           setPaymentMethods(paymentData);
           if (paymentData.length > 0) {
             setPaymentMethodId(paymentData[0].id.toString());
+          }
+        }
+
+        if (customersRes.ok) {
+          const custJson = await customersRes.json();
+          const opts = (custJson?.data ?? []) as CustomerOption[];
+          if (isSale) {
+            setCustomerOptions(opts);
+          } else {
+            setSupplierOptions(opts);
           }
         }
       } catch (error) {
@@ -296,11 +307,12 @@ export function TransactionForm({
 
   const handleSave = async () => {
     setIsSubmitting(true);
+    setFormError(null);
     try {
       if (isSale) {
         // ── Submit sale to API ─────────────────────────────────────────
         const header = {
-          customer_id: customer ? Number(customer) : null,
+          customer_id: customerId ? Number(customerId) : null,
           mechanic_id: mechanicId || null,
           invoice_number: trxId,
           sale_date: date,
@@ -339,12 +351,39 @@ export function TransactionForm({
         router.refresh();
       } else {
         // ── Submit purchase to API ─────────────────────────────────────
-        // (Purchase form submit would go here; for now just navigate)
+        const header = {
+          supplier_id: customerId ? Number(customerId) : null,
+          invoice_number: trxId,
+          purchase_date: date,
+          total_amount: totals.grandTotal,
+          status: "completed" as const,
+        };
+
+        const details = lines
+          .filter((l) => l.itemId != null)
+          .map((l) => ({
+            item_id: l.itemId!,
+            quantity: l.qty,
+            price: l.unitPrice,
+            subtotal: l.unitPrice * l.qty,
+          }));
+
+        const res = await fetch("/api/purchases", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ header, details }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error ?? "Gagal menyimpan pembelian");
+        }
+
         router.push(backHref);
         router.refresh();
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Gagal menyimpan transaksi");
+      setFormError(err instanceof Error ? err.message : "Gagal menyimpan transaksi");
     } finally {
       setIsSubmitting(false);
     }
@@ -385,23 +424,62 @@ export function TransactionForm({
                   {isSale ? "Customer" : "Supplier"}
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    placeholder={
-                      isSale
-                        ? "Cari nama customer..."
-                        : "Cari nama supplier..."
-                    }
-                    value={customer}
-                    onChange={(e) => setCustomer(e.target.value)}
-                    className="pl-9 pr-10"
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-sky-500 hover:text-sky-600"
-                  >
-                    <Plus className="h-5 w-5" />
-                  </button>
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 z-10 pointer-events-none" />
+                  {isSale ? (
+                    <Select value={customerId} onValueChange={(val) => {
+                      setCustomerId(val);
+                      const cust = customerOptions.find((c) => c.id.toString() === val);
+                      setCustomer(cust?.name ?? "");
+                    }}>
+                      <SelectTrigger className="pl-9">
+                        <SelectValue placeholder="Cari customer..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {customerOptions.length === 0 && (
+                          <SelectItem value="-1" disabled>
+                            Tidak ada customer
+                          </SelectItem>
+                        )}
+                        {customerOptions.map((c) => (
+                          <SelectItem key={c.id} value={c.id.toString()}>
+                            <span className="font-medium">{c.name}</span>
+                            {c.phone && (
+                              <span className="ml-2 text-xs text-slate-400">
+                                {c.phone}
+                              </span>
+                            )}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Select value={customerId} onValueChange={(val) => {
+                      setCustomerId(val);
+                      const sup = supplierOptions.find((s) => s.id.toString() === val);
+                      setCustomer(sup?.name ?? "");
+                    }}>
+                      <SelectTrigger className="pl-9">
+                        <SelectValue placeholder="Cari supplier..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {supplierOptions.length === 0 && (
+                          <SelectItem value="-1" disabled>
+                            Tidak ada supplier
+                          </SelectItem>
+                        )}
+                        {supplierOptions.map((s) => (
+                          <SelectItem key={s.id} value={s.id.toString()}>
+                            <span className="font-medium">{s.name}</span>
+                            {s.phone && (
+                              <span className="ml-2 text-xs text-slate-400">
+                                {s.phone}
+                              </span>
+                            )}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
               </div>
 
@@ -714,6 +792,13 @@ export function TransactionForm({
                 </div>
               </div>
             </div>
+
+            {/* Error message */}
+            {formError && (
+              <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">
+                {formError}
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex justify-end gap-3 pt-2">

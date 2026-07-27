@@ -18,21 +18,28 @@ import {
 } from "./ui/dashboard-card";
 import { formatCompactCurrency } from "@/lib/format";
 
-export function SalesChart() {
+export function SalesChart({ dateRange }: { dateRange?: { start: string; end: string } }) {
   const [data, setData] = useState<Array<{ day: string; sales: number }>>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [period, setPeriod] = useState("7days");
+  const [period, setPeriod] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchChartData = async () => {
       setIsLoading(true);
       try {
-        const end = new Date();
-        const start = new Date();
+        let start: Date, end: Date;
 
-        if (period === "7days") start.setDate(start.getDate() - 7);
-        else if (period === "month") start.setMonth(start.getMonth() - 1);
-        else if (period === "year") start.setFullYear(start.getFullYear() - 1);
+        if (dateRange) {
+          start = new Date(dateRange.start);
+          end = new Date(dateRange.end);
+        } else {
+          end = new Date();
+          start = new Date();
+          if (period === "7days") start.setDate(start.getDate() - 7);
+          else if (period === "month") start.setMonth(start.getMonth() - 1);
+          else if (period === "year") start.setFullYear(start.getFullYear() - 1);
+          else start.setDate(start.getDate() - 7); // default 7 days
+        }
 
         const response = await fetch(
           `/api/dashboard/chart?start=${start.toISOString().split("T")[0]}&end=${end.toISOString().split("T")[0]}`,
@@ -64,20 +71,22 @@ export function SalesChart() {
     };
 
     fetchChartData();
-  }, [period]);
+  }, [period, dateRange?.start, dateRange?.end]);
 
   return (
     <DashboardCard>
       <SectionHeader label="Revenue trend" title="Sales Trends">
-        <select
-          value={period}
-          onChange={(e) => setPeriod(e.target.value)}
-          className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 shadow-sm focus:border-sky-400 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-        >
-          <option value="7days">Last 7 Days</option>
-          <option value="month">Last Month</option>
-          <option value="year">Last Year</option>
-        </select>
+        {!dateRange && (
+          <select
+            value={period ?? "7days"}
+            onChange={(e) => setPeriod(e.target.value)}
+            className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 shadow-sm focus:border-sky-400 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+          >
+            <option value="7days">Last 7 Days</option>
+            <option value="month">Last Month</option>
+            <option value="year">Last Year</option>
+          </select>
+        )}
       </SectionHeader>
 
       <div className="h-72 w-full px-3 pb-3 pt-4">

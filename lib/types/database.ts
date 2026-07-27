@@ -294,7 +294,22 @@ export type ProfitLossReport = {
   gross_profit: number
   total_service_fees: number
   net_profit: number
+  hpp_total: number
 }
+
+// --- Activity Logs ---
+export type ActivityLog = {
+  id: number
+  user_id: string | null
+  action: 'create' | 'update' | 'delete'
+  entity: string
+  entity_id: string | null
+  description: string | null
+  metadata: string | null
+  created_at: string
+}
+
+export type ActivityLogInsert = Omit<ActivityLog, 'id' | 'created_at'>
 
 // --- Expenses ---
 export type Expense = {

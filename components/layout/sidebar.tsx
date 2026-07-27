@@ -19,9 +19,11 @@ import {
   RotateCcw,
   Download,
   Tag,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ThemeToggle } from "@/components/theme-toggle";
 import type { LucideIcon } from "lucide-react";
 
 type NavLink = { label: string; href: string; icon: LucideIcon; color?: string };
@@ -63,6 +65,7 @@ const sidebarNav: NavItem[] = [
     group: "Laporan & Pengaturan",
     items: [
       { label: "Laporan", href: "/dashboard/reports", icon: BarChart3 },
+      { label: "Activity Log", href: "/dashboard/activity-log", icon: History },
       { label: "Notifikasi", href: "/dashboard/notifications", icon: Bell },
       { label: "Pengaturan", href: "/dashboard/settings", icon: Settings },
     ],
@@ -165,7 +168,8 @@ export function Sidebar() {
 
       {/* User Footer */}
       <div className="p-3 border-t border-slate-200 dark:border-slate-800 shrink-0">
-        <div className="flex items-center gap-3 px-2 py-2">
+        <div className="flex items-center gap-1 px-2 py-2">
+          <ThemeToggle />
           <Avatar className="h-8 w-8 shrink-0">
             <AvatarFallback className="bg-sky-500 text-white text-xs font-bold">
               A

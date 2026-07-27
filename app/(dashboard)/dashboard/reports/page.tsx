@@ -32,6 +32,7 @@ type ProfitLossReport = {
   gross_profit: number;
   total_service_fees: number;
   net_profit: number;
+  hpp_total: number;
 };
 
 /* ───── Helpers ───── */
@@ -235,7 +236,7 @@ export default function ReportsPage() {
         </DashboardCard>
 
         {/* Stat Cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <ReportStat
             label="Total Sales"
             value={formatCurrency(sales?.total_sales ?? 0)}
@@ -244,11 +245,11 @@ export default function ReportsPage() {
             iconColor="text-emerald-500"
           />
           <ReportStat
-            label="Total Purchases"
-            value={formatCurrency(purchases?.total_purchases ?? 0)}
-            sub={`${purchases?.total_transactions ?? 0} transaksi`}
+            label="HPP (COGS)"
+            value={formatCurrency(profitLoss?.hpp_total ?? 0)}
+            sub="Harga Pokok Penjualan"
             icon={TrendingDown}
-            iconColor="text-orange-500"
+            iconColor="text-rose-500"
           />
           <ReportStat
             label="Gross Profit"

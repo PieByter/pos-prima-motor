@@ -235,6 +235,18 @@ export const purchaseReturnDetails = pgTable('purchase_return_details', {
   refund_amount: numeric('refund_amount', { precision: 15, scale: 2 }).notNull(),
 })
 
+// ─── activity_logs ───────────────────────────────────────────────────────────
+export const activityLogs = pgTable('activity_logs', {
+  id: serial('id').primaryKey(),
+  user_id: uuid('user_id'),
+  action: text('action', { enum: ['create', 'update', 'delete'] }).notNull(),
+  entity: text('entity').notNull(),
+  entity_id: text('entity_id'),
+  description: text('description'),
+  metadata: text('metadata'),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
 // ─── notifications ───────────────────────────────────────────────────────────
 export const notifications = pgTable('notifications', {
   id: serial('id').primaryKey(),
@@ -437,6 +449,14 @@ export const purchaseReturnDetailsRelations = relations(purchaseReturnDetails, (
 export const paymentMethodsRelations = relations(paymentMethods, ({ many }) => ({
   sales: many(sales),
   expenses: many(expenses),
+}))
+
+// ─── activity_logs ───────────────────────────────────────────────────────────
+export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
+  user: one(profiles, {
+    fields: [activityLogs.user_id],
+    references: [profiles.id],
+  }),
 }))
 
 // ─── notifications ───────────────────────────────────────────────────────────

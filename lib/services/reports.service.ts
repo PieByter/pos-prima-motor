@@ -115,28 +115,45 @@ export async function getProfitLossReport(
 
     if (purchasesError) return { data: null, error: new Error(purchasesError.message) }
 
-    // Get service fees from sale_details for those sales
     const saleIds = (salesData ?? []).map((s) => s.id)
     let total_service_fees = 0
+    let hpp_total = 0
 
     if (saleIds.length > 0) {
-      const { data: serviceData, error: serviceError } = await supabase
+      const { data: detailData, error: detailError } = await supabase
         .from('sale_details')
-        .select('service_fee')
+        .select('item_id, quantity, service_fee')
         .in('sale_id', saleIds)
 
-      if (serviceError) return { data: null, error: new Error(serviceError.message) }
-      total_service_fees = (serviceData ?? []).reduce((sum, sd) => sum + Number(sd.service_fee), 0)
+      if (detailError) return { data: null, error: new Error(detailError.message) }
+
+      total_service_fees = (detailData ?? []).reduce((sum, sd) => sum + Number(sd.service_fee), 0)
+
+      // HPP: get purchase_price from items for each sold item
+      const itemIds = [...new Set((detailData ?? []).map((d) => d.item_id))]
+      if (itemIds.length > 0) {
+        const { data: items } = await supabase
+          .from('items')
+          .select('id, purchase_price')
+          .in('id', itemIds)
+
+        const priceMap = new Map((items ?? []).map((i) => [i.id, Number(i.purchase_price)]))
+
+        hpp_total = (detailData ?? []).reduce((sum, sd) => {
+          const purchasePrice = priceMap.get(sd.item_id) ?? 0
+          return sum + purchasePrice * sd.quantity
+        }, 0)
+      }
     }
 
     const total_sales = (salesData ?? []).reduce((sum, s) => sum + Number(s.total_amount), 0)
     const total_purchases = (purchasesData ?? []).reduce((sum, p) => sum + Number(p.total_amount), 0)
 
-    const gross_profit = total_sales - total_purchases
+    const gross_profit = total_sales - hpp_total
     const net_profit = gross_profit + total_service_fees
 
     return {
-      data: { total_sales, total_purchases, gross_profit, total_service_fees, net_profit },
+      data: { total_sales, total_purchases, gross_profit, total_service_fees, net_profit, hpp_total },
       error: null,
     }
   } catch (err) {

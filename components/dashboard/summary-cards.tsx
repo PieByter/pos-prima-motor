@@ -58,8 +58,11 @@ const TrendIcon = {
   add: Plus,
 };
 
-export function SummaryCards() {
-  const { data, isLoading } = useFetch<SummaryData>("/api/dashboard/summary");
+export function SummaryCards({ dateRange }: { dateRange?: { start: string; end: string } }) {
+  const url = dateRange
+    ? `/api/dashboard/summary?start=${dateRange.start}&end=${dateRange.end}`
+    : "/api/dashboard/summary";
+  const { data, isLoading } = useFetch<SummaryData>(url);
 
   const stats = [
     {

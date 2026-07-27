@@ -15,6 +15,9 @@ import {
   Building2,
   ClipboardList,
   Bell,
+  Receipt,
+  RotateCcw,
+  Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -44,6 +47,14 @@ const sidebarNav: NavItem[] = [
       { label: "Penjualan", href: "/dashboard/transactions/sales", icon: ShoppingCart },
       { label: "Pembelian", href: "/dashboard/transactions/purchases", icon: ClipboardList },
       { label: "Inventory", href: "/dashboard/inventory", icon: Package },
+    ],
+  },
+  {
+    group: "Keuangan",
+    items: [
+      { label: "Pengeluaran", href: "/dashboard/expenses", icon: Receipt },
+      { label: "Retur Penjualan", href: "/dashboard/returns/sales", icon: RotateCcw },
+      { label: "Retur Pembelian", href: "/dashboard/returns/purchases", icon: RotateCcw },
     ],
   },
   {

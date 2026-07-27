@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { Loader2, TrendingDown, TrendingUp, Wallet, Download } from "lucide-react";
 import {
   DashboardCard,
   SectionHeader,
@@ -224,6 +224,14 @@ export default function ReportsPage() {
             </Button>
           </div>
           {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
+          <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => window.open(`/api/export?type=sales&start_date=${startDate}&end_date=${endDate}`, "_blank")}>
+              <Download className="h-4 w-4" /> Export Sales CSV
+            </Button>
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => window.open(`/api/export?type=purchases&start_date=${startDate}&end_date=${endDate}`, "_blank")}>
+              <Download className="h-4 w-4" /> Export Purchases CSV
+            </Button>
+          </div>
         </DashboardCard>
 
         {/* Stat Cards */}

@@ -11,7 +11,22 @@ import {
   CalendarDays,
   Hash,
   Loader2,
+  Banknote,
+  Wallet,
+  CreditCard,
+  Smartphone,
+  Landmark,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,6 +75,12 @@ type ItemOption = {
 type MechanicOption = {
   id: string;
   name: string;
+};
+
+type PaymentMethodOption = {
+  id: number;
+  name: string;
+  icon: string | null;
 };
 
 /* ------------------------------------------------------------------ */
@@ -136,15 +157,20 @@ export function TransactionForm({
   );
   const [itemOptions, setItemOptions] = useState<ItemOption[]>([]);
   const [mechanicOptions, setMechanicOptions] = useState<MechanicOption[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodOption[]>([]);
+  const [paymentMethodId, setPaymentMethodId] = useState<string>("");
+  const [cashAmount, setCashAmount] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isOptionsLoading, setIsOptionsLoading] = useState(true);
 
   useEffect(() => {
     const loadOptions = async () => {
       setIsOptionsLoading(true);
       try {
-        const [itemsRes, usersRes] = await Promise.all([
+        const [itemsRes, usersRes, paymentRes] = await Promise.all([
           fetch("/api/items?page=1&limit=200", { cache: "no-store" }),
           fetch("/api/users", { cache: "no-store" }),
+          fetch("/api/payment-methods", { cache: "no-store" }),
         ]);
 
         if (itemsRes.ok) {
@@ -164,6 +190,14 @@ export function TransactionForm({
             .map((u) => ({ id: u.id, name: u.name }));
 
           setMechanicOptions(mechanics);
+        }
+
+        if (paymentRes.ok) {
+          const paymentData = (await paymentRes.json()) as PaymentMethodOption[];
+          setPaymentMethods(paymentData);
+          if (paymentData.length > 0) {
+            setPaymentMethodId(paymentData[0].id.toString());
+          }
         }
       } catch (error) {
         console.error("Failed to load form options:", error);
@@ -194,8 +228,26 @@ export function TransactionForm({
     const tax = Math.round(beforeTax * taxRate);
     const grandTotal = beforeTax + tax;
 
-    return { itemsSubtotal, serviceFees, totalDiscount, taxRate, tax, grandTotal };
-  }, [lines]);
+    const cash = Number(cashAmount) || 0;
+    const changeAmount = cash >= grandTotal ? cash - grandTotal : 0;
+
+    return { itemsSubtotal, serviceFees, totalDiscount, taxRate, tax, grandTotal, cashAmount: cash, changeAmount };
+  }, [lines, cashAmount]);
+
+  /* ---- payment method helpers ---- */
+  const selectedPaymentMethod = paymentMethods.find((pm) => pm.id.toString() === paymentMethodId);
+  const isCashPayment = selectedPaymentMethod?.name?.toLowerCase() === "tunai";
+
+  const getPaymentIcon = (icon: string | null) => {
+    switch (icon) {
+      case "cash": return <Banknote className="h-4 w-4" />;
+      case "qris": return <Smartphone className="h-4 w-4" />;
+      case "bank": return <Landmark className="h-4 w-4" />;
+      case "debit": return <CreditCard className="h-4 w-4" />;
+      case "credit": return <CreditCard className="h-4 w-4" />;
+      default: return <Wallet className="h-4 w-4" />;
+    }
+  };
 
   /* ---- line helpers ---- */
   const updateLine = useCallback(
@@ -242,12 +294,60 @@ export function TransactionForm({
     ? "/dashboard/transactions/sales"
     : "/dashboard/transactions/purchases";
 
-  const handleSave = () => {
-    // In a real app, this would call an API to save the transaction
-    alert(
-      `${isEdit ? "Updated" : "Created"} ${isSale ? "sale" : "purchase"} transaction!\n\nCustomer: ${customer}\nItems: ${lines.length}\nTotal: ${formatRupiah(totals.grandTotal)}`
-    );
-    router.push(backHref);
+  const handleSave = async () => {
+    setIsSubmitting(true);
+    try {
+      if (isSale) {
+        // ── Submit sale to API ─────────────────────────────────────────
+        const header = {
+          customer_id: customer ? Number(customer) : null,
+          mechanic_id: mechanicId || null,
+          invoice_number: trxId,
+          sale_date: date,
+          total_amount: totals.grandTotal,
+          status: "completed" as const,
+          payment_method_id: paymentMethodId ? Number(paymentMethodId) : null,
+          cash_amount: isCashPayment ? totals.cashAmount : null,
+          change_amount: isCashPayment ? totals.changeAmount : null,
+          notes: notes || null,
+        };
+
+        const details = lines
+          .filter((l) => l.itemId != null)
+          .map((l) => ({
+            item_id: l.itemId!,
+            quantity: l.qty,
+            base_price: l.unitPrice,
+            discount_amount: Math.round(l.unitPrice * l.qty * (l.discountPercent / 100)),
+            final_price: l.unitPrice * l.qty - Math.round(l.unitPrice * l.qty * (l.discountPercent / 100)) + l.serviceFee,
+            service_fee: l.serviceFee,
+            subtotal: l.unitPrice * l.qty - Math.round(l.unitPrice * l.qty * (l.discountPercent / 100)) + l.serviceFee,
+          }));
+
+        const res = await fetch("/api/sales", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ header, details }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error ?? "Gagal menyimpan penjualan");
+        }
+
+        router.push(backHref);
+        router.refresh();
+      } else {
+        // ── Submit purchase to API ─────────────────────────────────────
+        // (Purchase form submit would go here; for now just navigate)
+        router.push(backHref);
+        router.refresh();
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Gagal menyimpan transaksi");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   /* ================================================================ */
@@ -513,7 +613,7 @@ export function TransactionForm({
               Tambah Baris Item
             </Button>
 
-            {/* Notes + Totals */}
+            {/* Notes + Payment + Totals */}
             <div className="flex flex-col sm:flex-row justify-between items-end gap-6 pt-6 border-t border-slate-200 dark:border-slate-700">
               {/* Notes */}
               <div className="w-full sm:w-1/2 space-y-1.5">
@@ -528,37 +628,89 @@ export function TransactionForm({
                 />
               </div>
 
-              {/* Summary */}
-              <div className="w-full sm:w-5/12 lg:w-1/3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 p-4 space-y-2">
-                <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
-                  <span>Subtotal (Items):</span>
-                  <span>{formatRupiah(totals.itemsSubtotal)}</span>
+              {/* Payment & Totals */}
+              <div className="w-full sm:w-5/12 lg:w-1/3 space-y-3">
+                {/* Payment Method */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Metode Pembayaran
+                  </label>
+                  <Select value={paymentMethodId} onValueChange={setPaymentMethodId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih metode bayar..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {paymentMethods.map((pm) => (
+                        <SelectItem key={pm.id} value={pm.id.toString()}>
+                          <span className="inline-flex items-center gap-2">
+                            {getPaymentIcon(pm.icon)}
+                            {pm.name}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                {isSale && (
+
+                {/* Cash payment fields */}
+                {isCashPayment && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                        Jumlah Dibayar
+                      </label>
+                      <Input
+                        type="number"
+                        min={0}
+                        placeholder="0"
+                        value={cashAmount}
+                        onChange={(e) => setCashAmount(e.target.value)}
+                        className="text-right"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                        Kembalian
+                      </label>
+                      <div className="flex h-10 w-full items-center justify-end rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 px-3 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                        {formatRupiah(totals.changeAmount)}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Summary */}
+                <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 p-4 space-y-2">
                   <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
-                    <span>Biaya Jasa:</span>
-                    <span>{formatRupiah(totals.serviceFees)}</span>
+                    <span>Subtotal (Items):</span>
+                    <span>{formatRupiah(totals.itemsSubtotal)}</span>
                   </div>
-                )}
-                {totals.totalDiscount > 0 && (
-                  <div className="flex justify-between text-sm text-red-600 dark:text-red-400">
-                    <span>Total Diskon:</span>
-                    <span>- {formatRupiah(totals.totalDiscount)}</span>
+                  {isSale && (
+                    <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
+                      <span>Biaya Jasa:</span>
+                      <span>{formatRupiah(totals.serviceFees)}</span>
+                    </div>
+                  )}
+                  {totals.totalDiscount > 0 && (
+                    <div className="flex justify-between text-sm text-red-600 dark:text-red-400">
+                      <span>Total Diskon:</span>
+                      <span>- {formatRupiah(totals.totalDiscount)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400 pb-2 border-b border-slate-200 dark:border-slate-700">
+                    <span>
+                      Pajak ({Math.round(totals.taxRate * 100)}%):
+                    </span>
+                    <span>{formatRupiah(totals.tax)}</span>
                   </div>
-                )}
-                <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400 pb-2 border-b border-slate-200 dark:border-slate-700">
-                  <span>
-                    Pajak ({Math.round(totals.taxRate * 100)}%):
-                  </span>
-                  <span>{formatRupiah(totals.tax)}</span>
-                </div>
-                <div className="flex justify-between items-center pt-1">
-                  <span className="text-base font-bold text-slate-900 dark:text-white">
-                    TOTAL
-                  </span>
-                  <span className="text-2xl font-bold text-sky-500">
-                    {formatRupiah(totals.grandTotal)}
-                  </span>
+                  <div className="flex justify-between items-center pt-1">
+                    <span className="text-base font-bold text-slate-900 dark:text-white">
+                      TOTAL
+                    </span>
+                    <span className="text-2xl font-bold text-sky-500">
+                      {formatRupiah(totals.grandTotal)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -576,14 +728,20 @@ export function TransactionForm({
                 type="button"
                 className="bg-sky-500 hover:bg-sky-600 text-white px-6"
                 onClick={handleSave}
+                disabled={isSubmitting}
               >
-                {isEdit
-                  ? isSale
-                    ? "Simpan Penjualan"
-                    : "Simpan Pembelian"
-                  : isSale
-                    ? "Buat Penjualan"
-                    : "Buat Pembelian"}
+                {isSubmitting ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Menyimpan...
+                  </span>
+                ) : isEdit ? (
+                  isSale ? "Simpan Penjualan" : "Simpan Pembelian"
+                ) : isSale ? (
+                  "Buat Penjualan"
+                ) : (
+                  "Buat Pembelian"
+                )}
               </Button>
             </div>
           </div>

@@ -53,14 +53,117 @@ export async function getSummaryCards(
     const totalSales = (salesData ?? []).reduce((sum, s) => sum + Number(s.total_amount), 0)
     const totalPurchases = (purchasesData ?? []).reduce((sum, p) => sum + Number(p.total_amount), 0)
 
+    // ── Calculate growth by comparing with previous period ─────────────
+    let salesGrowth = 0
+    let purchasesGrowth = 0
+
+    if (dateRange) {
+      const rangeStart = new Date(dateRange.start)
+      const rangeEnd = new Date(dateRange.end)
+      const rangeDuration = rangeEnd.getTime() - rangeStart.getTime()
+      const prevEnd = new Date(rangeStart.getTime() - 1)
+      const prevStart = new Date(prevEnd.getTime() - rangeDuration)
+
+      const prevStartStr = prevStart.toISOString().slice(0, 10)
+      const prevEndStr = prevEnd.toISOString().slice(0, 10)
+
+      // Previous period sales
+      const { data: prevSales } = await supabase
+        .from('sales')
+        .select('total_amount')
+        .eq('status', 'completed')
+        .gte('sale_date', prevStartStr)
+        .lte('sale_date', prevEndStr)
+
+      const prevSalesTotal = (prevSales ?? []).reduce((sum, s) => sum + Number(s.total_amount), 0)
+      if (prevSalesTotal > 0) {
+        salesGrowth = Math.round(((totalSales - prevSalesTotal) / prevSalesTotal) * 100)
+      }
+
+      // Previous period purchases
+      const { data: prevPurchases } = await supabase
+        .from('purchases')
+        .select('total_amount')
+        .eq('status', 'completed')
+        .gte('purchase_date', prevStartStr)
+        .lte('purchase_date', prevEndStr)
+
+      const prevPurchasesTotal = (prevPurchases ?? []).reduce((sum, p) => sum + Number(p.total_amount), 0)
+      if (prevPurchasesTotal > 0) {
+        purchasesGrowth = Math.round(((totalPurchases - prevPurchasesTotal) / prevPurchasesTotal) * 100)
+      }
+    } else {
+      // Default: compare this month vs last month
+      const now = new Date()
+      const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
+      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10)
+      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0, 10)
+
+      // This month sales
+      const { data: curSales } = await supabase
+        .from('sales')
+        .select('total_amount')
+        .eq('status', 'completed')
+        .gte('sale_date', currentMonthStart)
+
+      const curSalesTotal = (curSales ?? []).reduce((sum, s) => sum + Number(s.total_amount), 0)
+
+      // Last month sales
+      const { data: prevSales } = await supabase
+        .from('sales')
+        .select('total_amount')
+        .eq('status', 'completed')
+        .gte('sale_date', lastMonthStart)
+        .lte('sale_date', lastMonthEnd)
+
+      const prevSalesTotal = (prevSales ?? []).reduce((sum, s) => sum + Number(s.total_amount), 0)
+      if (prevSalesTotal > 0) {
+        salesGrowth = Math.round(((curSalesTotal - prevSalesTotal) / prevSalesTotal) * 100)
+      }
+
+      // This month purchases
+      const { data: curPurchases } = await supabase
+        .from('purchases')
+        .select('total_amount')
+        .eq('status', 'completed')
+        .gte('purchase_date', currentMonthStart)
+
+      const curPurchasesTotal = (curPurchases ?? []).reduce((sum, p) => sum + Number(p.total_amount), 0)
+
+      // Last month purchases
+      const { data: prevPurchases } = await supabase
+        .from('purchases')
+        .select('total_amount')
+        .eq('status', 'completed')
+        .gte('purchase_date', lastMonthStart)
+        .lte('purchase_date', lastMonthEnd)
+
+      const prevPurchasesTotal = (prevPurchases ?? []).reduce((sum, p) => sum + Number(p.total_amount), 0)
+      if (prevPurchasesTotal > 0) {
+        purchasesGrowth = Math.round(((curPurchasesTotal - prevPurchasesTotal) / prevPurchasesTotal) * 100)
+      }
+    }
+
+    // ── Include expenses in summary if available ──────────────────────
+    const { data: expenseRows } = dateRange
+      ? await supabase
+        .from('expenses')
+        .select('amount')
+        .gte('expense_date', dateRange.start)
+        .lte('expense_date', dateRange.end)
+      : await supabase.from('expenses').select('amount')
+
+    const totalExpenses = (expenseRows ?? []).reduce((sum, e) => sum + Number(e.amount), 0)
+
     return {
       data: {
         totalSales,
         totalPurchases,
         totalItems: totalItems ?? 0,
         totalCustomers: totalCustomers ?? 0,
-        salesGrowth: 0,
-        purchasesGrowth: 0,
+        totalExpenses,
+        salesGrowth,
+        purchasesGrowth,
       },
       error: null,
     }

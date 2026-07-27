@@ -37,8 +37,11 @@ export default async function SaleDetailPage({ params }: PageProps) {
     mechanicStation: "-",
     jobStart: "-",
     jobEnd: "-",
-    paymentMethod: "-",
+    paymentMethod: sale.payment_method?.name ?? "-",
+    paymentMethodIcon: sale.payment_method?.icon ?? null,
     transactionId: sale.invoice_number,
+    cashAmount: sale.cash_amount,
+    changeAmount: sale.change_amount,
     items: (sale.details ?? []).map((d) => ({
       id: d.id,
       name: d.item?.name ?? "Item",

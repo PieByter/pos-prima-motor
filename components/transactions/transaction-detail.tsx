@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Printer,
   Pencil,
   User,
   Wrench,
@@ -14,8 +13,13 @@ import {
   Disc3,
   Package,
   Truck,
+  Banknote,
+  Smartphone,
+  Landmark,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Receipt } from "@/components/transactions/receipt";
 import {
   type InvoiceDetail,
   type InvoiceItem,
@@ -32,6 +36,17 @@ const ICON_MAP: Record<InvoiceItem["icon"], React.ElementType> = {
   package: Package,
   truck: Truck,
 };
+
+function getPaymentIcon(icon: string | null) {
+  switch (icon) {
+    case "cash": return <Banknote className="h-4 w-4" />;
+    case "qris": return <Smartphone className="h-4 w-4" />;
+    case "bank": return <Landmark className="h-4 w-4" />;
+    case "debit": return <CreditCard className="h-4 w-4" />;
+    case "credit": return <CreditCard className="h-4 w-4" />;
+    default: return <Wallet className="h-4 w-4" />;
+  }
+}
 
 interface TransactionDetailProps {
   invoice: InvoiceDetail;
@@ -96,10 +111,7 @@ export function TransactionDetail({
             <Pencil className="h-4 w-4" />
             Edit
           </Button>
-          <Button className="bg-sky-500 hover:bg-sky-600 text-white gap-2">
-            <Printer className="h-4 w-4" />
-            Cetak Struk
-          </Button>
+          <Receipt invoice={invoice} />
         </div>
       </div>
 
@@ -196,7 +208,8 @@ export function TransactionDetail({
           <div className="space-y-3 text-sm">
             <div className="flex justify-between">
               <span className="text-slate-500 dark:text-slate-400">Metode</span>
-              <span className="font-medium text-slate-900 dark:text-white">
+              <span className="inline-flex items-center gap-1.5 font-medium text-slate-900 dark:text-white">
+                {invoice.paymentMethodIcon && getPaymentIcon(invoice.paymentMethodIcon)}
                 {invoice.paymentMethod}
               </span>
             </div>
@@ -206,6 +219,24 @@ export function TransactionDetail({
                 {invoice.transactionId}
               </span>
             </div>
+            {invoice.cashAmount != null && (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 dark:text-slate-400">Tunai Dibayar</span>
+                  <span className="font-medium text-slate-900 dark:text-white">
+                    {formatRupiah(invoice.cashAmount)}
+                  </span>
+                </div>
+                {invoice.changeAmount != null && invoice.changeAmount > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 dark:text-slate-400">Kembalian</span>
+                    <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                      {formatRupiah(invoice.changeAmount)}
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
             <div className="mt-2 flex justify-between border-t border-dashed border-slate-200 dark:border-slate-600 pt-3">
               <span className="font-semibold text-slate-700 dark:text-slate-200">
                 Total Bayar

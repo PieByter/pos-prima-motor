@@ -4,6 +4,8 @@ import type { Item, ItemInsert, ItemUpdate, PaginatedResponse } from '@/lib/type
 type ItemFilters = {
   search?: string
   category?: string
+  category_id?: number
+  brand_id?: number
   page?: number
   limit?: number
 }
@@ -16,6 +18,10 @@ function mapItem(row: any): Item {
     purchase_price: Number(row.purchase_price),
     selling_price: Number(row.selling_price),
     service_fee: Number(row.service_fee),
+    category_name: row.categories?.name ?? null,
+    brand_name: row.brands?.name ?? null,
+    categories: undefined,
+    brands: undefined,
   }
 }
 
@@ -24,13 +30,13 @@ export async function getItems(
   filters: ItemFilters = {},
 ): Promise<{ data: PaginatedResponse<Item> | null; error: Error | null }> {
   try {
-    const { search, category, page = 1, limit = 10 } = filters
+    const { search, category, category_id, brand_id, page = 1, limit = 10 } = filters
     const from = (page - 1) * limit
     const to = from + limit - 1
 
     let query = supabase
       .from('items')
-      .select('*', { count: 'exact' })
+      .select('*, categories(name), brands(name)', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(from, to)
 
@@ -39,6 +45,12 @@ export async function getItems(
     }
     if (category) {
       query = query.eq('category', category)
+    }
+    if (category_id) {
+      query = query.eq('category_id', category_id)
+    }
+    if (brand_id) {
+      query = query.eq('brand_id', brand_id)
     }
 
     const { data, error, count } = await query

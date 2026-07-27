@@ -22,6 +22,21 @@ export const profiles = pgTable('profiles', {
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+// ─── categories ──────────────────────────────────────────────────────────────
+export const categories = pgTable('categories', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+// ─── brands ──────────────────────────────────────────────────────────────────
+export const brands = pgTable('brands', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
 // ─── items ───────────────────────────────────────────────────────────────────
 export const items = pgTable('items', {
   id: serial('id').primaryKey(),
@@ -29,6 +44,8 @@ export const items = pgTable('items', {
   description: text('description'),
   sku: text('sku'),
   category: text('category'),
+  category_id: integer('category_id'),
+  brand_id: integer('brand_id'),
   purchase_price: numeric('purchase_price', { precision: 15, scale: 2 }).notNull(),
   selling_price: numeric('selling_price', { precision: 15, scale: 2 }).notNull(),
   service_fee: numeric('service_fee', { precision: 15, scale: 2 }).notNull().default('0'),
@@ -91,6 +108,10 @@ export const sales = pgTable('sales', {
   status: text('status', { enum: ['completed', 'pending', 'in_progress', 'cancelled'] })
     .notNull()
     .default('pending'),
+  payment_method_id: integer('payment_method_id'),
+  cash_amount: numeric('cash_amount', { precision: 15, scale: 2 }),
+  change_amount: numeric('change_amount', { precision: 15, scale: 2 }),
+  notes: text('notes'),
   created_by: uuid('created_by').notNull(),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -150,6 +171,82 @@ export const stockSummary = pgView('stock_summary', {
   current_stock: integer('current_stock'),
 }).existing()
 
+// ─── payment_methods ──────────────────────────────────────────────────────────
+export const paymentMethods = pgTable('payment_methods', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  icon: text('icon'),
+  is_active: boolean('is_active').notNull().default(true),
+})
+
+// ─── expenses ────────────────────────────────────────────────────────────────
+export const expenses = pgTable('expenses', {
+  id: serial('id').primaryKey(),
+  description: text('description').notNull(),
+  amount: numeric('amount', { precision: 15, scale: 2 }).notNull(),
+  category: text('category', { enum: ['operational', 'utilities', 'rent', 'salary', 'others'] }).notNull().default('others'),
+  expense_date: date('expense_date').notNull(),
+  payment_method_id: integer('payment_method_id'),
+  notes: text('notes'),
+  created_by: uuid('created_by'),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+// ─── sales_returns ───────────────────────────────────────────────────────────
+export const salesReturns = pgTable('sales_returns', {
+  id: serial('id').primaryKey(),
+  sale_id: integer('sale_id').notNull(),
+  return_date: date('return_date').notNull(),
+  reason: text('reason').notNull(),
+  total_refund: numeric('total_refund', { precision: 15, scale: 2 }).notNull(),
+  status: text('status', { enum: ['pending', 'processed', 'rejected'] }).notNull().default('pending'),
+  processed_by: uuid('processed_by'),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+// ─── sales_return_details ─────────────────────────────────────────────────────
+export const salesReturnDetails = pgTable('sales_return_details', {
+  id: serial('id').primaryKey(),
+  return_id: integer('return_id').notNull(),
+  item_id: integer('item_id').notNull(),
+  quantity: integer('quantity').notNull(),
+  refund_amount: numeric('refund_amount', { precision: 15, scale: 2 }).notNull(),
+})
+
+// ─── purchase_returns ─────────────────────────────────────────────────────────
+export const purchaseReturns = pgTable('purchase_returns', {
+  id: serial('id').primaryKey(),
+  purchase_id: integer('purchase_id').notNull(),
+  return_date: date('return_date').notNull(),
+  reason: text('reason').notNull(),
+  total_refund: numeric('total_refund', { precision: 15, scale: 2 }).notNull(),
+  status: text('status', { enum: ['pending', 'processed', 'rejected'] }).notNull().default('pending'),
+  processed_by: uuid('processed_by'),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+// ─── purchase_return_details ──────────────────────────────────────────────────
+export const purchaseReturnDetails = pgTable('purchase_return_details', {
+  id: serial('id').primaryKey(),
+  return_id: integer('return_id').notNull(),
+  item_id: integer('item_id').notNull(),
+  quantity: integer('quantity').notNull(),
+  refund_amount: numeric('refund_amount', { precision: 15, scale: 2 }).notNull(),
+})
+
+// ─── activity_logs ───────────────────────────────────────────────────────────
+export const activityLogs = pgTable('activity_logs', {
+  id: serial('id').primaryKey(),
+  user_id: uuid('user_id'),
+  action: text('action', { enum: ['create', 'update', 'delete'] }).notNull(),
+  entity: text('entity').notNull(),
+  entity_id: text('entity_id'),
+  description: text('description'),
+  metadata: text('metadata'),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
 // ─── notifications ───────────────────────────────────────────────────────────
 export const notifications = pgTable('notifications', {
   id: serial('id').primaryKey(),
@@ -176,7 +273,15 @@ export const profilesRelations = relations(profiles, ({ many }) => ({
 }))
 
 // ─── items ───────────────────────────────────────────────────────────────────
-export const itemsRelations = relations(items, ({ many }) => ({
+export const itemsRelations = relations(items, ({ one, many }) => ({
+  category: one(categories, {
+    fields: [items.category_id],
+    references: [categories.id],
+  }),
+  brand: one(brands, {
+    fields: [items.brand_id],
+    references: [brands.id],
+  }),
   purchaseDetails: many(purchaseDetails),
   saleDetails: many(saleDetails),
   stockMovements: many(stockMovements),
@@ -232,6 +337,10 @@ export const salesRelations = relations(sales, ({ one, many }) => ({
     fields: [sales.created_by],
     references: [profiles.id],
   }),
+  paymentMethod: one(paymentMethods, {
+    fields: [sales.payment_method_id],
+    references: [paymentMethods.id],
+  }),
   details: many(saleDetails),
 }))
 
@@ -269,6 +378,84 @@ export const discountItemsRelations = relations(discountItems, ({ one }) => ({
   item: one(items, {
     fields: [discountItems.item_id],
     references: [items.id],
+  }),
+}))
+
+// ─── categories ──────────────────────────────────────────────────────────────
+export const categoriesRelations = relations(categories, ({ many }) => ({
+  items: many(items),
+}))
+
+// ─── brands ──────────────────────────────────────────────────────────────────
+export const brandsRelations = relations(brands, ({ many }) => ({
+  items: many(items),
+}))
+
+// ─── expenses ─────────────────────────────────────────────────────────────────
+export const expensesRelations = relations(expenses, ({ one }) => ({
+  paymentMethod: one(paymentMethods, {
+    fields: [expenses.payment_method_id],
+    references: [paymentMethods.id],
+  }),
+  createdBy: one(profiles, {
+    fields: [expenses.created_by],
+    references: [profiles.id],
+  }),
+}))
+
+// ─── sales_returns ───────────────────────────────────────────────────────────
+export const salesReturnsRelations = relations(salesReturns, ({ one, many }) => ({
+  sale: one(sales, {
+    fields: [salesReturns.sale_id],
+    references: [sales.id],
+  }),
+  details: many(salesReturnDetails),
+}))
+
+// ─── sales_return_details ─────────────────────────────────────────────────────
+export const salesReturnDetailsRelations = relations(salesReturnDetails, ({ one }) => ({
+  return: one(salesReturns, {
+    fields: [salesReturnDetails.return_id],
+    references: [salesReturns.id],
+  }),
+  item: one(items, {
+    fields: [salesReturnDetails.item_id],
+    references: [items.id],
+  }),
+}))
+
+// ─── purchase_returns ─────────────────────────────────────────────────────────
+export const purchaseReturnsRelations = relations(purchaseReturns, ({ one, many }) => ({
+  purchase: one(purchases, {
+    fields: [purchaseReturns.purchase_id],
+    references: [purchases.id],
+  }),
+  details: many(purchaseReturnDetails),
+}))
+
+// ─── purchase_return_details ──────────────────────────────────────────────────
+export const purchaseReturnDetailsRelations = relations(purchaseReturnDetails, ({ one }) => ({
+  return: one(purchaseReturns, {
+    fields: [purchaseReturnDetails.return_id],
+    references: [purchaseReturns.id],
+  }),
+  item: one(items, {
+    fields: [purchaseReturnDetails.item_id],
+    references: [items.id],
+  }),
+}))
+
+// ─── payment_methods ─────────────────────────────────────────────────────────
+export const paymentMethodsRelations = relations(paymentMethods, ({ many }) => ({
+  sales: many(sales),
+  expenses: many(expenses),
+}))
+
+// ─── activity_logs ───────────────────────────────────────────────────────────
+export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
+  user: one(profiles, {
+    fields: [activityLogs.user_id],
+    references: [profiles.id],
   }),
 }))
 

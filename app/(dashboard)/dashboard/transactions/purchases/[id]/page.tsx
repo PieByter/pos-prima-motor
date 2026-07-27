@@ -36,6 +36,9 @@ export default async function PurchaseDetailPage({ params }: PageProps) {
     jobStart: "-",
     jobEnd: "-",
     paymentMethod: "-",
+    paymentMethodIcon: null,
+    cashAmount: null,
+    changeAmount: null,
     transactionId: purchase.invoice_number,
     items: (purchase.details ?? []).map((d) => ({
       id: d.id,

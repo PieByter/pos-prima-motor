@@ -25,18 +25,21 @@ export function useFetch<T>(url: string | null): UseFetchResult<T> {
     try {
       const response = await fetch(url, { cache: "no-store" });
       if (!response.ok) {
-        if (response.status === 500) {
-          setData(null);
-          setError(null);
-          return;
+        const errText = await response.text().catch(() => '');
+        let errMsg: string;
+        try {
+          const parsed = JSON.parse(errText);
+          errMsg = parsed?.error ?? `HTTP ${response.status}`;
+        } catch {
+          errMsg = errText || `HTTP ${response.status}`;
         }
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error(errMsg);
       }
       const result = await response.json();
       setData(result);
     } catch (err) {
       console.error(`useFetch error (${url}):`, err);
-      setError("Gagal memuat data. Coba lagi.");
+      setError(err instanceof Error ? err.message : "Gagal memuat data. Coba lagi.");
       setData(null);
     } finally {
       setIsLoading(false);

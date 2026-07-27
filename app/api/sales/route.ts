@@ -42,6 +42,9 @@ export async function POST(request: NextRequest) {
 
     const { header, details } = await request.json()
 
+    // Inject created_by from authenticated user
+    header.created_by = user.id
+
     const admin = createAdminClient()
     if (!header.invoice_number) {
       header.invoice_number = await generateInvoiceNumber(admin)

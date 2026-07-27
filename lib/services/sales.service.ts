@@ -29,6 +29,8 @@ function mapSale(row: any): Sale {
   return {
     ...row,
     total_amount: Number(row.total_amount),
+    cash_amount: row.cash_amount != null ? Number(row.cash_amount) : null,
+    change_amount: row.change_amount != null ? Number(row.change_amount) : null,
   }
 }
 
@@ -88,7 +90,7 @@ export async function getSaleById(
   try {
     const { data: sale, error } = await supabase
       .from('sales')
-      .select('*, customers(*), profiles(*)')
+      .select('*, customers(*), profiles(*), payment_methods(*)')
       .eq('id', id)
       .single()
 
@@ -124,6 +126,8 @@ export async function getSaleById(
         customer: (sale as any).customers ?? null,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mechanic: (sale as any).profiles ?? undefined,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        payment_method: (sale as any).payment_methods ?? undefined,
         details,
       } as SaleWithDetails,
       error: null,

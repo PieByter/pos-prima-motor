@@ -1,9 +1,9 @@
-# PRD — POS Prima Motor
+﻿# PRD — POS Prima Motor
 
 ## 1. Overview
 
 | Item | Detail |
-|---|---|
+| --- | --- |
 | **Nama Aplikasi** | POS Prima Motor |
 | **Deskripsi** | Aplikasi Point of Sale (POS) untuk toko sparepart motor. Mengelola penjualan, pembelian, stok barang, data pelanggan, supplier, diskon, dan laporan keuangan. |
 | **Tech Stack** | Next.js 16 (App Router) + TypeScript + Tailwind CSS + shadcn/ui |
@@ -18,7 +18,7 @@
 
 ### 2.1 Tech Architecture
 
-```
+```text
 ┌───────────────────────────────────────────────────┐
 │                   VERCEL (Hosting)                │
 │  ┌─────────────────────────────────────────────┐  │
@@ -58,14 +58,15 @@ export const supabase = createClient(
 ```
 
 **Environment Variables** (`.env.local`):
-```
+
+```text
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJxxxxx
 ```
 
 ### 2.3 Database Schema (ERD)
 
-```
+```text
 ┌──────────────┐       ┌──────────────┐       ┌──────────────────┐
 │  auth.users  │       │   profiles   │       │    customers     │
 │──────────────│       │──────────────│       │──────────────────│
@@ -133,7 +134,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJxxxxx
 ## 3. User Roles & Permissions
 
 | Fitur | Admin | Mekanik |
-|---|---|---|
+| --- | --- | --- |
 | Dashboard (lihat semua data) | ✅ | ❌ |
 | Dashboard (lihat data sendiri) | ✅ | ✅ |
 | Master Data (CRUD) | ✅ | ❌ |
@@ -152,7 +153,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJxxxxx
 
 ### 4.1 Struktur URL (App Router)
 
-```
+```text
 app/
 ├── (auth)/
 │   ├── login/page.tsx              → /login
@@ -188,7 +189,7 @@ app/
 
 ### 4.2 Sidebar Navigation
 
-```
+```text
 ┌─────────────────────────────┐
 │  🏍️  PRIMA MOTOR            │  ← Logo + Nama Toko
 │                             │
@@ -220,13 +221,14 @@ app/
 ```
 
 **Sidebar Behavior:**
+
 - Desktop (≥1024px): Sidebar tetap terbuka di kiri, lebar 256px
 - Tablet (768-1023px): Sidebar bisa di-collapse jadi icon only (64px)
 - Mobile (<768px): Sidebar tersembunyi, muncul sebagai drawer/overlay saat klik hamburger
 
 ### 4.3 Top Navbar
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │  ☰  │  Dashboard                    🔔  👤 Admin ▼         │
 │     │  Selamat datang, Admin!                               │
@@ -243,7 +245,7 @@ app/
 
 ### 5.1 Login Page (`/login`)
 
-```
+```text
 ┌──────────────────────────────────────────────────────┐
 │                                                      │
 │              🏍️  PRIMA MOTOR                         │
@@ -268,6 +270,7 @@ app/
 ```
 
 **Spesifikasi:**
+
 - Supabase Auth `signInWithPassword()`
 - Setelah login, redirect ke `/` (Dashboard)
 - Simpan session via Supabase cookie/localStorage
@@ -277,7 +280,7 @@ app/
 
 ### 5.2 Dashboard (`/`)
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────┐
 │  Dashboard                                        Hari ini ▼    │
 │  Selamat datang, Admin!                                         │
@@ -312,6 +315,7 @@ app/
 ```
 
 **Komponen UI:**
+
 - **Summary Cards** (4 kolom): Total Penjualan, Total Pembelian, Total Item, Total Customer
 - **Chart Penjualan**: Line/Bar chart (gunakan library Recharts)
 - **Item Terlaris**: Top 5 item paling banyak terjual
@@ -319,6 +323,7 @@ app/
 - **Transaksi Terakhir**: 5 transaksi penjualan terbaru
 
 **Data Query:**
+
 ```sql
 -- Summary Cards
 SELECT COUNT(*) FROM sales WHERE sale_date = CURRENT_DATE;
@@ -345,7 +350,7 @@ HAVING COALESCE(SUM(CASE WHEN sm.type='IN' THEN sm.quantity ELSE -sm.quantity EN
 
 ### 5.3 Master Data — Barang / Items (`/master-data/items`)
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────┐
 │  Master Data > Barang                                           │
 │                                                                  │
@@ -369,7 +374,8 @@ HAVING COALESCE(SUM(CASE WHEN sm.type='IN' THEN sm.quantity ELSE -sm.quantity EN
 ```
 
 **Modal / Dialog — Tambah / Edit Barang:**
-```
+
+```text
 ┌──────────────────────────────────────────┐
 │  Tambah Barang Baru                   ✕  │
 │  ──────────────────────────────────────  │
@@ -404,6 +410,7 @@ HAVING COALESCE(SUM(CASE WHEN sm.type='IN' THEN sm.quantity ELSE -sm.quantity EN
 ```
 
 **Fitur Tabel:**
+
 - Search / filter by nama atau SKU
 - Pagination (10, 25, 50 per page)
 - Sort per kolom (klik header)
@@ -414,7 +421,7 @@ HAVING COALESCE(SUM(CASE WHEN sm.type='IN' THEN sm.quantity ELSE -sm.quantity EN
 
 ### 5.4 Master Data — Pelanggan (`/master-data/customers`)
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────┐
 │  Master Data > Pelanggan                                        │
 │                                                                  │
@@ -441,7 +448,7 @@ Sama seperti Pelanggan. **Fields:** name*, phone, address
 
 ### 5.6 Pembelian (`/purchases`)
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────┐
 │  Pembelian                                                       │
 │                                                                  │
@@ -457,7 +464,8 @@ Sama seperti Pelanggan. **Fields:** name*, phone, address
 ```
 
 **Form Buat Pembelian (`/purchases/create`):**
-```
+
+```text
 ┌──────────────────────────────────────────────────────────────────┐
 │  Buat Pembelian Baru                                            │
 │                                                                  │
@@ -481,6 +489,7 @@ Sama seperti Pelanggan. **Fields:** name*, phone, address
 ```
 
 **Logic saat simpan:**
+
 1. Insert ke `purchases` (header)
 2. Insert ke `purchase_details` (detail per item)
 3. Insert ke `stock_movements` (type = 'IN' per item)
@@ -490,7 +499,7 @@ Sama seperti Pelanggan. **Fields:** name*, phone, address
 
 ### 5.7 Penjualan (`/sales`)
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────┐
 │  Penjualan                                                       │
 │                                                                  │
@@ -506,7 +515,8 @@ Sama seperti Pelanggan. **Fields:** name*, phone, address
 ```
 
 **Form Buat Penjualan (`/sales/create`):**
-```
+
+```text
 ┌──────────────────────────────────────────────────────────────────┐
 │  Buat Penjualan Baru                                            │
 │                                                                  │
@@ -543,6 +553,7 @@ Sama seperti Pelanggan. **Fields:** name*, phone, address
 ```
 
 **Logic saat simpan:**
+
 1. Insert ke `sales` (header)
 2. Insert ke `sale_details` (detail per item, termasuk diskon & jasa)
 3. Insert ke `stock_movements` (type = 'OUT' per item)
@@ -552,7 +563,7 @@ Sama seperti Pelanggan. **Fields:** name*, phone, address
 
 ### 5.8 Stok Barang (`/stock`)
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────┐
 │  Stok Barang                                                     │
 │                                                                  │
@@ -572,6 +583,7 @@ Sama seperti Pelanggan. **Fields:** name*, phone, address
 ```
 
 **Stok dihitung dari `stock_movements`:**
+
 ```sql
 SELECT i.id, i.name, i.sku,
   COALESCE(SUM(CASE WHEN sm.type = 'IN' THEN sm.quantity ELSE 0 END), 0) AS total_in,
@@ -587,7 +599,7 @@ ORDER BY current_stock ASC;
 
 ### 5.9 Diskon (`/discounts`)
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────┐
 │  Diskon                                                          │
 │                                                                  │
@@ -603,6 +615,7 @@ ORDER BY current_stock ASC;
 ```
 
 **Fields form:**
+
 - Nama diskon*
 - Tipe (percent / fixed)*
 - Nilai*
@@ -616,7 +629,7 @@ ORDER BY current_stock ASC;
 
 ### 5.10 Laporan (`/reports`)
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────┐
 │  Laporan                                                         │
 │                                                                  │
@@ -650,7 +663,7 @@ ORDER BY current_stock ASC;
 
 ### 5.11 Pengaturan (`/settings`)
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────┐
 │  Pengaturan                                                      │
 │                                                                  │
@@ -686,7 +699,7 @@ ORDER BY current_stock ASC;
 ### 6.1 Komponen yang Digunakan
 
 | Komponen | Kegunaan |
-|---|---|
+| --- | --- |
 | `Button` | Semua tombol aksi |
 | `Input` | Form fields |
 | `Table` | Data tables di semua halaman list |
@@ -709,7 +722,7 @@ ORDER BY current_stock ASC;
 
 ### 6.2 Folder Structure Komponen
 
-```
+```text
 components/
 ├── ui/                        ← shadcn/ui (auto-generated)
 │   ├── button.tsx
@@ -765,7 +778,7 @@ components/
 ### 7.1 Warna
 
 | Token | Warna | Kegunaan |
-|---|---|---|
+| --- | --- | --- |
 | `primary` | Blue 600 `#2563EB` | Tombol utama, sidebar aktif, link |
 | `destructive` | Red 600 `#DC2626` | Hapus, error, stok kritis |
 | `warning` | Amber 500 `#F59E0B` | Stok menipis, peringatan |
@@ -777,7 +790,7 @@ components/
 ### 7.2 Typography
 
 | Element | Font | Size | Weight |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Page Title | Geist Sans | 24px (text-2xl) | Semibold (600) |
 | Section Title | Geist Sans | 18px (text-lg) | Semibold (600) |
 | Table Header | Geist Sans | 14px (text-sm) | Medium (500) |
@@ -799,7 +812,7 @@ components/
 ## 8. Responsive Breakpoints
 
 | Breakpoint | Width | Layout |
-|---|---|---|
+| --- | --- | --- |
 | Mobile | < 768px | Sidebar hidden (hamburger menu), single column cards, table scroll horizontal |
 | Tablet | 768px - 1023px | Sidebar collapsed (icon only), 2 column cards |
 | Desktop | ≥ 1024px | Sidebar full, 4 column cards, full table |
@@ -810,7 +823,7 @@ components/
 
 ### 9.1 Data Fetching Pattern
 
-```
+```text
 Page (Server Component)
   └── fetch data from Supabase
        └── Pass data as props to Client Components
@@ -866,6 +879,7 @@ export async function createItem(formData: FormData) {
 ## 10. Prioritas Pengembangan (Roadmap)
 
 ### Phase 1 — Foundation (Minggu 1)
+
 - [x] Setup project Next.js + Supabase + Tailwind
 - [x] Setup database schema di Supabase
 - [x] Install shadcn/ui components
@@ -874,25 +888,212 @@ export async function createItem(formData: FormData) {
 - [ ] Profiles table + auto-create on signup
 
 ### Phase 2 — Master Data (Minggu 2)
+
 - [ ] CRUD Barang (items) + upload foto ke Supabase Storage
 - [ ] CRUD Pelanggan (customers)
 - [ ] CRUD Supplier (suppliers)
 - [ ] Reusable DataTable component
 
 ### Phase 3 — Transaksi (Minggu 3)
+
 - [ ] Pembelian: form + auto stock_movements IN
 - [ ] Penjualan: form + auto stock_movements OUT + diskon
 - [ ] Detail view pembelian & penjualan
 
 ### Phase 4 — Dashboard & Laporan (Minggu 4)
+
 - [ ] Dashboard: summary cards, charts (Recharts), alerts
 - [ ] Halaman Stok
 - [ ] Halaman Laporan + export Excel/print
 - [ ] CRUD Diskon
 
 ### Phase 5 — Polish (Minggu 5)
+
 - [ ] Settings: profil, kelola user
 - [ ] RLS policies Supabase
 - [ ] Responsive testing
 - [ ] Deploy ke Vercel
 - [ ] Testing & bug fixing
+
+---
+
+## 11. 💡 Tambahan Fitur Baru (Belum Ada Sebelumnya)
+
+### Fitur 15 — Dashboard Filter by Date Range (Nilai: 15)
+
+**Deskripsi:**
+Menambahkan filter rentang tanggal (date range picker) pada halaman Dashboard agar pengguna bisa melihat data summary cards dan grafik penjualan berdasarkan periode tertentu (misal: Hari Ini, 7 Hari Terakhir, 30 Hari Terakhir, atau custom range).
+
+**Komponen yang Terpengaruh:**
+
+- `components/dashboard/summary-cards.tsx`
+- `components/dashboard/sales-chart.tsx`
+- `components/dashboard/top-selling-items.tsx`
+- `components/dashboard/recent-transactions.tsx`
+- `components/dashboard/low-stock-alert.tsx`
+
+**Spesifikasi:**
+
+- Tambahkan dropdown/picker di bagian atas dashboard: `[Hari Ini | 7 Hari | 30 Hari | Custom Range ▼]`
+- Saat filter berubah, semua data di dashboard (summary cards & chart) ikut berubah sesuai periode
+- Default: "Hari Ini"
+- Gunakan komponen `Calendar` + `Popover` dari shadcn/ui untuk custom range
+- State filter disimpan di URL query params (`?from=2026-01-01&to=2026-01-31`) agar bisa di-bookmark
+
+---
+
+### Fitur 16 — Dark Mode Toggle (Nilai: 15)
+
+**Deskripsi:**
+Memastikan fitur dark mode berfungsi penuh di seluruh halaman aplikasi. Komponen `theme-toggle.tsx` sudah ada, tetapi perlu diverifikasi dan dilengkapi agar semua komponen konsisten saat mode gelap.
+
+**Komponen yang Terpengaruh:**
+
+- `components/theme-toggle.tsx` — Pastikan berfungsi (toggle light/dark/system)
+- `app/globals.css` — Tambahkan CSS variables untuk dark mode jika belum lengkap
+- `lib/theme-provider.tsx` — Pastikan `next-themes` Provider sudah terintegrasi dengan benar
+- Semua komponen UI — Pastikan tidak ada warna hardcoded yang terlihat buruk di dark mode
+
+**Spesifikasi:**
+
+- Gunakan library `next-themes` untuk mengelola tema
+- Theme toggle harus punya 3 opsi: Light, Dark, System
+- Simpan preferensi ke localStorage
+- Sidebar, Navbar, Tabel, Dialog, Form, Card, Chart semuanya harus konsisten di dark mode
+- Pastikan transisi tema halus (tanpa flash putih saat reload di dark mode)
+- Tambahkan script `suppressHydrationWarning` di `layout.tsx`
+
+---
+
+### Fitur 17 — Activity Log (Nilai: 15)
+
+**Deskripsi:**
+Mencatat semua aktivitas penting (create/update/delete) yang dilakukan oleh pengguna ke dalam tabel `activity_logs` untuk keperluan audit trail. Setiap perubahan data akan tercatat siapa yang melakukan, kapan, aksi apa, dan data apa yang diubah.
+
+**Tabel Database:**
+
+```sql
+CREATE TABLE activity_logs (
+  id          BIGSERIAL PRIMARY KEY,
+  user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  action      VARCHAR(20) NOT NULL CHECK (action IN ('CREATE', 'UPDATE', 'DELETE')),
+  entity_type VARCHAR(50) NOT NULL,  -- contoh: 'items', 'customers', 'sales', dll
+  entity_id   BIGINT,                -- ID record yang diubah
+  changes     JSONB,                 -- Simpan data lama & baru (untuk UPDATE)
+  description TEXT,                  -- Deskripsi singkat aktivitas
+  ip_address  INET,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Index untuk query cepat
+CREATE INDEX idx_activity_logs_user_id ON activity_logs(user_id);
+CREATE INDEX idx_activity_logs_entity ON activity_logs(entity_type, entity_id);
+CREATE INDEX idx_activity_logs_created_at ON activity_logs(created_at DESC);
+```
+
+**Halaman Activity Log (`/activity-log`):**
+
+```text
+┌──────────────────────────────────────────────────────────────────┐
+│  Activity Log                                                    │
+│                                                                  │
+│  🔍 Cari...   📅 Filter Tanggal   [Semua Entity ▼]             │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────────┐│
+│  │ Waktu          │ User      │ Aksi    │ Entitas    │ Detail  ││
+│  │────────────────│───────────│─────────│────────────│─────────││
+│  │ 26/02 10:30   │ Admin     │ UPDATE  │ Items (15) │ Harga   ││
+│  │ 26/02 10:25   │ Doni      │ CREATE  │ Sales (45) │ Trans.  ││
+│  │ 26/02 10:20   │ Admin     │ DELETE  │ Items (12) │ Ban IRC ││
+│  └──────────────────────────────────────────────────────────────┘│
+│                                           [Load More...]         │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Cara Kerja:**
+
+- **Opsi A — Database Trigger (Direkomendasikan):** Buat trigger function di PostgreSQL yang otomatis mencatat ke `activity_logs` setiap ada INSERT/UPDATE/DELETE di tabel-tabel utama.
+- **Opsi B — Aplikasi Level:** Panggil fungsi `logActivity()` dari setiap Server Action setelah operasi berhasil.
+- Tampilkan hanya untuk role Admin di sidebar.
+- Data activity log bersifat read-only (tidak bisa dihapus/diedit).
+
+---
+
+### Fitur 18 — HPP (Harga Pokok Penjualan) / Laba per Item (Nilai: 15)
+
+**Deskripsi:**
+Menambahkan perhitungan otomatis laba kotor per item dan total pada laporan keuangan. Laba dihitung dari `selling_price - purchase_price` untuk setiap item yang terjual, dikalikan quantity, dan dikurangi diskon.
+
+**Komponen yang Terpengaruh:**
+
+- `app/(dashboard)/reports/page.tsx` — Tambahkan tab/ringkasan laba
+- Laporan Laba/Rugi per periode
+
+**Database (cukup gunakan existing fields):**
+
+```sql
+-- items table sudah punya:
+-- purchase_price (harga beli)
+-- selling_price (harga jual)
+-- Laba per item = selling_price - purchase_price
+
+-- sale_details table sudah punya:
+-- quantity, base_price, discount_amount, service_fee, final_price
+```
+
+**Perhitungan Laba:**
+
+```sql
+SELECT
+  sd.item_id,
+  i.name AS item_name,
+  SUM(sd.quantity) AS qty_terjual,
+  i.purchase_price,
+  AVG(sd.base_price) AS harga_jual_rata,
+  (AVG(sd.base_price) - i.purchase_price) AS laba_per_unit,
+  SUM((sd.base_price - i.purchase_price) * sd.quantity) AS laba_kotor,
+  SUM(sd.service_fee) AS total_jasa,
+  SUM(sd.discount_amount) AS total_diskon,
+  SUM(sd.subtotal) AS total_penjualan
+FROM sale_details sd
+JOIN items i ON i.id = sd.item_id
+JOIN sales s ON s.id = sd.sale_id
+WHERE s.sale_date BETWEEN :start_date AND :end_date
+GROUP BY sd.item_id, i.name, i.purchase_price
+ORDER BY laba_kotor DESC;
+```
+
+**Ringkasan Laba di Halaman Laporan:**
+
+```text
+┌──────────────────────────────────────────────────────────────────┐
+│  Laporan Laba / Rugi                         📅 Periode tertentu │
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │  Ringkasan Keuangan                                         │ │
+│  │                                                             │ │
+│  │  Total Penjualan      Rp 25.500.000                         │ │
+│  │  Harga Pokok Penjualan Rp 18.200.000  ← (modal barang)      │ │
+│  │  ─────────────────────────────────────                       │ │
+│  │  Laba Kotor           Rp  7.300.000                         │ │
+│  │  Total Jasa Service   Rp  1.250.000                         │ │
+│  │  ─────────────────────────────────────                       │ │
+│  │  Laba Bersih          Rp  8.550.000                         │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │  Detail Laba per Item                                       │ │
+│  │                                                             │ │
+│  │  Item          │ Qty │ Modal   │ Jual    │ Laba    │ %      │ │
+│  │ ───────────────│─────│─────────│─────────│─────────│────────│ │
+│  │  Ban IRC 80/90 │ 10  │ Rp 85K  │ Rp 120K │ Rp 35K  │ 41%    │ │
+│  │  Oli Yamalube  │ 25  │ Rp 28K  │ Rp 35K  │ Rp 7K   │ 25%    │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Akses Tampilan:**
+
+- Hanya role Admin yang bisa melihat laporan laba
+- Tampilkan di tab "Laba/Rugi" pada halaman `/reports`
+- Bisa di-export ke Excel

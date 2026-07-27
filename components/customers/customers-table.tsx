@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useToast } from "@/lib/toast-provider";
 import {
   Search,
   Plus,
@@ -31,6 +32,7 @@ import { CustomerFormDialog } from "@/components/customers/customer-form-dialog"
 const ITEMS_PER_PAGE = 10;
 
 export function CustomersTable() {
+  const { showToast } = useToast();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -126,11 +128,14 @@ export function CustomersTable() {
       if (!res.ok) {
         throw new Error(await readApiErrorMessage(res, "Gagal menghapus"));
       }
+      showToast("Customer berhasil dihapus", "success");
       setCurrentPage(1);
       await fetchCustomers(1);
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : "Gagal menghapus customer.");
+      const msg = err instanceof Error ? err.message : "Gagal menghapus customer.";
+      setError(msg);
+      showToast(msg, "error");
     }
   }
 
@@ -145,6 +150,7 @@ export function CustomersTable() {
         if (!res.ok) {
           throw new Error(await readApiErrorMessage(res, "Gagal update"));
         }
+        showToast("Customer berhasil diperbarui", "success");
       } else {
         const res = await fetch("/api/customers", {
           method: "POST",
@@ -154,6 +160,7 @@ export function CustomersTable() {
         if (!res.ok) {
           throw new Error(await readApiErrorMessage(res, "Gagal tambah"));
         }
+        showToast("Customer berhasil ditambahkan", "success");
       }
       setDialogOpen(false);
       setEditingCustomer(null);
@@ -161,7 +168,9 @@ export function CustomersTable() {
       await fetchCustomers(1);
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : "Gagal menyimpan customer.");
+      const msg = err instanceof Error ? err.message : "Gagal menyimpan customer.";
+      setError(msg);
+      showToast(msg, "error");
     }
   }
 

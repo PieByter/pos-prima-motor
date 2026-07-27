@@ -33,12 +33,41 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     const body = await request.json()
     const admin = createAdminClient()
+
+    // Get old values for price history
+    const { data: oldItem } = await getItemById(admin, numericId)
+
     const { data, error } = await updateItem(admin, numericId, body)
 
     if (error || !data) {
       console.error('Items PATCH failed:', error)
       return NextResponse.json({ error: error?.message ?? 'Failed to update item' }, { status: 400 })
     }
+
+    // Log price changes to history
+    if (oldItem) {
+      const priceFields = ['purchase_price', 'selling_price', 'service_fee'] as const
+      const priceChanges: Array<{ item_id: number; field: string; old_price: number; new_price: number; changed_by: string }> = []
+
+      for (const field of priceFields) {
+        const oldVal = Number((oldItem as any)[field] ?? 0)
+        const newVal = Number((data as any)[field] ?? 0)
+        if (oldVal !== newVal) {
+          priceChanges.push({
+            item_id: numericId,
+            field,
+            old_price: oldVal,
+            new_price: newVal,
+            changed_by: user.id,
+          })
+        }
+      }
+
+      if (priceChanges.length > 0) {
+        await admin.from('price_history').insert(priceChanges)
+      }
+    }
+
     return NextResponse.json(data)
   } catch (err) {
     console.error('Items PATCH unexpected error:', err)

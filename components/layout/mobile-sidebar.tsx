@@ -17,6 +17,10 @@ import {
   Users,
   Building2,
   ChevronRight,
+  Receipt,
+  RotateCcw,
+  Bell,
+  Tag,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -49,9 +53,19 @@ const sidebarNav: NavItem[] = [
     ],
   },
   {
+    group: "Keuangan",
+    items: [
+      { label: "Pengeluaran", href: "/dashboard/expenses", icon: Receipt },
+      { label: "Diskon", href: "/dashboard/discounts", icon: Tag },
+      { label: "Retur Penjualan", href: "/dashboard/returns/sales", icon: RotateCcw },
+      { label: "Retur Pembelian", href: "/dashboard/returns/purchases", icon: RotateCcw },
+    ],
+  },
+  {
     group: "Laporan & Pengaturan",
     items: [
       { label: "Laporan", href: "/dashboard/reports", icon: BarChart3 },
+      { label: "Notifikasi", href: "/dashboard/notifications", icon: Bell },
       { label: "Pengaturan", href: "/dashboard/settings", icon: Settings },
     ],
   },

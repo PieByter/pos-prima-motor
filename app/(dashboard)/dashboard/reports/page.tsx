@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { Loader2, TrendingDown, TrendingUp, Wallet, Download } from "lucide-react";
 import {
   DashboardCard,
   SectionHeader,
@@ -32,6 +32,7 @@ type ProfitLossReport = {
   gross_profit: number;
   total_service_fees: number;
   net_profit: number;
+  hpp_total: number;
 };
 
 /* ───── Helpers ───── */
@@ -121,6 +122,7 @@ export default function ReportsPage() {
             gross_profit: 0,
             total_service_fees: 0,
             net_profit: 0,
+            hpp_total: 0,
           });
           return;
         }
@@ -224,10 +226,21 @@ export default function ReportsPage() {
             </Button>
           </div>
           {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
+          <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => window.open(`/api/export?type=profit-loss&start_date=${startDate}&end_date=${endDate}`, "_blank")}>
+              <Download className="h-4 w-4" /> Export Laba/Rugi (.xlsx)
+            </Button>
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => window.open(`/api/export?type=sales&start_date=${startDate}&end_date=${endDate}`, "_blank")}>
+              <Download className="h-4 w-4" /> Export Penjualan (.xlsx)
+            </Button>
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => window.open(`/api/export?type=purchases&start_date=${startDate}&end_date=${endDate}`, "_blank")}>
+              <Download className="h-4 w-4" /> Export Pembelian (.xlsx)
+            </Button>
+          </div>
         </DashboardCard>
 
         {/* Stat Cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <ReportStat
             label="Total Sales"
             value={formatCurrency(sales?.total_sales ?? 0)}
@@ -236,11 +249,11 @@ export default function ReportsPage() {
             iconColor="text-emerald-500"
           />
           <ReportStat
-            label="Total Purchases"
-            value={formatCurrency(purchases?.total_purchases ?? 0)}
-            sub={`${purchases?.total_transactions ?? 0} transaksi`}
+            label="HPP (COGS)"
+            value={formatCurrency(profitLoss?.hpp_total ?? 0)}
+            sub="Harga Pokok Penjualan"
             icon={TrendingDown}
-            iconColor="text-orange-500"
+            iconColor="text-rose-500"
           />
           <ReportStat
             label="Gross Profit"

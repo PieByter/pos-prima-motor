@@ -33,7 +33,10 @@ export type InvoiceDetail = {
   jobEnd: string;
   // Payment
   paymentMethod: string;
+  paymentMethodIcon: string | null;
   transactionId: string;
+  cashAmount: number | null;
+  changeAmount: number | null;
   // Items
   items: InvoiceItem[];
   subtotal: number;
@@ -67,7 +70,10 @@ export const dummySaleInvoices: Record<number, InvoiceDetail> = {
     mechanicStation: "Bay 03",
     jobStart: "10:35 AM",
     jobEnd: "11:45 AM",
-    paymentMethod: "Credit Card (Visa)",
+    paymentMethod: "Kartu Kredit",
+    paymentMethodIcon: "credit",
+    cashAmount: null,
+    changeAmount: null,
     transactionId: "TRX-998877",
     items: [
       {
@@ -136,7 +142,10 @@ export const dummySaleInvoices: Record<number, InvoiceDetail> = {
     mechanicStation: "Bay 01",
     jobStart: "02:20 PM",
     jobEnd: "-",
-    paymentMethod: "Pending",
+    paymentMethod: "-",
+    paymentMethodIcon: null,
+    cashAmount: null,
+    changeAmount: null,
     transactionId: "-",
     items: [
       {
@@ -183,7 +192,10 @@ export const dummySaleInvoices: Record<number, InvoiceDetail> = {
     mechanicStation: "Bay 02",
     jobStart: "09:10 AM",
     jobEnd: "10:45 AM",
-    paymentMethod: "Cash",
+    paymentMethod: "Tunai",
+    paymentMethodIcon: "cash",
+    cashAmount: 500000,
+    changeAmount: 15000,
     transactionId: "TRX-998800",
     items: [
       {
@@ -230,7 +242,10 @@ export const dummySaleInvoices: Record<number, InvoiceDetail> = {
     mechanicStation: "Bay 01",
     jobStart: "01:10 PM",
     jobEnd: "-",
-    paymentMethod: "Pending",
+    paymentMethod: "-",
+    paymentMethodIcon: null,
+    cashAmount: null,
+    changeAmount: null,
     transactionId: "-",
     items: [
       {
@@ -277,7 +292,10 @@ export const dummySaleInvoices: Record<number, InvoiceDetail> = {
     mechanicStation: "-",
     jobStart: "-",
     jobEnd: "-",
-    paymentMethod: "Cancelled",
+    paymentMethod: "-",
+    paymentMethodIcon: null,
+    cashAmount: null,
+    changeAmount: null,
     transactionId: "-",
     items: [
       {
@@ -315,7 +333,10 @@ export const dummyPurchaseInvoices: Record<number, InvoiceDetail> = {
     mechanicStation: "-",
     jobStart: "-",
     jobEnd: "-",
-    paymentMethod: "Bank Transfer",
+    paymentMethod: "Transfer Bank",
+    paymentMethodIcon: "bank",
+    cashAmount: null,
+    changeAmount: null,
     transactionId: "TRF-001122",
     items: [
       {
@@ -371,7 +392,10 @@ export const dummyPurchaseInvoices: Record<number, InvoiceDetail> = {
     mechanicStation: "-",
     jobStart: "-",
     jobEnd: "-",
-    paymentMethod: "Pending",
+    paymentMethod: "-",
+    paymentMethodIcon: null,
+    cashAmount: null,
+    changeAmount: null,
     transactionId: "-",
     items: [
       {
@@ -416,7 +440,10 @@ export const dummyPurchaseInvoices: Record<number, InvoiceDetail> = {
     mechanicStation: "-",
     jobStart: "-",
     jobEnd: "-",
-    paymentMethod: "Bank Transfer",
+    paymentMethod: "Transfer Bank",
+    paymentMethodIcon: "bank",
+    cashAmount: null,
+    changeAmount: null,
     transactionId: "TRF-003344",
     items: [
       {

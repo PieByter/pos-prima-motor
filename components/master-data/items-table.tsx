@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
 import {
   Search,
@@ -11,6 +11,8 @@ import {
   ChevronRight,
   ImageIcon,
   Package2,
+  Download,
+  Trash,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -32,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import { formatRupiah, getStockStatus, CATEGORIES, type Item } from "@/lib/data/items";
 import { Loader } from "lucide-react";
+import { useToast } from "@/lib/toast-provider";
 import { ItemFormDialog } from "./item-form-dialog";
 
 const ITEMS_PER_PAGE = 10;
@@ -52,12 +55,14 @@ type ApiItem = {
 };
 
 export function ItemsTable() {
+  const { showToast } = useToast();
   const [items, setItems] = useState<Item[]>([]);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -142,11 +147,82 @@ export function ItemsTable() {
     try {
       const response = await fetch(`/api/items/${id}`, { method: "DELETE" });
       if (!response.ok) throw new Error("Failed to delete item");
+      showToast("Item berhasil dihapus", "success");
       setItems((prev) => prev.filter((i) => i.id !== id));
     } catch (error) {
       console.error("Error deleting item:", error);
+      showToast("Gagal menghapus item", "error");
     }
   }
+
+  /* ── Bulk Actions ─────────────────────────────────────────────── */
+  const handleSelectAll = useCallback(() => {
+    if (selectedIds.size === paginatedItems.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(paginatedItems.map((i) => i.id)));
+    }
+  }, [paginatedItems, selectedIds.size]);
+
+  const handleSelectOne = useCallback((id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Hapus ${selectedIds.size} item terpilih?`)) return;
+    try {
+      const results = await Promise.allSettled(
+        [...selectedIds].map((id) =>
+          fetch(`/api/items/${id}`, { method: "DELETE" }),
+        ),
+      );
+      const failed = results.filter((r) => r.status === "rejected").length;
+      if (failed === 0) {
+        showToast(`${selectedIds.size} item berhasil dihapus`, "success");
+      } else {
+        showToast(`${selectedIds.size - failed} item dihapus, ${failed} gagal`, "error");
+      }
+      setSelectedIds(new Set());
+      setCurrentPage(1);
+      const refresh = await fetch(`/api/items?page=1&limit=${ITEMS_PER_PAGE}`, { cache: "no-store" });
+      if (refresh.ok) {
+        const result = await refresh.json();
+        const rows: ApiItem[] = result.data || [];
+        setItems(rows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          description: row.description ?? "",
+          sku: row.sku ?? "-",
+          category: row.category ?? "Uncategorized",
+          purchasePrice: Number(row.purchase_price ?? 0),
+          sellingPrice: Number(row.selling_price ?? 0),
+          serviceFee: Number(row.service_fee ?? 0),
+          stock: Number(row.stock ?? row.current_stock ?? 0),
+          picture: row.picture ?? null,
+          createdAt: row.created_at ?? new Date().toISOString().slice(0, 10),
+        })));
+      }
+    } catch {
+      showToast("Gagal menghapus item", "error");
+    }
+  }, [selectedIds, showToast]);
+
+  const handleBulkExport = useCallback(() => {
+    if (selectedIds.size === 0) {
+      // Export all items
+      window.open("/api/export?type=items", "_blank");
+      return;
+    }
+    // Export selected via API with IDs
+    const ids = [...selectedIds].join(",");
+    window.open(`/api/export?type=items&ids=${ids}`, "_blank");
+  }, [selectedIds]);
 
   async function handleSaveItem(data: Omit<Item, "id" | "createdAt">) {
     const payload = {
@@ -168,6 +244,7 @@ export function ItemsTable() {
           body: JSON.stringify(payload),
         });
         if (!response.ok) throw new Error("Failed to update item");
+        showToast("Item berhasil diperbarui", "success");
       } else {
         const response = await fetch("/api/items", {
           method: "POST",
@@ -175,6 +252,7 @@ export function ItemsTable() {
           body: JSON.stringify(payload),
         });
         if (!response.ok) throw new Error("Failed to create item");
+        showToast("Item berhasil ditambahkan", "success");
       }
 
       setDialogOpen(false);
@@ -292,12 +370,57 @@ export function ItemsTable() {
         </div>
       </div>
 
+      {/* Bulk Action Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 rounded-xl border border-sky-200 bg-sky-50 dark:border-sky-800 dark:bg-sky-900/20 px-4 py-2.5">
+          <span className="text-sm font-medium text-sky-700 dark:text-sky-300">
+            {selectedIds.size} item terpilih
+          </span>
+          <div className="flex items-center gap-2 ml-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 text-xs h-8"
+              onClick={handleBulkExport}
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="gap-2 text-xs h-8"
+              onClick={handleBulkDelete}
+            >
+              <Trash className="h-3.5 w-3.5" />
+              Hapus Semua
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs h-8"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              Batal
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700">
+                <TableHead className="w-10 px-2">
+                  <input
+                    type="checkbox"
+                    checked={paginatedItems.length > 0 && selectedIds.size === paginatedItems.length}
+                    onChange={handleSelectAll}
+                    className="h-4 w-4 rounded border-slate-300"
+                  />
+                </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 w-14">
                   Foto
                 </TableHead>
@@ -327,7 +450,7 @@ export function ItemsTable() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-16">
+                  <TableCell colSpan={9} className="text-center py-16">
                     <div className="flex flex-col items-center gap-3">
                       <Loader className="h-7 w-7 animate-spin text-sky-500" />
                       <span className="text-sm text-slate-500 dark:text-slate-400">
@@ -338,7 +461,7 @@ export function ItemsTable() {
                 </TableRow>
               ) : paginatedItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-16">
+                  <TableCell colSpan={9} className="text-center py-16">
                     <div className="flex flex-col items-center gap-3">
                       <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-full">
                         <Package2 className="h-6 w-6 text-slate-400" />
@@ -364,6 +487,15 @@ export function ItemsTable() {
                       key={item.id}
                       className="border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                     >
+                      {/* Checkbox */}
+                      <TableCell className="w-10 px-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(item.id)}
+                          onChange={() => handleSelectOne(item.id)}
+                          className="h-4 w-4 rounded border-slate-300"
+                        />
+                      </TableCell>
                       {/* Thumbnail */}
                       <TableCell>
                         <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">

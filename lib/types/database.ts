@@ -20,6 +20,10 @@ export type Item = {
   description: string | null
   sku: string | null
   category: string | null
+  category_id: number | null
+  brand_id: number | null
+  category_name: string | null
+  brand_name: string | null
   purchase_price: number
   selling_price: number
   service_fee: number
@@ -30,6 +34,27 @@ export type Item = {
 
 export type ItemInsert = Omit<Item, 'id' | 'created_at' | 'updated_at'>
 export type ItemUpdate = Partial<ItemInsert>
+
+// --- Categories ---
+export type Category = {
+  id: number
+  name: string
+  description: string | null
+  created_at: string
+}
+
+export type CategoryInsert = Omit<Category, 'id' | 'created_at'>
+export type CategoryUpdate = Partial<CategoryInsert>
+
+// --- Brands ---
+export type Brand = {
+  id: number
+  name: string
+  created_at: string
+}
+
+export type BrandInsert = Omit<Brand, 'id' | 'created_at'>
+export type BrandUpdate = Partial<BrandInsert>
 
 // --- Customers ---
 export type Customer = {
@@ -90,6 +115,17 @@ export type PurchaseWithDetails = Purchase & {
   details: (PurchaseDetail & { item?: Item })[]
 }
 
+// --- Payment Methods ---
+export type PaymentMethod = {
+  id: number
+  name: string
+  icon: string | null
+  is_active: boolean
+}
+
+export type PaymentMethodInsert = Omit<PaymentMethod, 'id'>
+export type PaymentMethodUpdate = Partial<PaymentMethodInsert>
+
 // --- Sales ---
 export type Sale = {
   id: number
@@ -99,6 +135,10 @@ export type Sale = {
   sale_date: string
   total_amount: number
   status: 'completed' | 'pending' | 'in_progress' | 'cancelled'
+  payment_method_id: number | null
+  cash_amount: number | null
+  change_amount: number | null
+  notes: string | null
   created_by: string // UUID
   created_at: string
   updated_at: string
@@ -125,6 +165,7 @@ export type SaleDetailInsert = Omit<SaleDetail, 'id'>
 export type SaleWithDetails = Sale & {
   customer?: Customer | null
   mechanic?: Profile
+  payment_method?: PaymentMethod | null
   details: (SaleDetail & { item?: Item })[]
 }
 
@@ -204,6 +245,7 @@ export type DashboardSummary = {
   totalPurchases: number
   totalItems: number
   totalCustomers: number
+  totalExpenses: number
   salesGrowth: number
   purchasesGrowth: number
 }
@@ -252,4 +294,94 @@ export type ProfitLossReport = {
   gross_profit: number
   total_service_fees: number
   net_profit: number
+  hpp_total: number
+}
+
+// --- Activity Logs ---
+export type ActivityLog = {
+  id: number
+  user_id: string | null
+  action: 'create' | 'update' | 'delete'
+  entity: string
+  entity_id: string | null
+  description: string | null
+  metadata: string | null
+  created_at: string
+}
+
+export type ActivityLogInsert = Omit<ActivityLog, 'id' | 'created_at'>
+
+// --- Expenses ---
+export type Expense = {
+  id: number
+  description: string
+  amount: number
+  category: 'operational' | 'utilities' | 'rent' | 'salary' | 'others'
+  expense_date: string
+  payment_method_id: number | null
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type ExpenseInsert = Omit<Expense, 'id' | 'created_at' | 'updated_at'>
+export type ExpenseUpdate = Partial<ExpenseInsert>
+
+// --- Sales Returns ---
+export type SalesReturn = {
+  id: number
+  sale_id: number
+  return_date: string
+  reason: string
+  total_refund: number
+  status: 'pending' | 'processed' | 'rejected'
+  processed_by: string | null
+  created_at: string
+}
+
+export type SalesReturnInsert = Omit<SalesReturn, 'id' | 'created_at'>
+export type SalesReturnUpdate = Partial<Omit<SalesReturnInsert, 'sale_id'>>
+
+export type SalesReturnDetail = {
+  id: number
+  return_id: number
+  item_id: number
+  quantity: number
+  refund_amount: number
+}
+
+export type SalesReturnDetailInsert = Omit<SalesReturnDetail, 'id'>
+
+export type SalesReturnWithDetails = SalesReturn & {
+  details: (SalesReturnDetail & { item?: Item })[]
+}
+
+// --- Purchase Returns ---
+export type PurchaseReturn = {
+  id: number
+  purchase_id: number
+  return_date: string
+  reason: string
+  total_refund: number
+  status: 'pending' | 'processed' | 'rejected'
+  processed_by: string | null
+  created_at: string
+}
+
+export type PurchaseReturnInsert = Omit<PurchaseReturn, 'id' | 'created_at'>
+export type PurchaseReturnUpdate = Partial<Omit<PurchaseReturnInsert, 'purchase_id'>>
+
+export type PurchaseReturnDetail = {
+  id: number
+  return_id: number
+  item_id: number
+  quantity: number
+  refund_amount: number
+}
+
+export type PurchaseReturnDetailInsert = Omit<PurchaseReturnDetail, 'id'>
+
+export type PurchaseReturnWithDetails = PurchaseReturn & {
+  details: (PurchaseReturnDetail & { item?: Item })[]
 }

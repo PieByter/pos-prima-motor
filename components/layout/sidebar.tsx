@@ -15,9 +15,19 @@ import {
   Building2,
   ClipboardList,
   Bell,
+  Receipt,
+  RotateCcw,
+  Download,
+  Tag,
+  History,
+  PlusCircle,
+  TrendingUp,
+  ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import type { LucideIcon } from "lucide-react";
 
 type NavLink = { label: string; href: string; icon: LucideIcon; color?: string };
@@ -44,12 +54,25 @@ const sidebarNav: NavItem[] = [
       { label: "Penjualan", href: "/dashboard/transactions/sales", icon: ShoppingCart },
       { label: "Pembelian", href: "/dashboard/transactions/purchases", icon: ClipboardList },
       { label: "Inventory", href: "/dashboard/inventory", icon: Package },
+      { label: "Adjust Stok", href: "/dashboard/inventory/adjust", icon: PlusCircle },
+      { label: "Riwayat Harga", href: "/dashboard/inventory/price-history", icon: TrendingUp },
+      { label: "Stok Opname", href: "/dashboard/inventory/opname", icon: ClipboardCheck },
+    ],
+  },
+  {
+    group: "Keuangan",
+    items: [
+      { label: "Pengeluaran", href: "/dashboard/expenses", icon: Receipt },
+      { label: "Diskon", href: "/dashboard/discounts", icon: Tag },
+      { label: "Retur Penjualan", href: "/dashboard/returns/sales", icon: RotateCcw },
+      { label: "Retur Pembelian", href: "/dashboard/returns/purchases", icon: RotateCcw },
     ],
   },
   {
     group: "Laporan & Pengaturan",
     items: [
       { label: "Laporan", href: "/dashboard/reports", icon: BarChart3 },
+      { label: "Activity Log", href: "/dashboard/activity-log", icon: History },
       { label: "Notifikasi", href: "/dashboard/notifications", icon: Bell },
       { label: "Pengaturan", href: "/dashboard/settings", icon: Settings },
     ],
@@ -152,7 +175,9 @@ export function Sidebar() {
 
       {/* User Footer */}
       <div className="p-3 border-t border-slate-200 dark:border-slate-800 shrink-0">
-        <div className="flex items-center gap-3 px-2 py-2">
+        <div className="flex items-center gap-1 px-2 py-2">
+          <ThemeToggle />
+          <LanguageSwitcher />
           <Avatar className="h-8 w-8 shrink-0">
             <AvatarFallback className="bg-sky-500 text-white text-xs font-bold">
               A

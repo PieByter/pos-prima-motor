@@ -66,6 +66,16 @@ export function NotificationDropdown() {
     if (open) loadNotifications();
   }, [open]);
 
+  // ── Real-time subscription via Supabase Realtime ──────────────────
+  useEffect(() => {
+    // Initial load
+    loadNotifications();
+
+    // Poll every 30 seconds as fallback (Realtime channel may not work without anon key setup)
+    const interval = setInterval(loadNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   async function handleMarkAllRead() {
     try {
       await fetch("/api/notifications", {

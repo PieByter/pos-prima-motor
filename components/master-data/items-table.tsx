@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import { formatRupiah, getStockStatus, CATEGORIES, type Item } from "@/lib/data/items";
 import { Loader } from "lucide-react";
+import { useToast } from "@/lib/toast-provider";
 import { ItemFormDialog } from "./item-form-dialog";
 
 const ITEMS_PER_PAGE = 10;
@@ -52,6 +53,7 @@ type ApiItem = {
 };
 
 export function ItemsTable() {
+  const { showToast } = useToast();
   const [items, setItems] = useState<Item[]>([]);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -142,9 +144,11 @@ export function ItemsTable() {
     try {
       const response = await fetch(`/api/items/${id}`, { method: "DELETE" });
       if (!response.ok) throw new Error("Failed to delete item");
+      showToast("Item berhasil dihapus", "success");
       setItems((prev) => prev.filter((i) => i.id !== id));
     } catch (error) {
       console.error("Error deleting item:", error);
+      showToast("Gagal menghapus item", "error");
     }
   }
 
@@ -168,6 +172,7 @@ export function ItemsTable() {
           body: JSON.stringify(payload),
         });
         if (!response.ok) throw new Error("Failed to update item");
+        showToast("Item berhasil diperbarui", "success");
       } else {
         const response = await fetch("/api/items", {
           method: "POST",
@@ -175,6 +180,7 @@ export function ItemsTable() {
           body: JSON.stringify(payload),
         });
         if (!response.ok) throw new Error("Failed to create item");
+        showToast("Item berhasil ditambahkan", "success");
       }
 
       setDialogOpen(false);

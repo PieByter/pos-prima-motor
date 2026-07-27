@@ -14,7 +14,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { useToasts } from "@/components/ui/toast";
+import { useToast } from "@/lib/toast-provider";
 
 type ProfileData = {
   user?: { id?: string; email?: string | null };
@@ -28,7 +28,7 @@ function ChangePasswordDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { showToast } = useToasts();
+  const { showToast } = useToast();
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -224,7 +224,7 @@ function EditProfileDialog({
   data: ProfileData | null;
   onSaved: () => void;
 }) {
-  const { showToast } = useToasts();
+  const { showToast } = useToast();
   const [name, setName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -316,7 +316,7 @@ export function ProfileSection() {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { showToast } = useToasts();
+  const { showToast } = useToast();
 
   async function loadProfile() {
     try {

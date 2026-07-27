@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +28,7 @@ import {
   Tag,
 } from "lucide-react";
 import { type Item, CATEGORIES } from "@/lib/data/items";
+import { itemSchema, type ItemFormData } from "@/lib/validations";
 
 interface ItemFormDialogProps {
   open: boolean;
@@ -55,24 +58,52 @@ function ItemFormContent({
   const isEdit = !!item;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [name, setName] = useState(item?.name ?? "");
-  const [sku, setSku] = useState(item?.sku ?? "");
-  const [category, setCategory] = useState(item?.category ?? "");
-  const [purchasePrice, setPurchasePrice] = useState(
-    item ? String(item.purchasePrice) : ""
-  );
-  const [sellingPrice, setSellingPrice] = useState(
-    item ? String(item.sellingPrice) : ""
-  );
-  const [serviceFee, setServiceFee] = useState(
-    item ? String(item.serviceFee) : ""
-  );
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<ItemFormData>({
+    resolver: zodResolver(itemSchema),
+    defaultValues: {
+      name: item?.name ?? "",
+      description: item?.description ?? "",
+      sku: item?.sku ?? "",
+      category: item?.category ?? "",
+      purchasePrice: item?.purchasePrice ?? 0,
+      sellingPrice: item?.sellingPrice ?? 0,
+      serviceFee: item?.serviceFee ?? 0,
+      stock: item?.stock ?? 0,
+      picture: item?.picture ?? null,
+    },
+  });
+
   const [previewUrl, setPreviewUrl] = useState<string | null>(
     item?.picture ?? null
   );
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+
+  const categoryValue = watch("category");
+  const pictureValue = watch("picture");
+
+  // Sync form with item data when dialog opens
+  useEffect(() => {
+    if (item) {
+      setValue("name", item.name ?? "");
+      setValue("description", item.description ?? "");
+      setValue("sku", item.sku ?? "");
+      setValue("category", item.category ?? "");
+      setValue("purchasePrice", item.purchasePrice ?? 0);
+      setValue("sellingPrice", item.sellingPrice ?? 0);
+      setValue("serviceFee", item.serviceFee ?? 0);
+      setValue("stock", item.stock ?? 0);
+      setValue("picture", item.picture ?? null);
+      setPreviewUrl(item.picture ?? null);
+    }
+  }, [item, setValue]);
 
   function handleFile(file: File) {
     if (!file.type.startsWith("image/")) return;
@@ -88,13 +119,11 @@ function ItemFormContent({
     if (file) handleFile(file);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function onSubmit(data: ItemFormData) {
     setIsUploading(true);
 
     let pictureUrl: string | null = previewUrl;
 
-    // Upload file to Supabase Storage if a new file was selected
     if (selectedFile) {
       try {
         const formData = new FormData();
@@ -119,20 +148,20 @@ function ItemFormContent({
     setIsUploading(false);
 
     onSave({
-      name,
-      description: "",
-      sku,
-      category,
-      purchasePrice: Number(purchasePrice) || 0,
-      sellingPrice: Number(sellingPrice) || 0,
-      serviceFee: Number(serviceFee) || 0,
-      stock: item?.stock ?? 0,
+      name: data.name,
+      description: data.description ?? "",
+      sku: data.sku,
+      category: data.category,
+      purchasePrice: Number(data.purchasePrice),
+      sellingPrice: Number(data.sellingPrice),
+      serviceFee: Number(data.serviceFee || 0),
+      stock: Number(data.stock || 0),
       picture: pictureUrl,
     });
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6 py-2">
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 py-2">
       {/* Row 1: Nama Barang & SKU */}
       <div className="grid grid-cols-2 gap-6">
         {/* Nama Barang */}
@@ -151,12 +180,11 @@ function ItemFormContent({
               id="item-name"
               type="text"
               placeholder="Contoh: Oli Yamalube Sport"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-shadow text-sm"
+              {...register("name")}
+              className={`w-full pl-10 pr-4 py-3 rounded-lg border ${errors.name ? "border-red-500" : "border-slate-200 dark:border-slate-600"} bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-shadow text-sm`}
             />
           </div>
+          {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
         </div>
 
         {/* SKU */}
@@ -170,7 +198,7 @@ function ItemFormContent({
             </Label>
             <button
               type="button"
-              onClick={() => setSku(generateSKU())}
+              onClick={() => setValue("sku", generateSKU())}
               className="text-xs text-sky-500 font-semibold hover:underline"
             >
               Auto-Generate
@@ -184,12 +212,11 @@ function ItemFormContent({
               id="item-sku"
               type="text"
               placeholder="SKU-XXXXX"
-              value={sku}
-              onChange={(e) => setSku(e.target.value)}
-              required
-              className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-shadow text-sm"
+              {...register("sku")}
+              className={`w-full pl-10 pr-4 py-3 rounded-lg border ${errors.sku ? "border-red-500" : "border-slate-200 dark:border-slate-600"} bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-shadow text-sm`}
             />
           </div>
+          {errors.sku && <p className="text-xs text-red-500">{errors.sku.message}</p>}
         </div>
       </div>
 
@@ -211,12 +238,11 @@ function ItemFormContent({
               type="number"
               placeholder="0"
               min="0"
-              value={purchasePrice}
-              onChange={(e) => setPurchasePrice(e.target.value)}
-              required
-              className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-shadow text-sm"
+              {...register("purchasePrice")}
+              className={`w-full pl-10 pr-4 py-3 rounded-lg border ${errors.purchasePrice ? "border-red-500" : "border-slate-200 dark:border-slate-600"} bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-shadow text-sm`}
             />
           </div>
+          {errors.purchasePrice && <p className="text-xs text-red-500">{errors.purchasePrice.message}</p>}
         </div>
 
         <div className="flex flex-col gap-2">
@@ -235,12 +261,11 @@ function ItemFormContent({
               type="number"
               placeholder="0"
               min="0"
-              value={sellingPrice}
-              onChange={(e) => setSellingPrice(e.target.value)}
-              required
-              className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-shadow text-sm"
+              {...register("sellingPrice")}
+              className={`w-full pl-10 pr-4 py-3 rounded-lg border ${errors.sellingPrice ? "border-red-500" : "border-slate-200 dark:border-slate-600"} bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-shadow text-sm`}
             />
           </div>
+          {errors.sellingPrice && <p className="text-xs text-red-500">{errors.sellingPrice.message}</p>}
         </div>
       </div>
 
@@ -263,11 +288,11 @@ function ItemFormContent({
               type="number"
               placeholder="0"
               min="0"
-              value={serviceFee}
-              onChange={(e) => setServiceFee(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-shadow text-sm"
+              {...register("serviceFee")}
+              className={`w-full pl-10 pr-4 py-3 rounded-lg border ${errors.serviceFee ? "border-red-500" : "border-slate-200 dark:border-slate-600"} bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-shadow text-sm`}
             />
           </div>
+          {errors.serviceFee && <p className="text-xs text-red-500">{errors.serviceFee.message}</p>}
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Isi jika barang ini termasuk jasa pasang/service.
           </p>
@@ -277,8 +302,8 @@ function ItemFormContent({
           <Label className="text-slate-900 dark:text-slate-200 text-sm font-medium">
             Kategori
           </Label>
-          <Select value={category} onValueChange={setCategory} required>
-            <SelectTrigger className="py-3 h-auto">
+          <Select value={categoryValue} onValueChange={(val) => setValue("category", val, { shouldValidate: true })}>
+            <SelectTrigger className={`py-3 h-auto ${errors.category ? "border-red-500" : ""}`}>
               <div className="flex items-center gap-2">
                 <Tag className="h-5 w-5 text-slate-400" />
                 <SelectValue placeholder="Pilih Kategori" />
@@ -292,6 +317,7 @@ function ItemFormContent({
               ))}
             </SelectContent>
           </Select>
+          {errors.category && <p className="text-xs text-red-500">{errors.category.message}</p>}
         </div>
       </div>
 
@@ -373,7 +399,7 @@ function ItemFormContent({
         </Button>
         <Button
           type="submit"
-          disabled={isUploading}
+          disabled={isSubmitting || isUploading}
           className="bg-sky-500 hover:bg-sky-600 text-white px-5 gap-2 shadow-md shadow-sky-500/20"
         >
           {isUploading ? (

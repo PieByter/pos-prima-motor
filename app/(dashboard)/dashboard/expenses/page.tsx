@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, Search, Trash2, Loader2, Download } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/lib/toast-provider";
 
 type ExpenseRow = {
   id: number;
@@ -26,6 +27,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export default function ExpensesPage() {
+  const { showToast } = useToast();
   const [expenses, setExpenses] = useState<ExpenseRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -68,9 +70,12 @@ export default function ExpensesPage() {
       if (res.ok) {
         setShowForm(false);
         setForm({ description: "", amount: "", category: "others", expense_date: new Date().toISOString().slice(0, 10), notes: "" });
+        showToast("Pengeluaran berhasil dicatat", "success");
         fetchExpenses();
+      } else {
+        showToast("Gagal mencatat pengeluaran", "error");
       }
-    } catch { /* ignore */ } finally {
+    } catch { showToast("Gagal mencatat pengeluaran", "error"); } finally {
       setSaving(false);
     }
   };
@@ -78,9 +83,12 @@ export default function ExpensesPage() {
   const handleDelete = async (id: number) => {
     if (!confirm("Hapus pengeluaran ini?")) return;
     try {
-      await fetch(`/api/expenses/${id}`, { method: "DELETE" });
-      fetchExpenses();
-    } catch { /* ignore */ }
+      const res = await fetch(`/api/expenses/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        showToast("Pengeluaran berhasil dihapus", "success");
+        fetchExpenses();
+      }
+    } catch { showToast("Gagal menghapus pengeluaran", "error"); }
   };
 
   const totalAmount = expenses.reduce((s, e) => s + Number(e.amount), 0);

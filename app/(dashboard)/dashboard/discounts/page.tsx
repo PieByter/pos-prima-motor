@@ -14,6 +14,7 @@ import {
 import { Plus, Search, Loader2, Tag, Percent } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/lib/toast-provider";
 
 type DiscountRow = {
   id: number;
@@ -28,6 +29,7 @@ type DiscountRow = {
 };
 
 export default function DiscountsPage() {
+  const { showToast } = useToast();
   const [discounts, setDiscounts] = useState<DiscountRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -86,9 +88,12 @@ export default function DiscountsPage() {
       if (res.ok) {
         setShowForm(false);
         setForm({ name: "", type: "percent", value: "", min_transaction: "0", max_percent: "", is_active: true, start_date: "", end_date: "" });
+        showToast("Diskon berhasil ditambahkan", "success");
         fetchDiscounts();
+      } else {
+        showToast("Gagal menambahkan diskon", "error");
       }
-    } catch { /* ignore */ } finally {
+    } catch { showToast("Gagal menambahkan diskon", "error"); } finally {
       setSaving(false);
     }
   };

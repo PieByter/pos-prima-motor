@@ -8,6 +8,13 @@
       "when": 1783844418218,
       "tag": "0000_furry_mystique",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785161277759,
+      "tag": "0001_dry_red_skull",
+      "breakpoints": true
     }
   ]
 }

@@ -1,17 +1,31 @@
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import postgres from 'postgres'
+import { readFileSync, existsSync } from 'fs'
+import { resolve } from 'path'
+
+// Auto-load .env.local if DATABASE_URL not already in env
+if (!process.env.DATABASE_URL) {
+    const envPath = resolve('.env.local')
+    if (existsSync(envPath)) {
+        const lines = readFileSync(envPath, 'utf8').split('\n')
+        for (const line of lines) {
+            const match = line.match(/^([A-Z_]+)=(.*)$/)
+            if (match) {
+                const [, key, value] = match
+                if (!process.env[key]) process.env[key] = value.replace(/^["']|["']$/g, '')
+            }
+        }
+    }
+}
 
 /**
- * Auto-migration script — seperti Flyway.
+ * Auto-migration script.
  *
- * Cara kerja:
- * 1. Cek apakah tabel `__drizzle_migrations` sudah ada
- * 2. Jika BELUM ada:
- *    - Cek apakah tabel utama (items, customers, dll) sudah ada
- *    - Jika SUDAH ada (existing DB) → tandai migration yg sudah ada sebagai applied
- *    - Jika BELUM ada (fresh DB) → jalankan migration normal
- * 3. Jika SUDAH ada → jalankan `migrate()` untuk apply migration baru
+ * - Fresh DB → drizzle migrate() creates all tables + tracks in drizzle.__drizzle_migrations
+ * - Existing DB (no drizzle tracking yet) → manually records 0000 as applied,
+ *   then runs any further pending migrations.
+ * - Already tracked → drizzle migrate() applies only new migrations.
  */
 async function runMigrations() {
     const connectionString = process.env.DATABASE_URL
@@ -21,7 +35,7 @@ async function runMigrations() {
         return
     }
 
-    console.log('⏳ Auto-migration: mengecek status database...')
+    console.log('⏳ Auto-migration: mengecek...')
 
     const client = postgres(connectionString, {
         max: 1,
@@ -30,71 +44,60 @@ async function runMigrations() {
     })
 
     try {
-        // Cek apakah tabel __drizzle_migrations sudah ada
-        const [row] = await client`
+        // Check if drizzle tracking exists
+        const [trackRow] = await client`
       SELECT EXISTS (
         SELECT FROM information_schema.tables
-        WHERE table_schema = 'public'
-        AND table_name = '__drizzle_migrations'
+        WHERE table_schema = 'drizzle' AND table_name = '__drizzle_migrations'
       ) AS exists
     `
-        const hasMigrationTable = row?.exists ?? false
+        const isTracked = trackRow?.exists ?? false
 
-        if (!hasMigrationTable) {
-            // Cek apakah tabel items sudah ada (indikasi existing database)
-            const [tableCheck] = await client`
+        if (!isTracked) {
+            // Check if DB has manual tables
+            const [tableRow] = await client`
         SELECT EXISTS (
           SELECT FROM information_schema.tables
-          WHERE table_schema = 'public'
-          AND table_name = 'items'
+          WHERE table_schema = 'public' AND table_name = 'items'
         ) AS exists
       `
-            const hasExistingTables = tableCheck?.exists ?? false
 
-            if (hasExistingTables) {
-                console.log('📦 Database sudah memiliki tabel — skip migrasi awal, tandai sebagai applied...')
-                // Buat tabel __drizzle_migrations dan tandai migration yg ada sbg applied
+            if (tableRow?.exists) {
+                console.log('📦 Database existing — bootstrapping drizzle tracking...')
+                // Create drizzle schema + migrations table
+                await client`CREATE SCHEMA IF NOT EXISTS drizzle`
                 await client`
-          CREATE TABLE IF NOT EXISTS "__drizzle_migrations" (
+          CREATE TABLE IF NOT EXISTS drizzle.__drizzle_migrations (
             id SERIAL PRIMARY KEY,
             hash TEXT NOT NULL,
             created_at BIGINT
           )
         `
-                // Cari semua file migration di folder drizzle/
-                const { readdirSync, existsSync } = await import('fs')
+                // Mark base migrations as applied (their effects already in DB)
+                const { readFileSync } = await import('fs')
                 const { resolve } = await import('path')
                 const { createHash } = await import('crypto')
-                const drizzleDir = resolve('./drizzle')
-
-                if (existsSync(drizzleDir)) {
-                    const files = readdirSync(drizzleDir)
-                        .filter(f => f.endsWith('.sql'))
-                        .sort()
-
-                    for (const file of files) {
-                        const fileHash = createHash('md5').update(file).digest('hex')
-                        await client`
-              INSERT INTO "__drizzle_migrations" (hash, created_at)
-              VALUES (${fileHash}, ${Date.now()})
-            `
-                    }
-                    console.log(`✅ ${files.length} migration(s) ditandai sebagai sudah applied.`)
+                const baseMigrations = ['0000_furry_mystique.sql', '0001_dry_red_skull.sql']
+                for (const name of baseMigrations) {
+                    const filePath = resolve('./drizzle', name)
+                    const hash = createHash('sha256').update(readFileSync(filePath, 'utf8')).digest('hex')
+                    await client`
+            INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
+            VALUES (${hash}, ${Date.now()})
+          `
                 }
+                console.log('   ✅ 0000 & 0001 marked as applied (already exist in DB).')
             } else {
-                // Database baru — jalankan migration normal
-                console.log('🆕 Database baru — menjalankan migration...')
-                const db = drizzle(client)
-                await migrate(db, { migrationsFolder: './drizzle' })
-                console.log('✅ Migration selesai.')
+                console.log('🆕 Database baru — menjalankan semua migration...')
             }
         } else {
-            // Sudah pernah migrate — jalankan pending migration
             console.log('🔄 Menjalankan pending migration...')
-            const db = drizzle(client)
-            await migrate(db, { migrationsFolder: './drizzle' })
-            console.log('✅ Migration selesai.')
         }
+
+        // Now run drizzle migrate — it will apply any remaining migrations
+        const db = drizzle(client)
+        await migrate(db, { migrationsFolder: './drizzle' })
+        console.log('✅ Migration selesai.')
     } catch (err) {
         console.error('❌ Migration gagal:', err)
         process.exit(1)

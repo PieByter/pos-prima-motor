@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PrimaMotorLogo } from "@/components/prima-motor-logo";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { ToastContainer, useToasts } from "@/components/ui/toast";
 
 function ResetPasswordForm() {
@@ -233,8 +232,6 @@ function ResetPasswordForm() {
 export default function ResetPasswordPage() {
   return (
     <>
-      <ThemeToggle />
-
       <div className="w-full max-w-md p-6">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
           {/* Header */}

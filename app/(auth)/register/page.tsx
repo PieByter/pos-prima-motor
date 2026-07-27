@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PrimaMotorLogo } from "@/components/prima-motor-logo";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { ToastContainer, useToasts } from "@/components/ui/toast";
 
 export default function RegisterPage() {
@@ -83,7 +82,6 @@ export default function RegisterPage() {
 
   return (
     <>
-      <ThemeToggle />
 
       <div className="w-full max-w-md p-6">
         {/* Register Card */}

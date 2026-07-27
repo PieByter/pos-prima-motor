@@ -7,16 +7,16 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:generate": "dotenv -e .env.local drizzle-kit generate",
-    "db:migrate": "dotenv -e .env.local tsx lib/db/migrate.ts",
-    "db:push": "dotenv -e .env.local drizzle-kit push",
-    "db:studio": "dotenv -e .env.local drizzle-kit studio"
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx lib/db/migrate.ts",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@dietrichgebert/ponytail": "^4.8.4",
     "@hookform/resolvers": "^5.5.7",
     "@supabase/ssr": "^0.9.0",
-    "@supabase/supabase-js": "^2.97.0",
+    "@supabase/supabase-js": "^2.110.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^17.4.2",

@@ -298,19 +298,33 @@ export async function getRecentTransactions(
   try {
     const { data: rows, error } = await supabase
       .from('sales')
-      .select('*, customers(name)')
+      .select('*')
       .order('created_at', { ascending: false })
       .limit(limitCount)
 
     if (error) return { data: null, error: new Error(error.message) }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mapped: SaleWithCustomer[] = (rows ?? []).map((r: any) => ({
+    // Get customer names for sales that have a customer_id
+    type SalesRow = Record<string, unknown> & { customer_id: number | null; total_amount: number | string }
+    const salesRows = (rows ?? []) as unknown as SalesRow[]
+    const customerIds = [...new Set(salesRows.map((r) => r.customer_id).filter((id): id is number => id !== null))]
+    const customerMap: Record<number, string> = {}
+    if (customerIds.length > 0) {
+      const { data: customers } = await supabase
+        .from('customers')
+        .select('id, name')
+        .in('id', customerIds)
+      for (const c of (customers ?? []) as unknown as { id: number; name: string }[]) {
+        customerMap[c.id] = c.name
+      }
+    }
+
+    const mapped: SaleWithCustomer[] = salesRows.map((r) => ({
       ...r,
       total_amount: Number(r.total_amount),
-      customer: r.customers ?? null,
+      customer: r.customer_id ? { name: customerMap[r.customer_id] ?? null } : null,
       customers: undefined,
-    }))
+    })) as unknown as SaleWithCustomer[]
 
     return { data: mapped, error: null }
   } catch (err) {

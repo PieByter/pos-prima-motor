@@ -365,7 +365,6 @@ export function TransactionForm({
         const header = {
           customer_id: customerId ? Number(customerId) : null,
           mechanic_id: mechanicId || null,
-          invoice_number: trxId,
           sale_date: date,
           total_amount: totals.grandTotal,
           status: "completed" as const,
@@ -404,7 +403,6 @@ export function TransactionForm({
         // ── Submit purchase to API ─────────────────────────────────────
         const header = {
           supplier_id: customerId ? Number(customerId) : null,
-          invoice_number: trxId,
           purchase_date: date,
           total_amount: totals.grandTotal,
           status: "completed" as const,
@@ -460,7 +458,7 @@ export function TransactionForm({
           </div>
           <span className="inline-flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-sm text-slate-500 dark:text-slate-400 shadow-sm">
             <Hash className="h-4 w-4" />
-            {trxId}
+            {isEdit ? trxId : "Auto-generate"}
           </span>
         </div>
 

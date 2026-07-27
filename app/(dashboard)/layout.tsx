@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { MobileSidebar } from "@/components/layout/mobile-sidebar";
 import { Bike, Bell } from "lucide-react";
 import Link from "next/link";
+import { ToastProvider } from "@/lib/toast-provider";
 
 export default function DashboardLayout({
   children,
@@ -18,6 +19,7 @@ export default function DashboardLayout({
   void pathname;
 
   return (
+    <ToastProvider>
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
       {/* ── Desktop sidebar (md+) ── */}
       <Sidebar />
@@ -73,5 +75,6 @@ export default function DashboardLayout({
         </main>
       </div>
     </div>
+    </ToastProvider>
   );
 }

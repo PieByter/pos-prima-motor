@@ -316,6 +316,7 @@ export function ProfileSection() {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { showToast } = useToasts();
 
   async function loadProfile() {
     try {

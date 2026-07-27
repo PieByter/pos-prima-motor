@@ -122,6 +122,7 @@ export default function ReportsPage() {
             gross_profit: 0,
             total_service_fees: 0,
             net_profit: 0,
+            hpp_total: 0,
           });
           return;
         }

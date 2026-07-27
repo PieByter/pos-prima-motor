@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useToast } from "@/lib/toast-provider";
 import {
   Search,
   Plus,
@@ -31,6 +32,7 @@ import { SupplierFormDialog } from "@/components/suppliers/supplier-form-dialog"
 const ITEMS_PER_PAGE = 10;
 
 export function SuppliersTable() {
+  const { showToast } = useToast();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -104,10 +106,12 @@ export function SuppliersTable() {
     try {
       const res = await fetch(`/api/suppliers/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Gagal menghapus");
+      showToast("Supplier berhasil dihapus", "success");
       setCurrentPage(1);
       await fetchSuppliers(1);
     } catch (err) {
       console.error(err);
+      showToast("Gagal menghapus supplier", "error");
     }
   }
 
@@ -120,6 +124,7 @@ export function SuppliersTable() {
           body: JSON.stringify(data),
         });
         if (!res.ok) throw new Error("Gagal update");
+        showToast("Supplier berhasil diperbarui", "success");
       } else {
         const res = await fetch("/api/suppliers", {
           method: "POST",
@@ -127,6 +132,7 @@ export function SuppliersTable() {
           body: JSON.stringify(data),
         });
         if (!res.ok) throw new Error("Gagal tambah");
+        showToast("Supplier berhasil ditambahkan", "success");
       }
       setDialogOpen(false);
       setEditingSupplier(null);
@@ -134,6 +140,7 @@ export function SuppliersTable() {
       await fetchSuppliers(1);
     } catch (err) {
       console.error(err);
+      showToast("Gagal menyimpan supplier", "error");
     }
   }
 

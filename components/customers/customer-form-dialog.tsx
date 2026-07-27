@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader, Users } from "lucide-react";
 import type { Customer } from "@/lib/types/database";
+import { customerSchema, type CustomerFormData } from "@/lib/validations";
 
 type Props = {
   open: boolean;
@@ -25,32 +28,38 @@ type Props = {
 
 export function CustomerFormDialog({ open, onOpenChange, customer, onSave }: Props) {
   const isEdit = !!customer;
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<CustomerFormData>({
+    resolver: zodResolver(customerSchema),
+    defaultValues: {
+      name: "",
+      phone: "",
+      address: "",
+    },
+  });
 
   // Reset form when dialog opens with new data
   useEffect(() => {
     if (open) {
-      setName(customer?.name ?? "");
-      setPhone(customer?.phone ?? "");
-      setAddress(customer?.address ?? "");
-    }
-  }, [open, customer]);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      await onSave({
-        name: name.trim(),
-        phone: phone.trim() || null,
-        address: address.trim() || null,
+      reset({
+        name: customer?.name ?? "",
+        phone: customer?.phone ?? "",
+        address: customer?.address ?? "",
       });
-    } finally {
-      setIsSaving(false);
     }
+  }, [open, customer, reset]);
+
+  async function onSubmit(data: CustomerFormData) {
+    await onSave({
+      name: data.name,
+      phone: data.phone || null,
+      address: data.address || null,
+    });
   }
 
   return (
@@ -74,7 +83,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer, onSave }: Pro
           </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-2">
           {/* Nama */}
           <div className="space-y-1.5">
             <Label htmlFor="customer-name" className="text-sm font-medium">
@@ -82,12 +91,13 @@ export function CustomerFormDialog({ open, onOpenChange, customer, onSave }: Pro
             </Label>
             <Input
               id="customer-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              {...register("name")}
               placeholder="Contoh: Budi Santoso"
-              required
-              className="bg-slate-50 dark:bg-slate-800"
+              className={`bg-slate-50 dark:bg-slate-800 ${errors.name ? "border-red-500" : ""}`}
             />
+            {errors.name && (
+              <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>
+            )}
           </div>
 
           {/* No. HP */}
@@ -98,11 +108,13 @@ export function CustomerFormDialog({ open, onOpenChange, customer, onSave }: Pro
             <Input
               id="customer-phone"
               type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              {...register("phone")}
               placeholder="Contoh: 0812-3456-7890"
-              className="bg-slate-50 dark:bg-slate-800"
+              className={`bg-slate-50 dark:bg-slate-800 ${errors.phone ? "border-red-500" : ""}`}
             />
+            {errors.phone && (
+              <p className="text-xs text-red-500 mt-1">{errors.phone.message}</p>
+            )}
           </div>
 
           {/* Alamat */}
@@ -112,12 +124,14 @@ export function CustomerFormDialog({ open, onOpenChange, customer, onSave }: Pro
             </Label>
             <Textarea
               id="customer-address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
+              {...register("address")}
               placeholder="Jl. Contoh No. 123, Kota..."
               rows={3}
-              className="bg-slate-50 dark:bg-slate-800 resize-none"
+              className={`bg-slate-50 dark:bg-slate-800 resize-none ${errors.address ? "border-red-500" : ""}`}
             />
+            {errors.address && (
+              <p className="text-xs text-red-500 mt-1">{errors.address.message}</p>
+            )}
           </div>
 
           <DialogFooter className="pt-2">
@@ -125,16 +139,16 @@ export function CustomerFormDialog({ open, onOpenChange, customer, onSave }: Pro
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isSaving}
+              disabled={isSubmitting}
             >
               Batal
             </Button>
             <Button
               type="submit"
               className="bg-emerald-500 hover:bg-emerald-600 text-white gap-2"
-              disabled={isSaving || !name.trim()}
+              disabled={isSubmitting}
             >
-              {isSaving && <Loader className="h-4 w-4 animate-spin" />}
+              {isSubmitting && <Loader className="h-4 w-4 animate-spin" />}
               {isEdit ? "Simpan Perubahan" : "Tambah Customer"}
             </Button>
           </DialogFooter>

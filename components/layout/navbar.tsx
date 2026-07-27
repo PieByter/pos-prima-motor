@@ -62,8 +62,10 @@ export function Navbar({ title, subtitle }: NavbarProps) {
           fetch(`/api/customers?search=${encodeURIComponent(q)}&limit=3`),
         ]);
 
-        const items = itemsRes.ok ? (await itemsRes.json())?.data ?? [] : [];
-        const customers = customersRes.ok ? (await customersRes.json())?.data ?? [];
+        const itemsData = itemsRes.ok ? await itemsRes.json() : null;
+        const customersData = customersRes.ok ? await customersRes.json() : null;
+        const items = itemsData?.data ?? [];
+        const customers = customersData?.data ?? [];
 
         const allResults: SearchResult[] = [
           ...items.map((i: any) => ({

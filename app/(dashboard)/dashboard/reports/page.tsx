@@ -13,6 +13,7 @@ import {
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { MechanicPerformanceTable } from "@/components/reports/mechanic-performance-table";
+import { WeeklySalarySummary } from "@/components/reports/weekly-salary-summary";
 
 /* ───── Types ───── */
 
@@ -203,6 +204,12 @@ export default function ReportsPage() {
           >
             👨‍🔧 Kinerja Mekanik
           </TabsTrigger>
+          <TabsTrigger
+            value="gaji"
+            className="data-[state=active]:border-b-2 data-[state=active]:border-sky-500 data-[state=active]:text-sky-600 data-[state=active]:shadow-none rounded-none px-5 py-2.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white border-b-2 border-transparent"
+          >
+            💰 Gaji Mingguan
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="keuangan" className="mt-0 space-y-5">
@@ -360,6 +367,13 @@ export default function ReportsPage() {
 
         <TabsContent value="mekanik" className="mt-0">
           <MechanicPerformanceTable
+            startDate={startDate}
+            endDate={endDate}
+          />
+        </TabsContent>
+
+        <TabsContent value="gaji" className="mt-0">
+          <WeeklySalarySummary
             startDate={startDate}
             endDate={endDate}
           />

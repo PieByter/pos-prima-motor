@@ -314,6 +314,16 @@ export type MechanicPerformanceRow = {
   total_earnings: number
 }
 
+export type WeeklySalaryRow = {
+  mechanic_id: string
+  mechanic_name: string
+  weekly_salary: number
+  total_service_fees: number
+  service_commission_pct: number
+  commission: number
+  total_earnings: number
+}
+
 // --- Activity Logs ---
 export type ActivityLog = {
   id: number

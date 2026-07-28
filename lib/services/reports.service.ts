@@ -4,6 +4,7 @@ import type {
   PurchasesReport,
   ProfitLossReport,
   MechanicPerformanceRow,
+  WeeklySalaryRow,
   ReportDateRange,
 } from '@/lib/types/database'
 
@@ -290,6 +291,92 @@ export async function getMechanicPerformance(
     }
 
     rows.sort((a, b) => b.total_sales - a.total_sales)
+
+    return { data: rows, error: null }
+  } catch (err) {
+    return { data: null, error: err as Error }
+  }
+}
+
+export async function getWeeklySalarySummary(
+  supabase: SupabaseClient,
+  dateRange: ReportDateRange,
+): Promise<{ data: WeeklySalaryRow[] | null; error: Error | null }> {
+  try {
+    // 1. Get all active mekanik
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, name, weekly_salary, service_commission_pct')
+      .eq('role', 'mekanik')
+      .eq('is_active', true)
+
+    if (profilesError) return { data: null, error: new Error(profilesError.message) }
+
+    // 2. Get all completed sales in range
+    const { data: salesData, error: salesError } = await supabase
+      .from('sales')
+      .select('id, mechanic_id')
+      .eq('status', 'completed')
+      .gte('sale_date', dateRange.start_date)
+      .lte('sale_date', dateRange.end_date)
+
+    if (salesError) return { data: null, error: new Error(salesError.message) }
+
+    const saleIds = (salesData ?? []).map((s) => s.id)
+    const saleMechanicMap = new Map<number, string>()
+    for (const s of salesData ?? []) {
+      saleMechanicMap.set(s.id, s.mechanic_id)
+    }
+
+    // 3. Get total service fees per mechanic from sale_details
+    const mechanicServiceFees = new Map<string, number>()
+    // Initialize all mekanik with 0
+    for (const p of profiles ?? []) {
+      mechanicServiceFees.set(p.id, 0)
+    }
+
+    if (saleIds.length > 0) {
+      // Batch in chunks
+      const chunks: number[][] = []
+      for (let i = 0; i < saleIds.length; i += 300) {
+        chunks.push(saleIds.slice(i, i + 300))
+      }
+
+      for (const chunk of chunks) {
+        const { data: detailChunk, error: detailError } = await supabase
+          .from('sale_details')
+          .select('sale_id, service_fee')
+          .in('sale_id', chunk)
+
+        if (detailError) return { data: null, error: new Error(detailError.message) }
+
+        for (const d of detailChunk ?? []) {
+          const mechanicId = saleMechanicMap.get(d.sale_id)
+          if (!mechanicId) continue
+          const current = mechanicServiceFees.get(mechanicId) ?? 0
+          mechanicServiceFees.set(mechanicId, current + Number(d.service_fee))
+        }
+      }
+    }
+
+    // 4. Build result
+    const rows: WeeklySalaryRow[] = (profiles ?? []).map((p) => {
+      const serviceFees = mechanicServiceFees.get(p.id) ?? 0
+      const salary = Number(p.weekly_salary) || 0
+      const pct = Number(p.service_commission_pct) || 0
+      const commission = serviceFees * (pct / 100)
+      return {
+        mechanic_id: p.id,
+        mechanic_name: p.name,
+        weekly_salary: salary,
+        total_service_fees: serviceFees,
+        service_commission_pct: pct,
+        commission,
+        total_earnings: salary + commission,
+      }
+    })
+
+    rows.sort((a, b) => b.total_earnings - a.total_earnings)
 
     return { data: rows, error: null }
   } catch (err) {

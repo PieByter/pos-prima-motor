@@ -10,8 +10,9 @@ import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { TodaySummary } from "@/components/dashboard/today-summary";
 import { RestockRecommendations } from "@/components/dashboard/restock-recommendations";
 import { DashboardPrintButton } from "@/components/dashboard/dashboard-print-button";
+import { MechanicStatsCards } from "@/components/dashboard/mechanic-stats-cards";
+import { MechanicWeeklyEstimate } from "@/components/dashboard/mechanic-weekly-estimate";
 import { useUserRole } from "@/lib/hooks/use-user-role";
-import { EyeOff } from "lucide-react";
 
 function toInputDate(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -103,7 +104,7 @@ export default function DashboardPage() {
       {/* Summary Cards */}
       <SummaryCards dateRange={{ start: startDate, end: endDate }} />
 
-      {/* Chart + Top Items */}
+      {/* Chart + Top Items (Admin only) */}
       {isAdmin && (
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
           <div className="lg:col-span-2">
@@ -113,18 +114,29 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Mechanic Personal Stats + Weekly Estimate */}
       {!isAdmin && (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white py-12 dark:border-slate-700 dark:bg-slate-800">
-          <EyeOff className="mb-3 h-10 w-10 text-slate-300" />
-          <p className="text-sm font-medium text-slate-500">Grafik penjualan hanya untuk Admin</p>
+        <>
+          <MechanicStatsCards />
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <LowStockAlert />
+            </div>
+            <MechanicWeeklyEstimate />
+          </div>
+        </>
+      )}
+
+      {/* Low Stock + Recent Transactions (Admin) */}
+      {isAdmin && (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <LowStockAlert />
+          <RecentTransactions />
         </div>
       )}
 
-      {/* Low Stock + Recent Transactions */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <LowStockAlert />
-        <RecentTransactions />
-      </div>
+      {/* Mechanic: Recent Transactions */}
+      {!isAdmin && <RecentTransactions />}
 
       {/* Auto Restock Recommendation */}
       {isAdmin && <RestockRecommendations />}

@@ -26,8 +26,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import type { LucideIcon } from "lucide-react";
 
 type NavLink = { label: string; href: string; icon: LucideIcon; color?: string };
@@ -176,8 +174,6 @@ export function Sidebar() {
       {/* User Footer */}
       <div className="p-3 border-t border-slate-200 dark:border-slate-800 shrink-0">
         <div className="flex items-center gap-1 px-2 py-2">
-          <ThemeToggle />
-          <LanguageSwitcher />
           <Avatar className="h-8 w-8 shrink-0">
             <AvatarFallback className="bg-sky-500 text-white text-xs font-bold">
               A

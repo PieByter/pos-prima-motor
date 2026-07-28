@@ -43,6 +43,9 @@ export function SuppliersTable() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  const allSelected = suppliers.length > 0 && suppliers.every(s => selectedIds.has(s.id));
 
   const pageInfo = useMemo(
     () => ({
@@ -115,6 +118,26 @@ export function SuppliersTable() {
     }
   }
 
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Yakin ingin menghapus ${selectedIds.size} supplier terpilih?`)) return;
+    try {
+      const res = await fetch("/api/suppliers", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [...selectedIds] }),
+      });
+      if (!res.ok) throw new Error("Gagal menghapus");
+      const { deleted } = await res.json();
+      showToast(`${deleted} supplier berhasil dihapus`, "success");
+      setSelectedIds(new Set());
+      setCurrentPage(1);
+      await fetchSuppliers(1);
+    } catch (err) {
+      showToast("Gagal menghapus supplier", "error");
+    }
+  }
+
   async function handleSave(data: Omit<Supplier, "id" | "created_at" | "updated_at">) {
     try {
       if (editingSupplier) {
@@ -170,6 +193,19 @@ export function SuppliersTable() {
         </Button>
       </div>
 
+      {/* Bulk Actions */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800">
+          <span className="text-sm text-red-700 dark:text-red-400">{selectedIds.size} dipilih</span>
+          <Button size="sm" variant="destructive" className="h-8 gap-1" onClick={handleBulkDelete}>
+            <Trash2 className="h-3.5 w-3.5" /> Hapus Terpilih
+          </Button>
+          <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setSelectedIds(new Set())}>
+            Batal
+          </Button>
+        </div>
+      )}
+
       {/* Search */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
         <div className="relative max-w-sm">
@@ -199,6 +235,12 @@ export function SuppliersTable() {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700">
+                <TableHead className="w-10 px-3">
+                  <input type="checkbox" className="h-4 w-4 rounded border-slate-300 cursor-pointer accent-violet-500" checked={allSelected} onChange={(e) => {
+                    if (e.target.checked) setSelectedIds(new Set(suppliers.map(x => x.id)));
+                    else setSelectedIds(new Set());
+                  }} />
+                </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5">
                   Nama Supplier
                 </TableHead>
@@ -228,7 +270,7 @@ export function SuppliersTable() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-16 text-center">
+                  <TableCell colSpan={6} className="py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <Loader className="h-7 w-7 animate-spin text-violet-500" />
                       <span className="text-sm text-slate-500 dark:text-slate-400">
@@ -239,7 +281,7 @@ export function SuppliersTable() {
                 </TableRow>
               ) : suppliers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-16 text-center">
+                  <TableCell colSpan={6} className="py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-full">
                         <Building2 className="h-6 w-6 text-slate-400" />
@@ -261,6 +303,13 @@ export function SuppliersTable() {
                     key={supplier.id}
                     className="border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                   >
+                    <TableCell className="px-3">
+                      <input type="checkbox" className="h-4 w-4 rounded border-slate-300 cursor-pointer accent-violet-500" checked={selectedIds.has(supplier.id)} onChange={(e) => {
+                        const next = new Set(selectedIds);
+                        if (e.target.checked) next.add(supplier.id); else next.delete(supplier.id);
+                        setSelectedIds(next);
+                      }} />
+                    </TableCell>
                     {/* Nama */}
                     <TableCell className="px-5">
                       <div className="flex items-center gap-3">

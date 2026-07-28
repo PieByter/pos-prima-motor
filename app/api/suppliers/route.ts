@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth'
-import { getSuppliers, createSupplier } from '@/lib/services/suppliers.service'
+import { getSuppliers, createSupplier, bulkDeleteSuppliers } from '@/lib/services/suppliers.service'
 import type { SupplierInsert } from '@/lib/types/database'
 
 export async function GET(request: NextRequest) {
@@ -57,6 +57,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(data, { status: 201 })
   } catch (err) {
     console.error('Suppliers POST unexpected error:', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { user, errorResponse } = await requireAuth()
+    if (errorResponse) return errorResponse
+    void user
+
+    const { ids } = await request.json()
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json({ error: 'ids array is required' }, { status: 400 })
+    }
+
+    const admin = createAdminClient()
+    const { deleted, error } = await bulkDeleteSuppliers(admin, ids)
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
+    return NextResponse.json({ deleted })
+  } catch (err) {
+    console.error('Suppliers bulk DELETE error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

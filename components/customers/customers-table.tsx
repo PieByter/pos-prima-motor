@@ -43,6 +43,7 @@ export function CustomersTable() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   async function readApiErrorMessage(res: Response, fallback: string) {
     try {
@@ -139,6 +140,25 @@ export function CustomersTable() {
     }
   }
 
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Hapus ${selectedIds.size} customer terpilih?`)) return;
+    try {
+      const res = await fetch("/api/customers", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [...selectedIds] }),
+      });
+      if (!res.ok) throw new Error("Gagal");
+      showToast(`${selectedIds.size} customer dihapus`, "success");
+      setSelectedIds(new Set());
+      setCurrentPage(1);
+      await fetchCustomers(1);
+    } catch (err) {
+      showToast("Gagal menghapus", "error");
+    }
+  }
+
   async function handleSave(data: Omit<Customer, "id" | "created_at" | "updated_at">) {
     try {
       if (editingCustomer) {
@@ -200,6 +220,19 @@ export function CustomersTable() {
         </Button>
       </div>
 
+      {/* Bulk Actions */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800">
+          <span className="text-sm text-red-700 dark:text-red-400">{selectedIds.size} dipilih</span>
+          <Button size="sm" variant="destructive" className="h-8 gap-1" onClick={handleBulkDelete}>
+            <Trash2 className="h-3.5 w-3.5" /> Hapus Terpilih
+          </Button>
+          <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setSelectedIds(new Set())}>
+            Batal
+          </Button>
+        </div>
+      )}
+
       {/* Search */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
         <div className="relative max-w-sm">
@@ -229,6 +262,12 @@ export function CustomersTable() {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700">
+                <TableHead className="w-10 px-3">
+                  <input type="checkbox" className="h-4 w-4 rounded accent-emerald-500" checked={customers.length > 0 && customers.every(c => selectedIds.has(c.id))} onChange={(e) => {
+                    if (e.target.checked) setSelectedIds(new Set(customers.map(x => x.id)));
+                    else setSelectedIds(new Set());
+                  }} />
+                </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5">
                   Nama Customer
                 </TableHead>
@@ -258,7 +297,7 @@ export function CustomersTable() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-16 text-center">
+                  <TableCell colSpan={6} className="py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <Loader className="h-7 w-7 animate-spin text-emerald-500" />
                       <span className="text-sm text-slate-500 dark:text-slate-400">
@@ -269,7 +308,7 @@ export function CustomersTable() {
                 </TableRow>
               ) : customers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-16 text-center">
+                  <TableCell colSpan={6} className="py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-full">
                         <Users className="h-6 w-6 text-slate-400" />

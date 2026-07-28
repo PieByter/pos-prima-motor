@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth'
@@ -294,6 +295,113 @@ export async function GET(request: NextRequest) {
                         { header: 'Margin (%)', key: 'margin', width: 14 },
                     ],
                     rows: profitRows,
+                })
+                break
+            }
+
+            case 'mechanic-performance': {
+                // Same logic as getMechanicPerformance service
+                let sq = admin.from('sales')
+                    .select('id, mechanic_id, total_amount')
+                    .eq('status', 'completed')
+                if (startDate) sq = sq.gte('sale_date', startDate)
+                if (endDate) sq = sq.lte('sale_date', endDate)
+                const { data: salesData } = await sq
+
+                const { data: profiles } = await admin.from('profiles')
+                    .select('id, name, weekly_salary, service_commission_pct')
+                    .eq('role', 'mekanik')
+                    .eq('is_active', true)
+
+                const saleIds = (salesData ?? []).map((s: any) => s.id)
+                const saleMechanicMap = new Map<number, string>()
+                for (const s of salesData ?? []) { saleMechanicMap.set((s as any).id, (s as any).mechanic_id) }
+
+                const mechMap = new Map<string, { name: string; txCount: number; sales: number; fees: number; salary: number; pct: number }>()
+                for (const p of profiles ?? []) {
+                    mechMap.set((p as any).id, { name: (p as any).name, txCount: 0, sales: 0, fees: 0, salary: Number((p as any).weekly_salary) || 0, pct: Number((p as any).service_commission_pct) || 0 })
+                }
+                for (const s of salesData ?? []) {
+                    const m = mechMap.get((s as any).mechanic_id)
+                    if (m) { m.txCount++; m.sales += Number((s as any).total_amount) }
+                }
+
+                if (saleIds.length > 0) {
+                    const { data: details } = await admin.from('sale_details').select('sale_id, service_fee').in('sale_id', saleIds)
+                    for (const d of details ?? []) {
+                        const mid = saleMechanicMap.get((d as any).sale_id)
+                        if (mid && mechMap.has(mid)) mechMap.get(mid)!.fees += Number((d as any).service_fee)
+                    }
+                }
+
+                const mechRows = [...mechMap.values()].map(m => {
+                    const comm = m.fees * (m.pct / 100)
+                    return { name: m.name, tx: m.txCount, sales: m.sales, fees: m.fees, pct: m.pct, commission: comm, salary: m.salary, total: m.salary + comm }
+                })
+                mechRows.sort((a, b) => b.sales - a.sales)
+
+                sheets.push({
+                    name: 'Kinerja Mekanik',
+                    columns: [
+                        { header: 'Mekanik', key: 'name', width: 22 },
+                        { header: 'Transaksi', key: 'tx', width: 12 },
+                        { header: 'Omset (Rp)', key: 'sales', width: 18, format: '#,##0' },
+                        { header: 'Total Jasa (Rp)', key: 'fees', width: 18, format: '#,##0' },
+                        { header: 'Komisi %', key: 'pct', width: 10 },
+                        { header: 'Komisi (Rp)', key: 'commission', width: 18, format: '#,##0' },
+                        { header: 'Gaji Mingguan (Rp)', key: 'salary', width: 18, format: '#,##0' },
+                        { header: 'Total (Rp)', key: 'total', width: 18, format: '#,##0' },
+                    ],
+                    rows: mechRows,
+                })
+                break
+            }
+
+            case 'weekly-salary': {
+                const { data: salaryProfiles } = await admin.from('profiles')
+                    .select('id, name, weekly_salary, service_commission_pct')
+                    .eq('role', 'mekanik')
+                    .eq('is_active', true)
+
+                let sq2 = admin.from('sales').select('id, mechanic_id').eq('status', 'completed')
+                if (startDate) sq2 = sq2.gte('sale_date', startDate)
+                if (endDate) sq2 = sq2.lte('sale_date', endDate)
+                const { data: sData } = await sq2
+
+                const sIdMap = new Map<number, string>()
+                for (const s of sData ?? []) { sIdMap.set((s as any).id, (s as any).mechanic_id) }
+                const sIds = (sData ?? []).map((x: any) => x.id)
+
+                const feeMap = new Map<string, number>()
+                for (const p of salaryProfiles ?? []) { feeMap.set((p as any).id, 0) }
+                if (sIds.length > 0) {
+                    const { data: dets } = await admin.from('sale_details').select('sale_id, service_fee').in('sale_id', sIds)
+                    for (const d of dets ?? []) {
+                        const mid = sIdMap.get((d as any).sale_id)
+                        if (mid && feeMap.has(mid)) feeMap.set(mid, (feeMap.get(mid) ?? 0) + Number((d as any).service_fee))
+                    }
+                }
+
+                const salaryRows = (salaryProfiles ?? []).map((p: any) => {
+                    const fees = feeMap.get(p.id) ?? 0
+                    const salary = Number(p.weekly_salary) || 0
+                    const pct = Number(p.service_commission_pct) || 0
+                    const comm = fees * (pct / 100)
+                    return { name: p.name, salary, fees, pct, commission: comm, total: salary + comm }
+                })
+                salaryRows.sort((a, b) => b.total - a.total)
+
+                sheets.push({
+                    name: 'Gaji Mingguan',
+                    columns: [
+                        { header: 'Mekanik', key: 'name', width: 22 },
+                        { header: 'Gaji Pokok (Rp)', key: 'salary', width: 18, format: '#,##0' },
+                        { header: 'Total Jasa (Rp)', key: 'fees', width: 18, format: '#,##0' },
+                        { header: 'Komisi %', key: 'pct', width: 10 },
+                        { header: 'Komisi (Rp)', key: 'commission', width: 18, format: '#,##0' },
+                        { header: 'Total (Rp)', key: 'total', width: 18, format: '#,##0' },
+                    ],
+                    rows: salaryRows,
                 })
                 break
             }

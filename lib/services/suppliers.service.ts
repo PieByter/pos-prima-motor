@@ -144,3 +144,15 @@ export async function deleteSupplier(
     return { error: err as Error }
   }
 }
+
+export async function bulkDeleteSuppliers(
+  supabase: SupabaseClient,
+  ids: number[],
+): Promise<{ deleted: number; error: Error | null }> {
+  try {
+    const { error, count } = await supabase.from('suppliers').delete().in('id', ids).select('id')
+    return { deleted: count ?? 0, error: error ? new Error(error.message) : null }
+  } catch (err) {
+    return { deleted: 0, error: err as Error }
+  }
+}

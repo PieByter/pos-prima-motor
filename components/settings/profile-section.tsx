@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Camera, Pencil, KeyRound, Lock, Eye, EyeOff, CheckCircle, Loader, Loader2 } from "lucide-react";
+import { Camera, Pencil, KeyRound, Lock, Eye, EyeOff, CheckCircle, Loader, Loader2, Wallet, Wrench, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatCurrency } from "@/lib/format";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,83 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useToast } from "@/lib/toast-provider";
+
+/* ─── Mechanic Earnings Card ─────────────────────────────────────── */
+
+function MechanicEarningsCard() {
+  const [earnings, setEarnings] = useState<{ weeklySalary: number; commissionPct: number; weekCommission: number; estimatedWeekEarnings: number; weekServiceFees: number; weekTransactions: number } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/dashboard/mechanic", { cache: "no-store" })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.earnings) {
+          setEarnings({
+            weeklySalary: d.earnings.weeklySalary || 0,
+            commissionPct: d.earnings.commissionPct || 0,
+            weekCommission: d.earnings.weekCommission || 0,
+            estimatedWeekEarnings: d.earnings.estimatedWeekEarnings || 0,
+            weekServiceFees: d.week?.serviceFees || 0,
+            weekTransactions: d.week?.transactionCount || 0,
+          });
+        }
+      })
+      .catch(() => { })
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <div className="p-5 animate-pulse space-y-3">
+          <div className="h-4 w-40 rounded bg-slate-200 dark:bg-slate-700" />
+          <div className="flex gap-4">
+            <div className="h-16 flex-1 rounded bg-slate-100 dark:bg-slate-700" />
+            <div className="h-16 flex-1 rounded bg-slate-100 dark:bg-slate-700" />
+            <div className="h-16 flex-1 rounded bg-slate-100 dark:bg-slate-700" />
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const e = earnings;
+  if (!e) return null;
+
+  return (
+    <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-amber-200 dark:border-amber-800 overflow-hidden">
+      <div className="p-5">
+        <h4 className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-300 mb-4">
+          <Wallet className="h-4 w-4" /> Pendapatan Minggu Ini
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-3 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Gaji Pokok</p>
+            <p className="mt-1 text-lg font-bold text-slate-800 dark:text-white">{formatCurrency(e.weeklySalary)}</p>
+          </div>
+          <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-3 text-center">
+            <div className="flex items-center justify-center gap-1">
+              <Wrench className="h-3 w-3 text-sky-500" />
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Komisi ({e.commissionPct}%)</p>
+            </div>
+            <p className="mt-1 text-lg font-bold text-amber-600 dark:text-amber-400">{formatCurrency(e.weekCommission)}</p>
+            <p className="text-[10px] text-slate-400">{e.weekTransactions} tx | Jasa: {formatCurrency(e.weekServiceFees)}</p>
+          </div>
+          <div className="rounded-lg border-2 border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 p-3 text-center">
+            <div className="flex items-center justify-center gap-1">
+              <TrendingUp className="h-3 w-3 text-amber-600" />
+              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">Estimasi Total</p>
+            </div>
+            <p className="mt-1 text-xl font-extrabold text-amber-700 dark:text-amber-300">{formatCurrency(e.estimatedWeekEarnings)}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─── Change Password Dialog ─────────────────────────────────────── */
 
 type ProfileData = {
   user?: { id?: string; email?: string | null };
@@ -465,6 +543,11 @@ export function ProfileSection() {
           </div>
         </div>
       </section>
+
+      {/* Mechanic Earnings Card */}
+      {role === "mekanik" && (
+        <MechanicEarningsCard />
+      )}
 
       <ChangePasswordDialog
         open={showChangePassword}

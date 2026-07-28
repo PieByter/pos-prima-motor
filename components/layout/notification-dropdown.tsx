@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Bell, CheckCheck, Loader2, AlertCircle, Info, CheckCircle, AlertTriangle, X } from "lucide-react";
 import Link from "next/link";
 import type { NotificationType } from "@/lib/types/notifications";
+import { createClient } from "@/lib/supabase/client";
 
 type UiNotification = {
   id: number;
@@ -71,9 +72,40 @@ export function NotificationDropdown() {
     // Initial load
     loadNotifications();
 
-    // Poll every 30 seconds as fallback (Realtime channel may not work without anon key setup)
+    // Supabase Realtime channel for notifications
+    const supabase = createClient();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user?.id) return;
+
+      channel = supabase
+        .channel(`notifications-${session.user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${session.user.id}`,
+          },
+          (payload) => {
+            const newNotif = payload.new as UiNotification;
+            // Prepend to list
+            setNotifications(prev => [newNotif, ...prev].slice(0, 5));
+            setUnreadCount(prev => prev + 1);
+          },
+        )
+        .subscribe();
+    });
+
+    // Poll every 30 seconds as fallback
     const interval = setInterval(loadNotifications, 30000);
-    return () => clearInterval(interval);
+
+    return () => {
+      clearInterval(interval);
+      if (channel) supabase.removeChannel(channel);
+    };
   }, []);
 
   async function handleMarkAllRead() {

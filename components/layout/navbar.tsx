@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type JSX } from "react";
 import { Search, Loader2, Package, Users, ShoppingCart, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { NotificationDropdown } from "@/components/layout/notification-dropdown";
@@ -19,7 +19,7 @@ type SearchResult = {
   href: string;
 };
 
-export function Navbar({ title, subtitle }: NavbarProps) {
+export function Navbar({ title, subtitle }: NavbarProps): JSX.Element {
   const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -70,17 +70,27 @@ export function Navbar({ title, subtitle }: NavbarProps) {
       setIsSearching(true);
       try {
         const q = searchQuery.trim();
-        const [itemsRes, customersRes] = await Promise.all([
+        const [itemsRes, customersRes, salesRes] = await Promise.all([
           fetch(`/api/items?search=${encodeURIComponent(q)}&limit=5`),
           fetch(`/api/customers?search=${encodeURIComponent(q)}&limit=3`),
+          fetch(`/api/sales?search=${encodeURIComponent(q)}&limit=3`),
         ]);
 
         const itemsData = itemsRes.ok ? await itemsRes.json() : null;
         const customersData = customersRes.ok ? await customersRes.json() : null;
+        const salesData = salesRes.ok ? await salesRes.json() : null;
         const items = itemsData?.data ?? [];
         const customers = customersData?.data ?? [];
+        const sales = salesData?.data ?? [];
 
         const allResults: SearchResult[] = [
+          ...sales.map((s: any) => ({
+            type: "sale" as const,
+            id: s.id,
+            label: `${s.invoice_number ?? "#" + s.id}`,
+            subLabel: `${new Date(s.sale_date).toLocaleDateString("id-ID")} | Rp ${Number(s.total_amount).toLocaleString("id-ID")}`,
+            href: `/dashboard/transactions/sales/${s.id}`,
+          })),
           ...items.map((i: any) => ({
             type: "item" as const,
             id: i.id,
@@ -146,7 +156,7 @@ export function Navbar({ title, subtitle }: NavbarProps) {
           </kbd>
           <Input
             ref={inputRef}
-            placeholder="Cari barang, customer..."
+            placeholder="Cari invoice, barang, customer..."
             className="w-56 pl-10 pr-12 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-sm"
             value={searchQuery}
             onChange={(e) => {

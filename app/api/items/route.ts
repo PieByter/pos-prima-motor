@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth'
-import { getItems, createItem } from '@/lib/services/items.service'
+import { getItems, createItem, bulkDeleteItems } from '@/lib/services/items.service'
 
 export async function GET(request: NextRequest) {
   try {
@@ -48,6 +48,33 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(data, { status: 201 })
   } catch (err) {
     console.error('Items POST unexpected error:', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { user, errorResponse } = await requireAuth()
+    if (errorResponse) return errorResponse
+    void user
+
+    const { ids } = await request.json()
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json({ error: 'ids array is required' }, { status: 400 })
+    }
+
+    const admin = createAdminClient()
+    const { deleted, error } = await bulkDeleteItems(admin, ids)
+
+    if (error) {
+      console.error('Items bulk DELETE failed:', error)
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
+    return NextResponse.json({ deleted })
+  } catch (err) {
+    console.error('Items bulk DELETE unexpected error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

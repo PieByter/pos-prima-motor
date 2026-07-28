@@ -144,6 +144,18 @@ export async function deleteItem(
   }
 }
 
+export async function bulkDeleteItems(
+  supabase: SupabaseClient,
+  ids: number[],
+): Promise<{ deleted: number; error: Error | null }> {
+  try {
+    const { error, count } = await supabase.from('items').delete().in('id', ids).select('id')
+    return { deleted: count ?? 0, error: error ? new Error(error.message) : null }
+  } catch (err) {
+    return { deleted: 0, error: err as Error }
+  }
+}
+
 // File upload uses Supabase Storage (not a DB operation)
 export async function uploadItemPicture(supabase: SupabaseClient, file: File, fileName: string) {
   const { data, error } = await supabase.storage

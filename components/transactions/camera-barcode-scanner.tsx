@@ -8,7 +8,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Camera, CameraOff, Loader2, ScanLine } from "lucide-react";
+import { Camera, CameraOff, Loader2, ScanLine, AlertTriangle } from "lucide-react";
+import { BrowserMultiFormatReader } from "@zxing/library";
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */
@@ -42,6 +43,19 @@ export function CameraBarcodeScanner({
   // Check if BarcodeDetector is supported
   const detectorSupported =
     typeof window !== "undefined" && "BarcodeDetector" in window;
+
+  // ZXing reader instance for fallback
+  const zxingReaderRef = useRef<BrowserMultiFormatReader | null>(null);
+
+  // Init ZXing reader once if needed
+  useEffect(() => {
+    if (!detectorSupported && !zxingReaderRef.current) {
+      zxingReaderRef.current = new BrowserMultiFormatReader();
+    }
+    return () => {
+      zxingReaderRef.current = null
+    };
+  }, [detectorSupported]);
 
   // Start camera
   const startCamera = useCallback(async () => {
@@ -77,8 +91,8 @@ export function CameraBarcodeScanner({
     }
   }, []);
 
-  // Stop camera
-  const stopCamera = useCallback(() => {
+  // Stop camera — pure media cleanup, no setState
+  const cleanupMediaStream = useCallback(() => {
     if (scanIntervalRef.current) {
       clearInterval(scanIntervalRef.current);
       scanIntervalRef.current = null;
@@ -93,8 +107,17 @@ export function CameraBarcodeScanner({
       videoRef.current.srcObject = null;
     }
 
-    setScanning(false);
+    // Reset ZXing reader
+    if (zxingReaderRef.current) {
+      zxingReaderRef.current.reset();
+    }
   }, []);
+
+  // Stop camera + reset state (called on detection)
+  const stopCamera = useCallback(() => {
+    cleanupMediaStream();
+    setScanning(false);
+  }, [cleanupMediaStream]);
 
   // Scan barcode from video frame
   const scanFrame = useCallback(async () => {
@@ -159,17 +182,17 @@ export function CameraBarcodeScanner({
   // Start/stop scanning on dialog open/close
   useEffect(() => {
     if (open) {
-      // Small delay to allow dialog to render
+      detectedRef.current = false;
+      // Small delay to allow dialog to render, then startCamera handles state reset
       const t = setTimeout(() => startCamera(), 300);
       return () => clearTimeout(t);
-    } else {
-      stopCamera();
-      setError(null);
-      setDetectedCode(null);
     }
-  }, [open, startCamera, stopCamera]);
+    // When dialog closes, ONLY clean up external resources.
+    // State resets are handled inside startCamera when dialog reopens.
+    cleanupMediaStream();
+  }, [open, startCamera, cleanupMediaStream]);
 
-  // Poll for barcode detection
+  // Poll for barcode detection — native BarcodeDetector
   useEffect(() => {
     if (scanning && detectorSupported) {
       scanIntervalRef.current = setInterval(() => {
@@ -184,6 +207,36 @@ export function CameraBarcodeScanner({
       }
     };
   }, [scanning, detectorSupported, scanFrame]);
+
+  // ZXing fallback — uses its own video scanning API
+  useEffect(() => {
+    if (scanning && !detectorSupported && videoRef.current && zxingReaderRef.current) {
+      const reader = zxingReaderRef.current;
+
+      reader
+        .decodeFromVideoElement(videoRef.current)
+        .then((result) => {
+          if (result && !detectedRef.current) {
+            detectedRef.current = true;
+            const code = result.getText();
+            setDetectedCode(code);
+            setScanning(false);
+            stopCamera();
+            setTimeout(() => {
+              onDetected(code);
+              onOpenChange(false);
+            }, 500);
+          }
+        })
+        .catch(() => {
+          // Timeout or decode fail — ZXing reader already handles retry internally
+        });
+
+      return () => {
+        reader.reset();
+      };
+    }
+  }, [scanning, detectorSupported, stopCamera, onDetected, onOpenChange]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -208,6 +261,12 @@ export function CameraBarcodeScanner({
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                 Arahkan kamera ke barcode barang
               </p>
+              {!detectorSupported && (
+                <span className="inline-flex items-center gap-1 mt-1 text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">
+                  <AlertTriangle className="h-3 w-3" />
+                  ZXing fallback
+                </span>
+              )}
             </div>
           </div>
         </DialogHeader>

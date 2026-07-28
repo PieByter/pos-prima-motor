@@ -73,3 +73,49 @@ export const expenseSchema = z.object({
 export type ItemFormData = z.infer<typeof itemSchema>;
 export type DiscountFormData = z.infer<typeof discountSchema>;
 export type ExpenseFormData = z.infer<typeof expenseSchema>;
+
+// ─── Sale Detail ────────────────────────────────────────────────────────────
+const saleDetailSchema = z.object({
+    item_id: z.number({ required_error: "Barang wajib dipilih" }),
+    quantity: z.coerce.number().int().min(1, "Jumlah minimal 1"),
+    base_price: z.coerce.number().min(0, "Harga tidak boleh negatif"),
+    discount_amount: z.coerce.number().min(0, "Diskon tidak boleh negatif").optional().default(0),
+    final_price: z.coerce.number().min(0, "Harga final tidak boleh negatif"),
+    service_fee: z.coerce.number().min(0, "Jasa tidak boleh negatif").optional().default(0),
+    subtotal: z.coerce.number().min(0, "Subtotal tidak boleh negatif"),
+});
+
+export const saleSchema = z.object({
+    header: z.object({
+        customer_id: z.number().nullable().optional(),
+        mechanic_id: z.string().uuid("Mekanik wajib dipilih"),
+        sale_date: z.string().min(1, "Tanggal wajib diisi"),
+        status: z.enum(["completed", "pending", "in_progress", "cancelled"]).optional().default("completed"),
+        invoice_number: z.string().optional(),
+    }),
+    details: z.array(saleDetailSchema).min(1, "Minimal 1 barang harus ditambahkan"),
+}).refine(
+    (data) => data.details.every((d) => d.final_price >= 0),
+    { message: "Harga final tidak boleh negatif", path: ["details"] },
+);
+
+export const purchaseSchema = z.object({
+    header: z.object({
+        supplier_id: z.number({ required_error: "Supplier wajib dipilih" }),
+        purchase_date: z.string().min(1, "Tanggal wajib diisi"),
+        status: z.enum(["completed", "pending", "cancelled"]).optional().default("completed"),
+        invoice_number: z.string().optional(),
+    }),
+    details: z.array(
+        z.object({
+            item_id: z.number({ required_error: "Barang wajib dipilih" }),
+            quantity: z.coerce.number().int().min(1, "Jumlah minimal 1"),
+            price: z.coerce.number().min(0, "Harga tidak boleh negatif"),
+            subtotal: z.coerce.number().min(0, "Subtotal tidak boleh negatif"),
+        }),
+    ).min(1, "Minimal 1 barang harus ditambahkan"),
+});
+
+export type SaleFormData = z.infer<typeof saleSchema>;
+export type PurchaseFormData = z.infer<typeof purchaseSchema>;
+export type SaleDetailFormData = z.infer<typeof saleDetailSchema>;

@@ -144,3 +144,15 @@ export async function deleteCustomer(
     return { error: err as Error }
   }
 }
+
+export async function bulkDeleteCustomers(
+  supabase: SupabaseClient,
+  ids: number[],
+): Promise<{ deleted: number; error: Error | null }> {
+  try {
+    const { error, count } = await supabase.from('customers').delete().in('id', ids).select('id')
+    return { deleted: count ?? 0, error: error ? new Error(error.message) : null }
+  } catch (err) {
+    return { deleted: 0, error: err as Error }
+  }
+}

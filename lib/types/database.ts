@@ -298,6 +298,10 @@ export type ProfitLossReport = {
   total_service_fees: number
   net_profit: number
   hpp_total: number
+  total_expenses: number
+  total_mechanic_salaries: number
+  total_mechanic_commissions: number
+  net_profit_owner: number
 }
 
 export type MechanicPerformanceRow = {

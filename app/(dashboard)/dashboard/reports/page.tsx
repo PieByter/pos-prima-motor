@@ -36,6 +36,10 @@ type ProfitLossReport = {
   total_service_fees: number;
   net_profit: number;
   hpp_total: number;
+  total_expenses: number;
+  total_mechanic_salaries: number;
+  total_mechanic_commissions: number;
+  net_profit_owner: number;
 };
 
 /* ───── Helpers ───── */
@@ -127,6 +131,10 @@ export default function ReportsPage() {
             total_service_fees: 0,
             net_profit: 0,
             hpp_total: 0,
+            total_expenses: 0,
+            total_mechanic_salaries: 0,
+            total_mechanic_commissions: 0,
+            net_profit_owner: 0,
           });
           return;
         }
@@ -266,7 +274,7 @@ export default function ReportsPage() {
         </DashboardCard>
 
         {/* Stat Cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <ReportStat
             label="Total Sales"
             value={formatCurrency(sales?.total_sales ?? 0)}
@@ -289,13 +297,69 @@ export default function ReportsPage() {
             iconColor="text-sky-500"
           />
           <ReportStat
-            label="Net Profit"
+            label="Operational Profit"
             value={formatCurrency(profitLoss?.net_profit ?? 0)}
-            sub="Setelah biaya pembelian"
+            sub="Gross profit + service fees"
             icon={Wallet}
             iconColor="text-indigo-500"
           />
         </div>
+
+        {/* Owner Net Profit Breakdown */}
+        <DashboardCard>
+          <SectionHeader label="Laba bersih pemilik" title="Rincian Laba Bersih" />
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                <tr>
+                  <td className="px-5 py-3 text-slate-600 dark:text-slate-400">Total Penjualan</td>
+                  <td className="px-5 py-3 text-right font-mono font-medium text-slate-700 dark:text-slate-300">{formatCurrency(profitLoss?.total_sales ?? 0)}</td>
+                </tr>
+                <tr>
+                  <td className="px-5 py-3 pl-8 text-slate-500 dark:text-slate-400">HPP (Modal Barang)</td>
+                  <td className="px-5 py-3 text-right font-mono text-rose-600 dark:text-rose-400">- {formatCurrency(profitLoss?.hpp_total ?? 0)}</td>
+                </tr>
+                <tr className="border-b-2 border-slate-200 dark:border-slate-700">
+                  <td className="px-5 py-3 font-semibold text-slate-700 dark:text-slate-300">Laba Kotor</td>
+                  <td className="px-5 py-3 text-right font-mono font-bold text-slate-800 dark:text-white">{formatCurrency(profitLoss?.gross_profit ?? 0)}</td>
+                </tr>
+                <tr>
+                  <td className="px-5 py-3 pl-8 text-slate-500 dark:text-slate-400">Pendapatan Jasa Service</td>
+                  <td className="px-5 py-3 text-right font-mono text-sky-600 dark:text-sky-400">+ {formatCurrency(profitLoss?.total_service_fees ?? 0)}</td>
+                </tr>
+                <tr className="border-b-2 border-slate-200 dark:border-slate-700">
+                  <td className="px-5 py-3 font-semibold text-slate-700 dark:text-slate-300">Laba Operasional</td>
+                  <td className="px-5 py-3 text-right font-mono font-bold text-indigo-600 dark:text-indigo-400">{formatCurrency(profitLoss?.net_profit ?? 0)}</td>
+                </tr>
+                <tr>
+                  <td className="px-5 py-3 pl-8 text-slate-500 dark:text-slate-400">Biaya Operasional</td>
+                  <td className="px-5 py-3 text-right font-mono text-rose-600 dark:text-rose-400">- {formatCurrency(profitLoss?.total_expenses ?? 0)}</td>
+                </tr>
+                <tr>
+                  <td className="px-5 py-3 pl-8 text-slate-500 dark:text-slate-400">Gaji Mekanik</td>
+                  <td className="px-5 py-3 text-right font-mono text-rose-600 dark:text-rose-400">- {formatCurrency(profitLoss?.total_mechanic_salaries ?? 0)}</td>
+                </tr>
+                <tr>
+                  <td className="px-5 py-3 pl-8 text-slate-500 dark:text-slate-400">Komisi Mekanik</td>
+                  <td className="px-5 py-3 text-right font-mono text-rose-600 dark:text-rose-400">- {formatCurrency(profitLoss?.total_mechanic_commissions ?? 0)}</td>
+                </tr>
+                <tr className="border-t-2 border-slate-200 bg-amber-50/50 dark:border-slate-700 dark:bg-amber-900/10">
+                  <td className="px-5 py-3 text-base font-extrabold text-amber-800 dark:text-amber-200">
+                    💰 LABA BERSIH PEMILIK
+                  </td>
+                  <td className="px-5 py-3 text-right">
+                    <span className={`font-mono text-lg font-extrabold ${(profitLoss?.net_profit_owner ?? 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {formatCurrency(profitLoss?.net_profit_owner ?? 0)}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="border-t px-5 py-2.5 text-[10px] text-slate-400 dark:text-slate-500">
+            Laba Bersih Pemilik = Laba Operasional − Biaya − Gaji − Komisi
+          </div>
+        </DashboardCard>
 
         {/* Daily Breakdown Table */}
         <DashboardCard>

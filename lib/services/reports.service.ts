@@ -154,8 +154,86 @@ export async function getProfitLossReport(
     const gross_profit = total_sales - hpp_total
     const net_profit = gross_profit + total_service_fees
 
+    // 5. Get total expenses in range
+    const { data: expenseData, error: expenseError } = await supabase
+      .from('expenses')
+      .select('amount')
+      .gte('expense_date', dateRange.start_date)
+      .lte('expense_date', dateRange.end_date)
+
+    // Don't fail the whole report if expenses query fails — just use 0
+    const total_expenses = expenseError ? 0 : (expenseData ?? []).reduce((sum, e) => sum + Number(e.amount), 0)
+
+    // 6. Get total mechanic salaries from active mekanik profiles
+    const { data: salaryData, error: salaryError } = await supabase
+      .from('profiles')
+      .select('weekly_salary')
+      .eq('role', 'mekanik')
+      .eq('is_active', true)
+
+    const total_mechanic_salaries = salaryError ? 0 : (salaryData ?? []).reduce((sum, p) => sum + Number(p.weekly_salary || 0), 0)
+
+    // 7. Get total mechanic commissions from sale_details by mechanic
+    let total_mechanic_commissions = 0
+    if (saleIds.length > 0) {
+      // Map sales to mechanic_id
+      const { data: mechSales } = await supabase
+        .from('sales')
+        .select('id, mechanic_id')
+        .in('id', saleIds)
+
+      const saleMechMap = new Map<number, string>()
+      for (const s of mechSales ?? []) {
+        saleMechMap.set(s.id, s.mechanic_id)
+      }
+
+      // Get mechanic commission pcts
+      const { data: mechProfiles } = await supabase
+        .from('profiles')
+        .select('id, service_commission_pct')
+        .eq('role', 'mekanik')
+        .eq('is_active', true)
+
+      const commissionPctMap = new Map<string, number>()
+      for (const p of mechProfiles ?? []) {
+        commissionPctMap.set(p.id, Number(p.service_commission_pct) || 0)
+      }
+
+      // Get service fees per sale
+      const { data: allDetails } = await supabase
+        .from('sale_details')
+        .select('sale_id, service_fee')
+        .in('sale_id', saleIds)
+
+      // Aggregate commissions per mechanic
+      const mechCommissions = new Map<string, number>()
+      for (const d of allDetails ?? []) {
+        const mechId = saleMechMap.get(d.sale_id)
+        if (!mechId) continue
+        const pct = commissionPctMap.get(mechId) ?? 0
+        const comm = Number(d.service_fee) * (pct / 100)
+        mechCommissions.set(mechId, (mechCommissions.get(mechId) ?? 0) + comm)
+      }
+
+      total_mechanic_commissions = [...mechCommissions.values()].reduce((sum, c) => sum + c, 0)
+    }
+
+    // 8. Owner net profit = net_profit - expenses - salaries - commissions
+    const net_profit_owner = net_profit - total_expenses - total_mechanic_salaries - total_mechanic_commissions
+
     return {
-      data: { total_sales, total_purchases, gross_profit, total_service_fees, net_profit, hpp_total },
+      data: {
+        total_sales,
+        total_purchases,
+        gross_profit,
+        total_service_fees,
+        net_profit,
+        hpp_total,
+        total_expenses,
+        total_mechanic_salaries,
+        total_mechanic_commissions,
+        net_profit_owner,
+      },
       error: null,
     }
   } catch (err) {

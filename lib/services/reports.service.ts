@@ -3,6 +3,7 @@ import type {
   SalesReport,
   PurchasesReport,
   ProfitLossReport,
+  MechanicPerformanceRow,
   ReportDateRange,
 } from '@/lib/types/database'
 
@@ -156,6 +157,141 @@ export async function getProfitLossReport(
       data: { total_sales, total_purchases, gross_profit, total_service_fees, net_profit, hpp_total },
       error: null,
     }
+  } catch (err) {
+    return { data: null, error: err as Error }
+  }
+}
+
+export async function getMechanicPerformance(
+  supabase: SupabaseClient,
+  dateRange: ReportDateRange,
+): Promise<{ data: MechanicPerformanceRow[] | null; error: Error | null }> {
+  try {
+    // 1. Get completed sales in range
+    const { data: salesData, error: salesError } = await supabase
+      .from('sales')
+      .select('id, mechanic_id, total_amount')
+      .eq('status', 'completed')
+      .gte('sale_date', dateRange.start_date)
+      .lte('sale_date', dateRange.end_date)
+
+    if (salesError) return { data: null, error: new Error(salesError.message) }
+
+    // 2. Get ALL mekanik profiles (including those with 0 sales)
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, name, weekly_salary, service_commission_pct')
+      .eq('role', 'mekanik')
+      .eq('is_active', true)
+
+    if (profilesError) return { data: null, error: new Error(profilesError.message) }
+
+    // 3. Get sale_details for service_fee
+    const saleIds = (salesData ?? []).map((s) => s.id)
+    let detailsBySale = new Map<number, { serviceFees: number; itemId: number; quantity: number }[]>()
+    let allDetailRows: { sale_id: number; item_id: number; quantity: number; service_fee: number }[] = []
+
+    if (saleIds.length > 0) {
+      // Batch sale_ids in chunks of 300 to avoid oversized queries
+      const chunks: number[][] = []
+      for (let i = 0; i < saleIds.length; i += 300) {
+        chunks.push(saleIds.slice(i, i + 300))
+      }
+
+      for (const chunk of chunks) {
+        const { data: detailChunk, error: detailError } = await supabase
+          .from('sale_details')
+          .select('sale_id, item_id, quantity, service_fee')
+          .in('sale_id', chunk)
+
+        if (detailError) return { data: null, error: new Error(detailError.message) }
+        allDetailRows.push(...(detailChunk ?? []))
+      }
+    }
+
+    // 4. Get items for HPP
+    const itemIds = [...new Set(allDetailRows.map((d) => d.item_id))]
+    let priceMap = new Map<number, number>()
+    if (itemIds.length > 0) {
+      const { data: items } = await supabase
+        .from('items')
+        .select('id, purchase_price')
+        .in('id', itemIds)
+      priceMap = new Map((items ?? []).map((i) => [i.id, Number(i.purchase_price)]))
+    }
+
+    // 5. Aggregate per mechanic
+    type MechAgg = {
+      name: string
+      totalSales: number
+      transactions: Set<number>
+      serviceFees: number
+      hpp: number
+      weeklySalary: number
+      commissionPct: number
+    }
+
+    const mechanicMap = new Map<string, MechAgg>()
+
+    // Init all active mekanik
+    for (const p of profiles ?? []) {
+      mechanicMap.set(p.id, {
+        name: p.name,
+        totalSales: 0,
+        transactions: new Set(),
+        serviceFees: 0,
+        hpp: 0,
+        weeklySalary: Number(p.weekly_salary) || 0,
+        commissionPct: Number(p.service_commission_pct) || 0,
+      })
+    }
+
+    // Map sale_id -> mechanic_id for quick lookup
+    const saleMechanicMap = new Map<number, string>()
+    for (const s of salesData ?? []) {
+      saleMechanicMap.set(s.id, s.mechanic_id)
+      const mech = mechanicMap.get(s.mechanic_id)
+      if (mech) {
+        mech.totalSales += Number(s.total_amount)
+        mech.transactions.add(s.id)
+      }
+    }
+
+    // Aggregate details
+    for (const d of allDetailRows) {
+      const mechanicId = saleMechanicMap.get(d.sale_id)
+      if (!mechanicId) continue
+      const mech = mechanicMap.get(mechanicId)
+      if (!mech) continue
+
+      mech.serviceFees += Number(d.service_fee)
+      const purchasePrice = priceMap.get(d.item_id) ?? 0
+      mech.hpp += purchasePrice * d.quantity
+    }
+
+    // 6. Build result rows
+    const rows: MechanicPerformanceRow[] = []
+    for (const [mechanicId, mech] of mechanicMap) {
+      const commission = mech.serviceFees * (mech.commissionPct / 100)
+      const grossProfit = mech.totalSales - mech.hpp
+      rows.push({
+        mechanic_id: mechanicId,
+        mechanic_name: mech.name,
+        total_sales: mech.totalSales,
+        total_transactions: mech.transactions.size,
+        total_service_fees: mech.serviceFees,
+        hpp_total: mech.hpp,
+        gross_profit: grossProfit,
+        weekly_salary: mech.weeklySalary,
+        service_commission_pct: mech.commissionPct,
+        commission,
+        total_earnings: mech.weeklySalary + commission,
+      })
+    }
+
+    rows.sort((a, b) => b.total_sales - a.total_sales)
+
+    return { data: rows, error: null }
   } catch (err) {
     return { data: null, error: err as Error }
   }

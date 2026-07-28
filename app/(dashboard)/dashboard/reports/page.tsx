@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, TrendingDown, TrendingUp, Wallet, Download } from "lucide-react";
 import {
   DashboardCard,
@@ -11,6 +12,7 @@ import {
 } from "@/components/dashboard/ui/dashboard-card";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { MechanicPerformanceTable } from "@/components/reports/mechanic-performance-table";
 
 /* ───── Types ───── */
 
@@ -95,6 +97,7 @@ export default function ReportsPage() {
   const [profitLoss, setProfitLoss] = useState<ProfitLossReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState("keuangan");
 
   const loadReports = useCallback(async () => {
     setLoading(true);
@@ -183,10 +186,26 @@ export default function ReportsPage() {
     <>
       <Navbar
         title="Reports"
-        subtitle="Laporan penjualan, pembelian, dan laba rugi."
+        subtitle="Laporan keuangan, laba rugi, dan kinerja mekanik."
       />
 
-      <div className="space-y-5">
+      <Tabs value={tab} onValueChange={setTab} className="space-y-5">
+        <TabsList className="bg-transparent border-b border-slate-200 dark:border-slate-700 rounded-none w-full justify-start h-auto p-0 gap-0">
+          <TabsTrigger
+            value="keuangan"
+            className="data-[state=active]:border-b-2 data-[state=active]:border-sky-500 data-[state=active]:text-sky-600 data-[state=active]:shadow-none rounded-none px-5 py-2.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white border-b-2 border-transparent"
+          >
+            📊 Keuangan
+          </TabsTrigger>
+          <TabsTrigger
+            value="mekanik"
+            className="data-[state=active]:border-b-2 data-[state=active]:border-sky-500 data-[state=active]:text-sky-600 data-[state=active]:shadow-none rounded-none px-5 py-2.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white border-b-2 border-transparent"
+          >
+            👨‍🔧 Kinerja Mekanik
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="keuangan" className="mt-0 space-y-5">
         {/* Date Filters */}
         <DashboardCard className="p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
@@ -337,7 +356,15 @@ export default function ReportsPage() {
             </table>
           </div>
         </DashboardCard>
-      </div>
+        </TabsContent>
+
+        <TabsContent value="mekanik" className="mt-0">
+          <MechanicPerformanceTable
+            startDate={startDate}
+            endDate={endDate}
+          />
+        </TabsContent>
+      </Tabs>
     </>
   );
 }

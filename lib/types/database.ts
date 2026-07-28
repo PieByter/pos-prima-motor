@@ -300,6 +300,20 @@ export type ProfitLossReport = {
   hpp_total: number
 }
 
+export type MechanicPerformanceRow = {
+  mechanic_id: string
+  mechanic_name: string
+  total_sales: number
+  total_transactions: number
+  total_service_fees: number
+  hpp_total: number
+  gross_profit: number
+  weekly_salary: number
+  service_commission_pct: number
+  commission: number
+  total_earnings: number
+}
+
 // --- Activity Logs ---
 export type ActivityLog = {
   id: number

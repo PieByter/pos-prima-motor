@@ -90,6 +90,24 @@ export function NotificationDropdown() {
     }
   }
 
+  async function handleMarkOneRead(id: number, e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notificationId: id }),
+      });
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)),
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error("Failed to mark notification read:", err);
+    }
+  }
+
   function timeAgo(dateStr: string) {
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
@@ -170,7 +188,16 @@ export function NotificationDropdown() {
                       <p className="text-[11px] text-slate-400 mt-1">{timeAgo(n.created_at)}</p>
                     </div>
                     {!n.is_read && (
-                      <span className="h-2 w-2 bg-sky-500 rounded-full mt-2 shrink-0" />
+                      <>
+                        <span className="h-2 w-2 bg-sky-500 rounded-full mt-2 shrink-0" />
+                        <button
+                          onClick={(e) => handleMarkOneRead(n.id, e)}
+                          className="shrink-0 p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
+                          title="Tandai sudah dibaca"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </>
                     )}
                   </div>
                 );

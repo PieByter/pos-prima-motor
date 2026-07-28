@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, ShoppingCart, DollarSign, TrendingUp } from "lucide-react";
+import { ShoppingCart, DollarSign, TrendingUp, Bell } from "lucide-react";
 import { useFetch } from "@/lib/hooks/use-fetch";
 import { formatCurrency } from "@/lib/format";
 
@@ -9,6 +9,7 @@ interface TodaySummary {
   totalSales: number;
   totalItems: number;
   lowStockCount: number;
+  unreadNotifications?: number;
 }
 
 export function TodaySummary() {
@@ -38,6 +39,12 @@ export function TodaySummary() {
             <span className="flex items-center gap-1 text-xs font-medium text-amber-600">
               <TrendingUp className="h-3 w-3" />
               {data.lowStockCount} item kritis
+            </span>
+          )}
+          {data && (data.unreadNotifications ?? 0) > 0 && (
+            <span className="flex items-center gap-1 text-xs font-medium text-red-600">
+              <Bell className="h-3 w-3" />
+              {data.unreadNotifications} notifikasi baru
             </span>
           )}
         </div>

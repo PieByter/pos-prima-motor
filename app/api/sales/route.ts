@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth'
 import { getSales, createSale, generateInvoiceNumber } from '@/lib/services/sales.service'
+import { notifyLargeTransaction, notifyMechanicSaleCreated, checkAndNotifyLowStock } from '@/lib/services/notification-triggers.service'
 
 export async function GET(request: NextRequest) {
   try {
@@ -56,6 +57,46 @@ export async function POST(request: NextRequest) {
       console.error('Sales POST failed:', error)
       return NextResponse.json({ error: error?.message ?? 'Failed to create sale' }, { status: 400 })
     }
+
+    // ─── Fire notifications (fire-and-forget, don't block response) ───
+    const sale = data as { id: number; invoice_number: string; total_amount: number; mechanic_id: string; customer?: { name?: string } }
+    const totalServiceFees = (details ?? []).reduce((sum: number, d: { service_fee?: number }) => sum + (Number(d.service_fee) || 0), 0)
+
+    // Notify mechanic that their sale was created
+    notifyMechanicSaleCreated(
+      sale.mechanic_id,
+      sale.id,
+      sale.invoice_number,
+      Number(sale.total_amount),
+      totalServiceFees,
+    ).catch((e) => console.error('Failed to notify mechanic:', e))
+
+    // Notify admin about large transaction
+    notifyLargeTransaction(
+      sale.id,
+      sale.invoice_number,
+      Number(sale.total_amount),
+      sale.customer?.name ?? 'Walk-in',
+    ).catch((e) => console.error('Failed to notify large tx:', e))
+
+    // Check low stock for each item in the sale
+    for (const d of details ?? []) {
+      if (!d.item_id) continue
+      const { data: stockData } = await admin
+        .from('stock_summary')
+        .select('item_name, current_stock')
+        .eq('item_id', d.item_id)
+        .single()
+
+      if (stockData) {
+        checkAndNotifyLowStock(
+          stockData.item_name,
+          d.item_id,
+          Number(stockData.current_stock),
+        ).catch((e) => console.error('Failed to check low stock:', e))
+      }
+    }
+
     return NextResponse.json(data, { status: 201 })
   } catch (err) {
     console.error('Sales POST unexpected error:', err)

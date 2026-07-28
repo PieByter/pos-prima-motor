@@ -41,6 +41,9 @@ export async function createUser(
   password: string,
   name: string,
   role: Profile['role'],
+  weeklySalary?: number,
+  commissionPct?: number,
+  hireDate?: string,
 ): Promise<{ data: Profile | null; error: Error | null }> {
   // 1. Create auth user via Supabase Admin Auth
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -58,7 +61,15 @@ export async function createUser(
   try {
     const { data: profile, error } = await supabase
       .from('profiles')
-      .insert({ id: authData.user.id, name, role, is_active: true })
+      .insert({
+        id: authData.user.id,
+        name,
+        role,
+        is_active: true,
+        weekly_salary: weeklySalary ?? 0,
+        service_commission_pct: commissionPct ?? 0,
+        hire_date: hireDate ?? null,
+      })
       .select()
       .single()
 
@@ -74,7 +85,7 @@ export async function createUser(
 export async function updateUser(
   supabase: SupabaseClient,
   userId: string,
-  data: Partial<Pick<Profile, 'name' | 'role' | 'is_active' | 'profile_picture'>> & { password?: string },
+  data: Partial<Pick<Profile, 'name' | 'role' | 'is_active' | 'profile_picture' | 'weekly_salary' | 'service_commission_pct' | 'hire_date'>> & { password?: string },
 ): Promise<{ data: Profile | null; error: Error | null }> {
   try {
     // If password is provided, update auth password via admin API
@@ -91,6 +102,9 @@ export async function updateUser(
     if (data.role !== undefined) profileData.role = data.role
     if (data.is_active !== undefined) profileData.is_active = data.is_active
     if (data.profile_picture !== undefined) profileData.profile_picture = data.profile_picture
+    if (data.weekly_salary !== undefined) profileData.weekly_salary = data.weekly_salary
+    if (data.service_commission_pct !== undefined) profileData.service_commission_pct = data.service_commission_pct
+    if (data.hire_date !== undefined) profileData.hire_date = data.hire_date
 
     const { data: row, error } = await supabase
       .from('profiles')

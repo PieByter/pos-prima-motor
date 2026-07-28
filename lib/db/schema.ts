@@ -18,6 +18,9 @@ export const profiles = pgTable('profiles', {
   role: text('role', { enum: ['admin', 'mekanik'] }).notNull(),
   is_active: boolean('is_active').notNull().default(true),
   profile_picture: text('profile_picture'),
+  weekly_salary: numeric('weekly_salary', { precision: 12, scale: 2 }).notNull().default('0'),
+  service_commission_pct: numeric('service_commission_pct', { precision: 5, scale: 2 }).notNull().default('0'),
+  hire_date: date('hire_date'),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })

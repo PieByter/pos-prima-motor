@@ -26,6 +26,9 @@ type UserFormData = {
   role: "admin" | "mekanik";
   is_active: boolean;
   password?: string;
+  weekly_salary?: number;
+  service_commission_pct?: number;
+  hire_date?: string;
 };
 
 type Props = {
@@ -36,9 +39,21 @@ type Props = {
     name: string;
     role: string;
     status: string;
+    weekly_salary?: number;
+    service_commission_pct?: number;
+    hire_date?: string;
   } | null;
   onSave: (data: UserFormData) => Promise<void>;
 };
+
+function formatRupiah(n: number) {
+  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
+}
+
+function parseNumeric(val: string): number {
+  const cleaned = val.replace(/[^\d]/g, "");
+  return cleaned ? parseInt(cleaned, 10) : 0;
+}
 
 export function UserFormDialog({ open, onOpenChange, user, onSave }: Props) {
   const isEdit = !!user;
@@ -48,6 +63,11 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: Props) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  // Compensation fields
+  const [weeklySalary, setWeeklySalary] = useState("0");
+  const [commissionPct, setCommissionPct] = useState("0");
+  const [hireDate, setHireDate] = useState("");
+  const showCompensation = role === "mekanik";
 
   useEffect(() => {
     if (open) {
@@ -61,6 +81,9 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: Props) {
       );
       setIsActive(user?.status === "Aktif");
       setPassword("");
+      setWeeklySalary(user?.weekly_salary ? user.weekly_salary.toString() : "0");
+      setCommissionPct(user?.service_commission_pct ? user.service_commission_pct.toString() : "0");
+      setHireDate(user?.hire_date ?? "");
     }
   }, [open, user]);
 
@@ -68,7 +91,14 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: Props) {
     e.preventDefault();
     setIsSaving(true);
     try {
-      const data: UserFormData = { name: name.trim(), role: role as "admin" | "mekanik", is_active: isActive };
+      const data: UserFormData = {
+        name: name.trim(),
+        role: role as "admin" | "mekanik",
+        is_active: isActive,
+        weekly_salary: parseNumeric(weeklySalary),
+        service_commission_pct: parseFloat(commissionPct) || 0,
+        hire_date: hireDate || undefined,
+      };
       if (password.trim()) {
         data.password = password.trim();
       }
@@ -190,6 +220,63 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: Props) {
                 </button>
               </div>
               <p className="text-xs text-slate-400">Minimal 6 karakter. Isi hanya jika ingin mereset password.</p>
+            </div>
+          )}
+
+          {/* Compensation (only for Mekanik) */}
+          {showCompensation && (
+            <div className="space-y-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                💰 Gaji &amp; Komisi
+              </p>
+              <div className="space-y-1.5">
+                <Label htmlFor="user-salary" className="text-sm font-medium">
+                  Gaji Pokok / Minggu
+                </Label>
+                <Input
+                  id="user-salary"
+                  value={formatRupiah(parseNumeric(weeklySalary))}
+                  onChange={(e) => {
+                    const num = parseNumeric(e.target.value);
+                    setWeeklySalary(num.toString());
+                  }}
+                  placeholder="Rp 0"
+                  inputMode="numeric"
+                  className="bg-white dark:bg-slate-900 font-mono"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="user-commission" className="text-sm font-medium">
+                  Komisi Jasa (%)
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="user-commission"
+                    type="number"
+                    value={commissionPct}
+                    onChange={(e) => setCommissionPct(e.target.value)}
+                    placeholder="0"
+                    min={0}
+                    max={100}
+                    step={0.5}
+                    className="bg-white dark:bg-slate-900 pr-8 font-mono"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">%</span>
+                </div>
+                <p className="text-xs text-slate-400">Persentase dari total jasa service yang dikerjakan.</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="user-hire-date" className="text-sm font-medium">
+                  Tanggal Mulai Kerja
+                </Label>
+                <Input
+                  id="user-hire-date"
+                  type="date"
+                  value={hireDate}
+                  onChange={(e) => setHireDate(e.target.value)}
+                  className="bg-white dark:bg-slate-900"
+                />
+              </div>
             </div>
           )}
 

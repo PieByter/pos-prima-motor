@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     if (errorResponse) return errorResponse
     void user
 
-    const { email, password, name, role } = await request.json()
+    const { email, password, name, role, weekly_salary, service_commission_pct, hire_date } = await request.json()
 
     if (!email || !password || !name || !role) {
       return NextResponse.json(
@@ -39,7 +39,16 @@ export async function POST(request: NextRequest) {
     }
 
     const admin = createAdminClient()
-    const { data, error } = await createUser(admin, email, password, name, role)
+    const { data, error } = await createUser(
+      admin,
+      email,
+      password,
+      name,
+      role,
+      weekly_salary,
+      service_commission_pct,
+      hire_date,
+    )
 
     if (error || !data) {
       console.error('Users POST failed:', error)

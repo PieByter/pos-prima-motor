@@ -42,6 +42,9 @@ type UiUser = {
   lastLogin: string;
   initials: string;
   avatarColor: string;
+  weekly_salary?: number;
+  service_commission_pct?: number;
+  hire_date?: string;
 };
 
 export function UsersTable() {
@@ -81,6 +84,9 @@ export function UsersTable() {
           role: "admin" | "mekanik";
           is_active: boolean;
           created_at: string;
+          weekly_salary?: number;
+          service_commission_pct?: number;
+          hire_date?: string;
         }>;
 
         const mapped: UiUser[] = rows.map((u, idx) => ({
@@ -93,6 +99,9 @@ export function UsersTable() {
           lastLogin: "-",
           initials: getInitials(u.name),
           avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
+          weekly_salary: u.weekly_salary,
+          service_commission_pct: u.service_commission_pct,
+          hire_date: u.hire_date,
         }));
 
         setUsers(mapped);
@@ -150,6 +159,9 @@ export function UsersTable() {
     role: "admin" | "mekanik";
     is_active: boolean;
     password?: string;
+    weekly_salary?: number;
+    service_commission_pct?: number;
+    hire_date?: string;
   }) {
     if (editingUser) {
       // Edit existing user — send only provided fields
@@ -159,6 +171,9 @@ export function UsersTable() {
         is_active: data.is_active,
       }
       if (data.password) payload.password = data.password
+      if (data.weekly_salary !== undefined) payload.weekly_salary = data.weekly_salary
+      if (data.service_commission_pct !== undefined) payload.service_commission_pct = data.service_commission_pct
+      if (data.hire_date !== undefined) payload.hire_date = data.hire_date
 
       const res = await fetch(`/api/users/${editingUser.apiId}`, {
         method: "PATCH",
@@ -181,6 +196,9 @@ export function UsersTable() {
         role: "admin" | "mekanik";
         is_active: boolean;
         created_at: string;
+        weekly_salary?: number;
+        service_commission_pct?: number;
+        hire_date?: string;
       }>;
       const mapped: UiUser[] = rows.map((u, idx) => ({
         id: idx + 1,
@@ -192,6 +210,9 @@ export function UsersTable() {
         lastLogin: "-",
         initials: getInitials(u.name),
         avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
+        weekly_salary: u.weekly_salary,
+        service_commission_pct: u.service_commission_pct,
+        hire_date: u.hire_date,
       }));
       setUsers(mapped);
     }
@@ -273,6 +294,18 @@ export function UsersTable() {
                 >
                   Terakhir Login
                 </th>
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden md:table-cell"
+                >
+                  Gaji/Minggu
+                </th>
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden md:table-cell"
+                >
+                  Komisi
+                </th>
                 <th scope="col" className="relative px-6 py-3">
                   <span className="sr-only">Actions</span>
                 </th>
@@ -281,7 +314,7 @@ export function UsersTable() {
             <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
+                  <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
                     <span className="inline-flex items-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
                       Loading users...
@@ -290,7 +323,7 @@ export function UsersTable() {
                 </tr>
               ) : paginatedUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
+                  <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
                     Tidak ada data pengguna.
                   </td>
                 </tr>
@@ -340,6 +373,28 @@ export function UsersTable() {
                   {/* Last Login */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400 hidden sm:table-cell">
                     {user.lastLogin}
+                  </td>
+
+                  {/* Weekly Salary */}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right hidden md:table-cell">
+                    {user.role === "Mekanik" && user.weekly_salary ? (
+                      <span className="font-mono font-medium text-slate-700 dark:text-slate-300">
+                        {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(user.weekly_salary)}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 dark:text-slate-500">-</span>
+                    )}
+                  </td>
+
+                  {/* Commission % */}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right hidden md:table-cell">
+                    {user.role === "Mekanik" && user.service_commission_pct ? (
+                      <span className="font-mono font-medium text-sky-600 dark:text-sky-400">
+                        {user.service_commission_pct}%
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 dark:text-slate-500">-</span>
+                    )}
                   </td>
 
                   {/* Actions */}

@@ -9,6 +9,9 @@ export type Profile = {
   role: 'admin' | 'mekanik'
   is_active: boolean
   profile_picture: string | null
+  weekly_salary: number
+  service_commission_pct: number
+  hire_date: string | null
   created_at: string
   updated_at: string
 }

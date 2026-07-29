@@ -5,8 +5,10 @@ import type {
     SalesReturnWithDetails,
 } from '@/lib/types/database'
 
-function mapReturn(row: any): SalesReturn {
-    return { ...row, total_refund: Number(row.total_refund) }
+type SupabaseRow = Record<string, unknown>
+
+function mapReturn(row: SupabaseRow): SalesReturn {
+    return { ...row, total_refund: Number(row.total_refund) } as unknown as SalesReturn
 }
 
 export async function getSalesReturns(
@@ -43,13 +45,18 @@ export async function getSalesReturnById(
         return {
             data: {
                 ...mapReturn(ret),
-                details: (details ?? []).map((d: any) => ({
+                details: (details ?? []).map((d) => ({
                     ...d,
                     refund_amount: Number(d.refund_amount),
-                    item: d.items ? { ...d.items, purchase_price: Number(d.items.purchase_price), selling_price: Number(d.items.selling_price), service_fee: Number(d.items.service_fee) } : undefined,
+                    item: d.items ? {
+                        ...(d.items as SupabaseRow),
+                        purchase_price: Number((d.items as SupabaseRow).purchase_price),
+                        selling_price: Number((d.items as SupabaseRow).selling_price),
+                        service_fee: Number((d.items as SupabaseRow).service_fee),
+                    } : undefined,
                     items: undefined,
                 })),
-            } as SalesReturnWithDetails,
+            } as unknown as SalesReturnWithDetails,
             error: null,
         }
     } catch (err) {

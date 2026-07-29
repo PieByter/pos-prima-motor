@@ -75,8 +75,7 @@ export async function getStockMovements(
 
     if (error) return { data: null, error: new Error(error.message) }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mapped = (data ?? []).map((r: any) => ({
+    const mapped = (data ?? []).map((r) => ({
       ...r,
       item: { name: r.items?.name ?? '', sku: r.items?.sku ?? '' },
       items: undefined,

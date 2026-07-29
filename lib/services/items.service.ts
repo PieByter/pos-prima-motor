@@ -10,19 +10,20 @@ type ItemFilters = {
   limit?: number
 }
 
+type SupabaseRow = Record<string, unknown>
+
 /** Ensure numeric fields come back as numbers (Postgres returns decimal as string) */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapItem(row: any): Item {
+function mapItem(row: SupabaseRow): Item {
   return {
     ...row,
     purchase_price: Number(row.purchase_price),
     selling_price: Number(row.selling_price),
     service_fee: Number(row.service_fee),
-    category_name: row.categories?.name ?? null,
-    brand_name: row.brands?.name ?? null,
+    category_name: (row.categories as Record<string, string> | undefined)?.name ?? null,
+    brand_name: (row.brands as Record<string, string> | undefined)?.name ?? null,
     categories: undefined,
     brands: undefined,
-  }
+  } as unknown as Item
 }
 
 export async function getItems(

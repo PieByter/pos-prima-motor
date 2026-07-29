@@ -1,6 +1,15 @@
 -- ============================================
 -- POS Prima Motor — Full Database Schema
--- Run this in Supabase SQL Editor
+-- ============================================
+--
+-- ⚠️  REFERENCE ONLY — DO NOT USE FOR MIGRATIONS
+--
+-- Source of truth: lib/db/schema.ts + Drizzle migrations (./drizzle/)
+-- This file is a human-readable SQL reference. For all schema changes:
+--   1. Edit lib/db/schema.ts
+--   2. Run: pnpm db:generate     → creates migration SQL
+--   3. Run: pnpm db:migrate      → applies to database
+--
 -- ============================================
 
 -- ============================================

@@ -18,12 +18,13 @@ type PurchaseFilters = {
   limit?: number
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapPurchase(row: any): Purchase {
+type SupabaseRow = Record<string, unknown>
+
+function mapPurchase(row: SupabaseRow): Purchase {
   return {
     ...row,
     total_amount: Number(row.total_amount),
-  }
+  } as unknown as Purchase
 }
 
 export async function getPurchases(
@@ -50,8 +51,7 @@ export async function getPurchases(
     const { data, error, count } = await query
     if (error) return { data: null, error: new Error(error.message) }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const enriched = (data ?? []).map((r: any) => ({
+    const enriched = (data ?? []).map((r) => ({
       ...mapPurchase(r),
       supplier: r.suppliers ?? null,
       suppliers: undefined,
@@ -90,8 +90,7 @@ export async function getPurchaseById(
       .select('*')
       .eq('purchase_id', id)
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const details = (detailRows ?? []).map((d: any) => ({
+    const details = (detailRows ?? []).map((d) => ({
       ...d,
       price: Number(d.price),
       subtotal: Number(d.subtotal),
@@ -100,10 +99,9 @@ export async function getPurchaseById(
     return {
       data: {
         ...mapPurchase(purchase),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        supplier: (purchase as any).suppliers ?? undefined,
+        supplier: purchase.suppliers ?? undefined,
         details,
-      } as PurchaseWithDetails,
+      } as unknown as PurchaseWithDetails,
       error: null,
     }
   } catch (err) {

@@ -12,8 +12,10 @@ type ExpenseFilters = {
     limit?: number
 }
 
-function mapExpense(row: any): Expense {
-    return { ...row, amount: Number(row.amount) }
+type SupabaseRow = Record<string, unknown>
+
+function mapExpense(row: SupabaseRow): Expense {
+    return { ...row, amount: Number(row.amount) } as unknown as Expense
 }
 
 export async function getExpenses(

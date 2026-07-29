@@ -15,24 +15,24 @@ type DiscountFilters = {
   limit?: number
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapDiscount(row: any): Discount {
+type SupabaseRow = Record<string, unknown>
+
+function mapDiscount(row: SupabaseRow): Discount {
   return {
     ...row,
     value: Number(row.value),
     min_transaction: Number(row.min_transaction),
     max_percent: row.max_percent !== null ? Number(row.max_percent) : null,
-  }
+  } as unknown as Discount
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapItem(row: any): Item {
+function mapItem(row: SupabaseRow): Item {
   return {
     ...row,
     purchase_price: Number(row.purchase_price),
     selling_price: Number(row.selling_price),
     service_fee: Number(row.service_fee),
-  }
+  } as unknown as Item
 }
 
 export async function getDiscounts(
@@ -80,10 +80,9 @@ export async function getDiscountById(
     if (error || !discount) return { data: null, error: new Error('Discount not found') }
 
     const { data: linkedItems } = await supabase.from('discount_items').select('items(*)').eq('discount_id', id)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const items = (linkedItems ?? []).map((r: any) => mapItem(r.items)).filter(Boolean)
+    const items = (linkedItems ?? []).map((r) => mapItem(r.items as unknown as SupabaseRow)).filter(Boolean)
 
-    return { data: { ...mapDiscount(discount), items } as DiscountWithItems, error: null }
+    return { data: { ...mapDiscount(discount), items } as unknown as DiscountWithItems, error: null }
   } catch (err) {
     return { data: null, error: err as Error }
   }

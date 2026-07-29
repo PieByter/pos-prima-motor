@@ -306,7 +306,7 @@ export async function getRecentTransactions(
 
     // Get customer names for sales that have a customer_id
     type SalesRow = Record<string, unknown> & { customer_id: number | null; total_amount: number | string }
-    const salesRows = (rows ?? []) as unknown as SalesRow[]
+    const salesRows = (rows ?? []) as SalesRow[]
     const customerIds = [...new Set(salesRows.map((r) => r.customer_id).filter((id): id is number => id !== null))]
     const customerMap: Record<number, string> = {}
     if (customerIds.length > 0) {
@@ -314,12 +314,12 @@ export async function getRecentTransactions(
         .from('customers')
         .select('id, name')
         .in('id', customerIds)
-      for (const c of (customers ?? []) as unknown as { id: number; name: string }[]) {
+      for (const c of (customers ?? []) as { id: number; name: string }[]) {
         customerMap[c.id] = c.name
       }
     }
 
-    const mapped: SaleWithCustomer[] = salesRows.map((r) => ({
+    const mapped = salesRows.map((r) => ({
       ...r,
       total_amount: Number(r.total_amount),
       customer: r.customer_id ? { name: customerMap[r.customer_id] ?? null } : null,

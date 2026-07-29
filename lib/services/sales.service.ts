@@ -24,14 +24,15 @@ type SaleListItem = Sale & {
   mechanic?: { name: string | null } | null
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapSale(row: any): Sale {
+type SupabaseRow = Record<string, unknown>
+
+function mapSale(row: SupabaseRow): Sale {
   return {
     ...row,
     total_amount: Number(row.total_amount),
     cash_amount: row.cash_amount != null ? Number(row.cash_amount) : null,
     change_amount: row.change_amount != null ? Number(row.change_amount) : null,
-  }
+  } as unknown as Sale
 }
 
 export async function getSales(
@@ -59,8 +60,7 @@ export async function getSales(
     const { data, error, count } = await query
     if (error) return { data: null, error: new Error(error.message) }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const enriched: SaleListItem[] = (data ?? []).map((r: any) => ({
+    const enriched: SaleListItem[] = (data ?? []).map((r) => ({
       ...mapSale(r),
       customer: r.customers ?? null,
       mechanic: r.profiles ?? null,
@@ -101,8 +101,7 @@ export async function getSaleById(
       .select('*, items(*)')
       .eq('sale_id', id)
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const details = (detailRows ?? []).map((r: any) => ({
+    const details = (detailRows ?? []).map((r) => ({
       ...r,
       base_price: Number(r.base_price),
       discount_amount: Number(r.discount_amount),
@@ -110,26 +109,22 @@ export async function getSaleById(
       service_fee: Number(r.service_fee),
       subtotal: Number(r.subtotal),
       item: r.items ? {
-        ...r.items,
-        purchase_price: Number(r.items.purchase_price),
-        selling_price: Number(r.items.selling_price),
-        service_fee: Number(r.items.service_fee),
+        ...(r.items as SupabaseRow),
+        purchase_price: Number((r.items as SupabaseRow).purchase_price),
+        selling_price: Number((r.items as SupabaseRow).selling_price),
+        service_fee: Number((r.items as SupabaseRow).service_fee),
       } : undefined,
       items: undefined,
     }))
 
     return {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data: {
         ...mapSale(sale),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        customer: (sale as any).customers ?? null,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        mechanic: (sale as any).profiles ?? undefined,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        payment_method: (sale as any).payment_methods ?? undefined,
+        customer: sale.customers ?? null,
+        mechanic: sale.profiles ?? undefined,
+        payment_method: sale.payment_methods ?? undefined,
         details,
-      } as SaleWithDetails,
+      } as unknown as SaleWithDetails,
       error: null,
     }
   } catch (err) {

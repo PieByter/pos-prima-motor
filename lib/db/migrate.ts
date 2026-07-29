@@ -1,23 +1,10 @@
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import postgres from 'postgres'
-import { readFileSync, existsSync } from 'fs'
-import { resolve } from 'path'
+import { config } from 'dotenv'
 
-// Auto-load .env.local if DATABASE_URL not already in env
-if (!process.env.DATABASE_URL) {
-    const envPath = resolve('.env.local')
-    if (existsSync(envPath)) {
-        const lines = readFileSync(envPath, 'utf8').split('\n')
-        for (const line of lines) {
-            const match = line.match(/^([A-Z_]+)=(.*)$/)
-            if (match) {
-                const [, key, value] = match
-                if (!process.env[key]) process.env[key] = value.replace(/^["']|["']$/g, '')
-            }
-        }
-    }
-}
+// Load .env.local (same as drizzle.config.ts)
+config({ path: '.env.local' })
 
 /**
  * Auto-migration script.

@@ -3,7 +3,12 @@
 
 const CACHE_NAME = "prima-motor-v1";
 
-const STATIC_ASSETS = ["/", "/dashboard", "/icons/icon.svg"];
+const STATIC_ASSETS = [
+  "/",
+  "/dashboard",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+];
 
 // Install: pre-cache static assets
 self.addEventListener("install", (event) => {

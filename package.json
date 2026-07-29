@@ -10,7 +10,8 @@
     "db:generate": "dotenv -e .env.local -- drizzle-kit generate",
     "db:migrate": "tsx lib/db/migrate.ts",
     "db:push": "dotenv -e .env.local -- drizzle-kit push",
-    "db:studio": "dotenv -e .env.local -- drizzle-kit studio"
+    "db:studio": "dotenv -e .env.local -- drizzle-kit studio",
+    "generate-icons": "node scripts/generate-icons.mjs"
   },
   "dependencies": {
     "@dietrichgebert/ponytail": "^4.8.4",

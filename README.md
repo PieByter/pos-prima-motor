@@ -1,36 +1,131 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🏍️ POS Prima Motor
 
-## Getting Started
+> Point of Sale untuk toko sparepart motor — kelola penjualan, pembelian, stok, pelanggan, supplier, diskon & laporan.
 
-First, run the development server:
+## ✨ Fitur
+
+- **Dashboard** — ringkasan penjualan, stok menipis, transaksi terbaru, performa mekanik
+- **Master Data** — kelola barang (item), kategori, brand
+- **Transaksi** — penjualan & pembelian dengan barcode scanner, struk cetak, diskon
+- **Inventori** — stok real-time, mutasi stok, stok opname, riwayat harga
+- **Pelanggan & Supplier** — CRUD lengkap dengan pencarian
+- **Retur** — retur penjualan & pembelian dengan pengembalian stok
+- **Diskon** — diskon persen/nominal, periode, minimum transaksi
+- **Biaya Operasional** — catat pengeluaran harian
+- **Laporan** — penjualan, pembelian, laba/rugi, performa mekanik, gaji mingguan
+- **Notifikasi Real-time** — alert stok kritis, transaksi besar, retur (via Supabase Realtime)
+- **Role-based Access** — Admin (full akses) & Mekanik (terbatas)
+- **Dark Mode** + **i18n** (ID/EN)
+- **PWA** — bisa di-install di HP sebagai app
+
+## 🛠️ Tech Stack
+
+| Layer | Teknologi |
+|-------|-----------|
+| Framework | Next.js 16 (App Router) + React 19 |
+| Language | TypeScript 5 |
+| Styling | Tailwind CSS 4 + shadcn/ui (New York) |
+| Database | Supabase (PostgreSQL) |
+| ORM | Drizzle ORM |
+| Auth | Supabase Auth (`@supabase/ssr`) |
+| Forms | react-hook-form + zod |
+| Charts | recharts |
+| Icons | lucide-react |
+| PWA | Web App Manifest + Service Worker |
+
+## 🚀 Getting Started
+
+### Prasyarat
+
+- **Node.js** 20+
+- **pnpm** (pakai `corepack enable`)
+- **Supabase project** (free tier cukup)
+
+### Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+# 1. Clone repo
+git clone <repo-url>
+cd pos-prima-motor
+
+# 2. Install dependencies
+pnpm install
+
+# 3. Copy & isi environment variables
+cp .env .env.local
+# Edit .env.local — isi NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
+#   SUPABASE_SERVICE_ROLE_KEY, dan DATABASE_URL dari Supabase Dashboard.
+
+# 4. Jalankan database migration
+pnpm db:migrate
+
+# 5. Jalankan dev server
 pnpm dev
-# or
-bun dev
+# Buka http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Dari mana |
+|----------|-----------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Settings → API → Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Settings → API → anon/public key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API → service_role key |
+| `DATABASE_URL` | Supabase → Settings → Database → Connection string (port 6543 pooler) |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+> ⚠️ `.env.local` jangan di-commit ke git. Template: `.env`
 
-## Learn More
+## 📦 Scripts
 
-To learn more about Next.js, take a look at the following resources:
+| Command | Fungsi |
+|---------|--------|
+| `pnpm dev` | Dev server (Turbopack) |
+| `pnpm build` | Production build |
+| `pnpm lint` | ESLint |
+| `pnpm db:generate` | Generate file migration SQL dari schema |
+| `pnpm db:migrate` | Apply migration ke database |
+| `pnpm db:studio` | Buka Drizzle Studio (GUI) |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📁 Struktur Project
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+app/                    # Next.js App Router
+├── (auth)/             # Login, register, forgot password
+├── (dashboard)/        # Dashboard + semua halaman POS
+└── api/                # REST API routes (40+ endpoints)
 
-## Deploy on Vercel
+components/
+├── ui/                 # shadcn/ui primitives
+├── layout/             # Sidebar, navbar, notification dropdown
+├── dashboard/          # Komponen dashboard
+├── transactions/       # Form transaksi, receipt, barcode scanner
+├── master-data/        # Form & tabel master data
+├── customers/          # Form & tabel customer
+├── suppliers/          # Form & tabel supplier
+├── reports/            # Tabel laporan
+└── settings/           # Profile, user management
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+lib/
+├── db/                 # Drizzle schema + migrator
+├── services/           # Business logic layer
+├── supabase/           # Supabase client (client, server, admin)
+├── hooks/              # Custom hooks
+├── types/              # TypeScript types
+├── locales/            # i18n (ID + EN)
+└── data/               # Format utilities
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🗄️ Database
+
+19 tabel + 1 view, dikelola via Drizzle ORM:
+
+`profiles` · `categories` · `brands` · `items` · `customers` · `suppliers` · `purchases` · `purchase_details` · `sales` · `sale_details` · `stock_movements` · `stock_summary` (view) · `discounts` · `discount_items` · `payment_methods` · `expenses` · `sales_returns` · `sales_return_details` · `purchase_returns` · `purchase_return_details` · `activity_logs` · `notifications`
+
+> Schema source of truth: `lib/db/schema.ts`  
+> Migrations: `./drizzle/`  
+> SQL reference: `master_data.sql` (read-only, jangan pakai untuk migrasi)
+
+## 📄 License
+
+Private — Prima Motor.
+

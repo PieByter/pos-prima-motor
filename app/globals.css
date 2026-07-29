@@ -156,12 +156,37 @@
   body.printing-dashboard header:not(.print-header) {
     display: none !important;
   }
-  body.printing-dashboard main {
-    padding: 0 !important;
-    margin: 0 !important;
-    max-width: 100% !important;
+}
+
+/* ── Receipt Print Styles ── */
+@media print {
+  body:not(.printing-receipt) * {
+    visibility: hidden;
   }
-  body.printing-dashboard .space-y-6 > * {
-    break-inside: avoid;
+
+  body.printing-receipt {
+    background: white;
+    font-size: 11px;
+    color: #000;
+    margin: 0;
+    padding: 0;
+  }
+
+  .receipt-container {
+    visibility: visible;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    padding: 4mm 6mm;
+    font-family: "Courier New", Courier, monospace;
+  }
+
+  .receipt-container * {
+    visibility: visible;
+  }
+
+  .receipt-no-print {
+    display: none !important;
   }
 }

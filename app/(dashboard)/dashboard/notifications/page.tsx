@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   Bell,
   CheckCheck,
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/client";
 import type { NotificationType } from "@/lib/types/notifications";
 
 type UiNotification = {
@@ -49,25 +50,71 @@ export default function NotificationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const refreshRef = useRef(page);
 
-  async function loadNotifications() {
+  refreshRef.current = page;
+
+  const loadNotifications = useCallback(async (p = page) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/notifications?page=${page}&limit=${ITEMS_PER_PAGE}`);
+      const res = await fetch(`/api/notifications?page=${p}&limit=${ITEMS_PER_PAGE}`);
       if (!res.ok) return;
       const json = await res.json();
       setNotifications(json.data ?? []);
       setTotalUnread(json.totalUnread ?? 0);
+      setTotal(json.total ?? 0);
     } catch (err) {
       console.error("Failed to load notifications:", err);
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [page]);
 
   useEffect(() => {
     loadNotifications();
-  }, [page]);
+  }, [loadNotifications]);
+
+  // ── Real-time: refresh when new notification arrives ─────────────
+  useEffect(() => {
+    const supabase = createClient();
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user?.id) return;
+
+      supabase
+        .channel(`notifications-page-${session.user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "notifications",
+            filter: `user_id=eq.${session.user.id}`,
+          },
+          () => {
+            // Refresh current page when new notification comes in
+            loadNotifications(refreshRef.current);
+          },
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "notifications",
+            filter: `user_id=eq.${session.user.id}`,
+          },
+          () => {
+            loadNotifications(refreshRef.current);
+          },
+        )
+        .subscribe();
+    });
+
+    return () => {
+      // Channel cleanup via Supabase client lifecycle
+    };
+  }, [loadNotifications]);
 
   async function handleMarkAllRead() {
     try {

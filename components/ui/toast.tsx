@@ -2,9 +2,9 @@
 
 import { useEffect, useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, AlertCircle, CheckCircle, Info } from "lucide-react";
+import { X, AlertCircle, CheckCircle, Info, AlertTriangle } from "lucide-react";
 
-export type ToastType = "success" | "error" | "info";
+export type ToastType = "success" | "error" | "warning" | "info";
 
 export interface Toast {
   id: string;
@@ -36,14 +36,18 @@ function ToastItem({ toast, onClose }: ToastProps) {
       ? "#16a34a"
       : toast.type === "error"
         ? "#dc2626"
-        : "#2563eb";
+        : toast.type === "warning"
+          ? "#d97706"
+          : "#2563eb";
 
   const Icon =
     toast.type === "success"
       ? CheckCircle
       : toast.type === "error"
         ? AlertCircle
-        : Info;
+        : toast.type === "warning"
+          ? AlertTriangle
+          : Info;
 
   return (
     <div

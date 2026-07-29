@@ -4,17 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Bell, CheckCheck, Loader2, AlertCircle, Info, CheckCircle, AlertTriangle, X } from "lucide-react";
 import Link from "next/link";
 import type { NotificationType } from "@/lib/types/notifications";
-import { createClient } from "@/lib/supabase/client";
-
-type UiNotification = {
-  id: number;
-  title: string;
-  message: string;
-  type: NotificationType;
-  is_read: boolean;
-  link: string | null;
-  created_at: string;
-};
+import { useRealtimeNotifications } from "@/hooks/use-realtime-notifications";
 
 const TYPE_ICONS: Record<NotificationType, typeof Info> = {
   info: Info,
@@ -32,10 +22,16 @@ const TYPE_COLORS: Record<NotificationType, string> = {
 
 export function NotificationDropdown() {
   const [open, setOpen] = useState(false);
-  const [notifications, setNotifications] = useState<UiNotification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const {
+    notifications,
+    unreadCount,
+    isLoading,
+    refresh,
+    markAllRead,
+    markOneRead,
+  } = useRealtimeNotifications({ limit: 5 });
 
   // Close on click outside
   useEffect(() => {
@@ -48,96 +44,14 @@ export function NotificationDropdown() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  async function loadNotifications() {
-    setIsLoading(true);
-    try {
-      const res = await fetch("/api/notifications?limit=5");
-      if (!res.ok) return;
-      const json = await res.json();
-      setNotifications(json.data ?? []);
-      setUnreadCount(json.totalUnread ?? 0);
-    } catch (err) {
-      console.error("Failed to load notifications:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
+  // Refresh when dropdown opens
   useEffect(() => {
-    if (open) loadNotifications();
-  }, [open]);
-
-  // ── Real-time subscription via Supabase Realtime ──────────────────
-  useEffect(() => {
-    // Initial load
-    loadNotifications();
-
-    // Supabase Realtime channel for notifications
-    const supabase = createClient();
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session?.user?.id) return;
-
-      channel = supabase
-        .channel(`notifications-${session.user.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'notifications',
-            filter: `user_id=eq.${session.user.id}`,
-          },
-          (payload) => {
-            const newNotif = payload.new as UiNotification;
-            // Prepend to list
-            setNotifications(prev => [newNotif, ...prev].slice(0, 5));
-            setUnreadCount(prev => prev + 1);
-          },
-        )
-        .subscribe();
-    });
-
-    // Poll every 30 seconds as fallback
-    const interval = setInterval(loadNotifications, 30000);
-
-    return () => {
-      clearInterval(interval);
-      if (channel) supabase.removeChannel(channel);
-    };
-  }, []);
-
-  async function handleMarkAllRead() {
-    try {
-      await fetch("/api/notifications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-      setUnreadCount(0);
-    } catch (err) {
-      console.error("Failed to mark all read:", err);
-    }
-  }
-
-  async function handleMarkOneRead(id: number, e: React.MouseEvent) {
+    if (open) refresh();
+  }, [open, refresh]);
+  function handleMarkOneRead(id: number, e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    try {
-      await fetch("/api/notifications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notificationId: id }),
-      });
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)),
-      );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
-    } catch (err) {
-      console.error("Failed to mark notification read:", err);
-    }
+    markOneRead(id);
   }
 
   function timeAgo(dateStr: string) {
@@ -176,7 +90,7 @@ export function NotificationDropdown() {
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <button
-                  onClick={handleMarkAllRead}
+                  onClick={markAllRead}
                   className="text-xs text-sky-600 hover:text-sky-700 font-medium flex items-center gap-1 cursor-pointer"
                 >
                   <CheckCheck className="h-3.5 w-3.5" />

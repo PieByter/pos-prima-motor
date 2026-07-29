@@ -6,6 +6,7 @@ import { MobileSidebar } from "@/components/layout/mobile-sidebar";
 import { Bike, Bell } from "lucide-react";
 import Link from "next/link";
 import { ToastProvider } from "@/lib/toast-provider";
+import { RealtimeNotificationToaster } from "@/components/layout/realtime-notification-toaster";
 
 export default function DashboardLayout({
   children,
@@ -16,6 +17,7 @@ export default function DashboardLayout({
 
   return (
     <ToastProvider>
+    <RealtimeNotificationToaster />
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
       {/* ── Desktop sidebar (md+) ── */}
       <Sidebar />

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/lib/toast-provider";
 import type { NotificationType } from "@/lib/types/notifications";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 type ToastNotification = {
   id: number;
@@ -23,16 +24,30 @@ type ToastNotification = {
 export function RealtimeNotificationToaster() {
   const { showToast } = useToast();
   const shownIds = useRef(new Set<number>());
-  const userIdRef = useRef<string | null>(null);
+
+  // Keep showToast in a ref so the realtime callback never goes stale
+  // without triggering effect re-runs (React 19: sync ref in effect).
+  const showToastRef = useRef(showToast);
+  useEffect(() => {
+    showToastRef.current = showToast;
+  });
 
   useEffect(() => {
     const supabase = createClient();
+    let channel: RealtimeChannel | null = null;
+    let cancelled = false;
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session?.user?.id) return;
-      userIdRef.current = session.user.id;
+    async function setupRealtime() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-      supabase
+      // Abort if unmounted, no session, or channel already set up
+      // (the `|| channel` guard defends against StrictMode double-invoke
+      //  race where both async setups resolve after the second mount)
+      if (cancelled || !session?.user?.id || channel) return;
+
+      channel = supabase
         .channel(`notifications-toast-${session.user.id}`)
         .on(
           "postgres_changes",
@@ -55,24 +70,31 @@ export function RealtimeNotificationToaster() {
               shownIds.current = new Set(arr.slice(-50));
             }
 
-            // Show toast for important notifications
+            const toast = showToastRef.current;
+
             if (notif.type === "error") {
-              showToast(notif.message, "error", 6000);
+              toast(notif.message, "error", 6000);
             } else if (notif.type === "warning") {
-              showToast(notif.message, "warning", 5000);
+              toast(notif.message, "warning", 5000);
             } else if (notif.type === "success") {
-              showToast(notif.message, "success", 4000);
+              toast(notif.message, "success", 4000);
             }
             // Skip "info" type — no toast needed
           },
         )
         .subscribe();
-    });
+    }
+
+    setupRealtime();
 
     return () => {
-      // Channel auto-cleanup via supabase client lifecycle
+      cancelled = true;
+      if (channel) {
+        channel.unsubscribe();
+        supabase.removeChannel(channel);
+      }
     };
-  }, [showToast]);
+  }, []);
 
   return null;
 }

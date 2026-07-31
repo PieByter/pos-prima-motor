@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import type { NotificationType } from "@/lib/types/notifications";
 
 type UiNotification = {
@@ -44,11 +45,20 @@ export function useRealtimeNotifications(
     const [notifications, setNotifications] = useState<UiNotification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
-    const userIdRef = useRef<string | null>(null);
+
+    // Refs to keep latest values accessible in the realtime callback without
+    // triggering effect re-runs (avoids channel re-subscription loops).
+    // React 19: sync refs in useEffect, not during render.
+    const limitRef = useRef(limit);
+    useEffect(() => {
+        limitRef.current = limit;
+    });
 
     const refresh = useCallback(async () => {
         try {
-            const params = new URLSearchParams({ limit: String(limit) });
+            const params = new URLSearchParams({
+                limit: String(limitRef.current),
+            });
             const res = await fetch(`/api/notifications?${params}`);
             if (!res.ok) return;
             const json = await res.json();
@@ -59,7 +69,12 @@ export function useRealtimeNotifications(
         } finally {
             setIsLoading(false);
         }
-    }, [limit]);
+    }, []); // Stable — uses limitRef
+
+    const refreshRef = useRef(refresh);
+    useEffect(() => {
+        refreshRef.current = refresh;
+    });
 
     const markAllRead = useCallback(async () => {
         try {
@@ -93,14 +108,23 @@ export function useRealtimeNotifications(
 
     // ── Real-time subscription + initial load ──────────────────────
     useEffect(() => {
+        let cancelled = false;
+
+        // Initial fetch
         refresh();
 
         const supabase = createClient();
-        let channel: ReturnType<typeof supabase.channel> | null = null;
+        let channel: RealtimeChannel | null = null;
 
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (!session?.user?.id) return;
-            userIdRef.current = session.user.id;
+        async function setupRealtime() {
+            const {
+                data: { session },
+            } = await supabase.auth.getSession();
+
+            // Abort if unmounted, no session, or channel already set up
+            // (the `|| channel` guard defends against StrictMode double-
+            //  invoke race where both async setups resolve after re-mount)
+            if (cancelled || !session?.user?.id || channel) return;
 
             channel = supabase
                 .channel(`notifications-${session.user.id}`)
@@ -114,7 +138,9 @@ export function useRealtimeNotifications(
                     },
                     (payload) => {
                         const newNotif = payload.new as UiNotification;
-                        setNotifications((prev) => [newNotif, ...prev].slice(0, limit));
+                        setNotifications((prev) =>
+                            [newNotif, ...prev].slice(0, limitRef.current),
+                        );
                         setUnreadCount((prev) => prev + 1);
                     },
                 )
@@ -129,23 +155,36 @@ export function useRealtimeNotifications(
                     (payload) => {
                         const updated = payload.new as UiNotification;
                         setNotifications((prev) =>
-                            prev.map((n) => (n.id === updated.id ? updated : n)),
+                            prev.map((n) =>
+                                n.id === updated.id ? updated : n,
+                            ),
                         );
                         // Recalculate unread count from server
-                        refresh();
+                        refreshRef.current();
                     },
                 )
                 .subscribe();
-        });
+        }
+
+        setupRealtime();
 
         // Poll every 30 seconds as fallback
         const interval = setInterval(refresh, 30000);
 
         return () => {
+            cancelled = true;
             clearInterval(interval);
-            if (channel) supabase.removeChannel(channel);
+            // .unsubscribe() properly tears down the realtime connection
+            // so a future channel with the same name can be re-created.
+            if (channel) {
+                channel.unsubscribe();
+                supabase.removeChannel(channel);
+            }
         };
-    }, [refresh, limit]);
+        // refresh is stable (useCallback with [] deps), so including it
+        // in the dep array does NOT cause re-subscription loops.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     return {
         notifications,

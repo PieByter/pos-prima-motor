@@ -8,6 +8,8 @@ export default defineConfig({
   out: './drizzle',
   dialect: 'postgresql',
   dbCredentials: {
-    url: process.env.DATABASE_URL!,
+    // Wajib pakai DIRECT connection (port 5432), bukan pooled (6543) —
+    // PgBouncer transaction mode tidak mendukung prepared statements untuk DDL.
+    url: process.env.DIRECT_URL ?? process.env.DATABASE_URL!,
   },
 })

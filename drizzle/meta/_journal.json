@@ -22,6 +22,27 @@
       "when": 1785297963161,
       "tag": "0002_small_arachne",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785722584427,
+      "tag": "0003_lively_nemesis",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785723012668,
+      "tag": "0004_square_matthew_murdock",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1785723356671,
+      "tag": "0005_cooing_captain_universe",
+      "breakpoints": true
     }
   ]
 }

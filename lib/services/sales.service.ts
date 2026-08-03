@@ -46,7 +46,7 @@ export async function getSales(
 
     let query = supabase
       .from('sales')
-      .select('*, customers(name), profiles(name)', { count: 'exact' })
+      .select('*, customers(name), profiles!sales_mechanic_id_profiles_id_fk(name)', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(from, to)
 
@@ -90,7 +90,7 @@ export async function getSaleById(
   try {
     const { data: sale, error } = await supabase
       .from('sales')
-      .select('*, customers(*), profiles(*), payment_methods(*)')
+      .select('*, customers(*), profiles!sales_mechanic_id_profiles_id_fk(*), payment_methods(*)')
       .eq('id', id)
       .single()
 

@@ -121,9 +121,24 @@ lib/
 
 `profiles` · `categories` · `brands` · `items` · `customers` · `suppliers` · `purchases` · `purchase_details` · `sales` · `sale_details` · `stock_movements` · `stock_summary` (view) · `discounts` · `discount_items` · `payment_methods` · `expenses` · `sales_returns` · `sales_return_details` · `purchase_returns` · `purchase_return_details` · `activity_logs` · `notifications`
 
-> Schema source of truth: `lib/db/schema.ts`  
-> Migrations: `./drizzle/`  
-> SQL reference: `master_data.sql` (read-only, jangan pakai untuk migrasi)
+> Schema source of truth: `lib/db/schema.ts` (schema-first — ubah schema, lalu generate)  
+> Migrations: `./drizzle/` — apply via `npx drizzle-kit migrate`
+
+### Workflow migrasi (standar)
+
+```bash
+# 1. Ubah lib/db/schema.ts sesuai kebutuhan
+# 2. Generate file migration (lokal, tanpa efek ke database)
+npx drizzle-kit generate
+
+# 3. Review file .sql yang dibuat di ./drizzle/ (wajib, 5 detik)
+
+# 4. Push ke Supabase
+npx drizzle-kit migrate
+```
+
+> `drizzle.config.ts` wajib pakai `DIRECT_URL` (port 5432), bukan pooled `DATABASE_URL` (port 6543) — keduanya sudah dikonfigurasi.  
+> Alternatif setara: `pnpm db:generate` / `pnpm db:migrate` (script `lib/db/migrate.ts`), hasilnya sama.
 
 ## 📄 License
 

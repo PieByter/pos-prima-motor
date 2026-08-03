@@ -9,7 +9,10 @@ import {
   timestamp,
   date,
   uuid,
+  index,
+  primaryKey,
 } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 
 // ─── profiles ───────────────────────────────────────────────────────────────
 export const profiles = pgTable('profiles', {
@@ -41,21 +44,26 @@ export const brands = pgTable('brands', {
 })
 
 // ─── items ───────────────────────────────────────────────────────────────────
-export const items = pgTable('items', {
-  id: serial('id').primaryKey(),
-  name: text('name').notNull(),
-  description: text('description'),
-  sku: text('sku'),
-  category: text('category'),
-  category_id: integer('category_id'),
-  brand_id: integer('brand_id'),
-  purchase_price: numeric('purchase_price', { precision: 15, scale: 2 }).notNull(),
-  selling_price: numeric('selling_price', { precision: 15, scale: 2 }).notNull(),
-  service_fee: numeric('service_fee', { precision: 15, scale: 2 }).notNull().default('0'),
-  picture: text('picture'),
-  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
+export const items = pgTable(
+  'items',
+  {
+    id: serial('id').primaryKey(),
+    name: text('name').notNull(),
+    description: text('description'),
+    sku: text('sku').unique(),
+    category: text('category'),
+    category_id: integer('category_id').references(() => categories.id),
+    brand_id: integer('brand_id').references(() => brands.id),
+    purchase_price: numeric('purchase_price', { precision: 15, scale: 2 }).notNull(),
+    selling_price: numeric('selling_price', { precision: 15, scale: 2 }).notNull(),
+    service_fee: numeric('service_fee', { precision: 15, scale: 2 }).notNull().default('0'),
+    stock: integer('stock'),
+    picture: text('picture'),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('idx_items_category').on(t.category)],
+)
 
 // ─── customers ───────────────────────────────────────────────────────────────
 export const customers = pgTable('customers', {
@@ -78,71 +86,95 @@ export const suppliers = pgTable('suppliers', {
 })
 
 // ─── purchases ───────────────────────────────────────────────────────────────
-export const purchases = pgTable('purchases', {
-  id: serial('id').primaryKey(),
-  supplier_id: integer('supplier_id').notNull(),
-  invoice_number: text('invoice_number').notNull(),
-  purchase_date: date('purchase_date').notNull(),
-  total_amount: numeric('total_amount', { precision: 15, scale: 2 }).notNull(),
-  status: text('status', { enum: ['completed', 'pending', 'cancelled'] }).notNull().default('pending'),
-  created_by: uuid('created_by').notNull(),
-  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
+export const purchases = pgTable(
+  'purchases',
+  {
+    id: serial('id').primaryKey(),
+    supplier_id: integer('supplier_id').notNull().references(() => suppliers.id),
+    invoice_number: text('invoice_number').notNull().unique(),
+    purchase_date: date('purchase_date').notNull(),
+    total_amount: numeric('total_amount', { precision: 15, scale: 2 }).notNull(),
+    status: text('status', { enum: ['completed', 'pending', 'cancelled'] }).notNull().default('pending'),
+    created_by: uuid('created_by').notNull().references(() => profiles.id),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('idx_purchases_purchase_date').on(t.purchase_date)],
+)
 
 // ─── purchase_details ─────────────────────────────────────────────────────────
-export const purchaseDetails = pgTable('purchase_details', {
-  id: serial('id').primaryKey(),
-  purchase_id: integer('purchase_id').notNull(),
-  item_id: integer('item_id').notNull(),
-  quantity: integer('quantity').notNull(),
-  price: numeric('price', { precision: 15, scale: 2 }).notNull(),
-  subtotal: numeric('subtotal', { precision: 15, scale: 2 }).notNull(),
-})
+export const purchaseDetails = pgTable(
+  'purchase_details',
+  {
+    id: serial('id').primaryKey(),
+    purchase_id: integer('purchase_id').notNull().references(() => purchases.id),
+    item_id: integer('item_id').notNull().references(() => items.id),
+    quantity: integer('quantity').notNull(),
+    price: numeric('price', { precision: 15, scale: 2 }).notNull(),
+    subtotal: numeric('subtotal', { precision: 15, scale: 2 }).notNull(),
+  },
+  (t) => [index('idx_purchase_details_purchase_id').on(t.purchase_id)],
+)
 
 // ─── sales ───────────────────────────────────────────────────────────────────
-export const sales = pgTable('sales', {
-  id: serial('id').primaryKey(),
-  customer_id: integer('customer_id'),
-  mechanic_id: uuid('mechanic_id').notNull(),
-  invoice_number: text('invoice_number').notNull(),
-  sale_date: date('sale_date').notNull(),
-  total_amount: numeric('total_amount', { precision: 15, scale: 2 }).notNull(),
-  status: text('status', { enum: ['completed', 'pending', 'in_progress', 'cancelled'] })
-    .notNull()
-    .default('pending'),
-  payment_method_id: integer('payment_method_id'),
-  cash_amount: numeric('cash_amount', { precision: 15, scale: 2 }),
-  change_amount: numeric('change_amount', { precision: 15, scale: 2 }),
-  notes: text('notes'),
-  created_by: uuid('created_by').notNull(),
-  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
+export const sales = pgTable(
+  'sales',
+  {
+    id: serial('id').primaryKey(),
+    customer_id: integer('customer_id').references(() => customers.id),
+    mechanic_id: uuid('mechanic_id').notNull().references(() => profiles.id),
+    invoice_number: text('invoice_number').notNull().unique(),
+    sale_date: date('sale_date').notNull(),
+    total_amount: numeric('total_amount', { precision: 15, scale: 2 }).notNull(),
+    status: text('status', { enum: ['completed', 'pending', 'in_progress', 'cancelled'] })
+      .notNull()
+      .default('pending'),
+    payment_method_id: integer('payment_method_id').references(() => paymentMethods.id),
+    cash_amount: numeric('cash_amount', { precision: 15, scale: 2 }),
+    change_amount: numeric('change_amount', { precision: 15, scale: 2 }),
+    notes: text('notes'),
+    created_by: uuid('created_by').notNull().references(() => profiles.id),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('idx_sales_sale_date').on(t.sale_date),
+    index('idx_sales_mechanic').on(t.mechanic_id),
+    index('idx_sales_customer').on(t.customer_id),
+  ],
+)
 
 // ─── sale_details ─────────────────────────────────────────────────────────────
-export const saleDetails = pgTable('sale_details', {
-  id: serial('id').primaryKey(),
-  sale_id: integer('sale_id').notNull(),
-  item_id: integer('item_id').notNull(),
-  quantity: integer('quantity').notNull(),
-  base_price: numeric('base_price', { precision: 15, scale: 2 }).notNull(),
-  discount_amount: numeric('discount_amount', { precision: 15, scale: 2 }).notNull().default('0'),
-  final_price: numeric('final_price', { precision: 15, scale: 2 }).notNull(),
-  service_fee: numeric('service_fee', { precision: 15, scale: 2 }).notNull().default('0'),
-  subtotal: numeric('subtotal', { precision: 15, scale: 2 }).notNull(),
-})
+export const saleDetails = pgTable(
+  'sale_details',
+  {
+    id: serial('id').primaryKey(),
+    sale_id: integer('sale_id').notNull().references(() => sales.id),
+    item_id: integer('item_id').notNull().references(() => items.id),
+    quantity: integer('quantity').notNull(),
+    base_price: numeric('base_price', { precision: 15, scale: 2 }).notNull(),
+    discount_amount: numeric('discount_amount', { precision: 15, scale: 2 }).notNull().default('0'),
+    final_price: numeric('final_price', { precision: 15, scale: 2 }).notNull(),
+    service_fee: numeric('service_fee', { precision: 15, scale: 2 }).notNull().default('0'),
+    subtotal: numeric('subtotal', { precision: 15, scale: 2 }).notNull(),
+  },
+  (t) => [index('idx_sale_details_sale_id').on(t.sale_id)],
+)
 
 // ─── stock_movements ──────────────────────────────────────────────────────────
-export const stockMovements = pgTable('stock_movements', {
-  id: serial('id').primaryKey(),
-  item_id: integer('item_id').notNull(),
-  type: text('type', { enum: ['IN', 'OUT'] }).notNull(),
-  quantity: integer('quantity').notNull(),
-  reference_type: text('reference_type', { enum: ['purchase', 'sale'] }),
-  reference_id: integer('reference_id'),
-  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-})
+export const stockMovements = pgTable(
+  'stock_movements',
+  {
+    id: serial('id').primaryKey(),
+    item_id: integer('item_id').notNull().references(() => items.id),
+    type: text('type', { enum: ['IN', 'OUT'] }).notNull(),
+    quantity: integer('quantity').notNull(),
+    reference_type: text('reference_type', { enum: ['purchase', 'sale'] }),
+    reference_id: integer('reference_id'),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('idx_stock_item_id').on(t.item_id)],
+)
 
 // ─── discounts ───────────────────────────────────────────────────────────────
 export const discounts = pgTable('discounts', {
@@ -158,12 +190,17 @@ export const discounts = pgTable('discounts', {
 })
 
 // ─── discount_items ───────────────────────────────────────────────────────────
-export const discountItems = pgTable('discount_items', {
-  discount_id: integer('discount_id').notNull(),
-  item_id: integer('item_id').notNull(),
-})
+export const discountItems = pgTable(
+  'discount_items',
+  {
+    discount_id: integer('discount_id').notNull().references(() => discounts.id),
+    item_id: integer('item_id').notNull().references(() => items.id),
+  },
+  (t) => [primaryKey({ columns: [t.discount_id, t.item_id] }), index('idx_discount_items_item_id').on(t.item_id)],
+)
 
 // ─── stock_summary VIEW ──────────────────────────────────────────────────────
+// View dikelola Drizzle (definisi asli dari V1.3__create_views.sql)
 export const stockSummary = pgView('stock_summary', {
   item_id: integer('item_id'),
   name: text('name'),
@@ -172,7 +209,19 @@ export const stockSummary = pgView('stock_summary', {
   total_in: integer('total_in'),
   total_out: integer('total_out'),
   current_stock: integer('current_stock'),
-}).existing()
+}).as(
+  sql`SELECT
+  i.id AS item_id,
+  i.name,
+  i.sku,
+  i.category,
+  COALESCE(SUM(CASE WHEN sm.type = 'IN' THEN sm.quantity ELSE 0 END), 0) AS total_in,
+  COALESCE(SUM(CASE WHEN sm.type = 'OUT' THEN sm.quantity ELSE 0 END), 0) AS total_out,
+  COALESCE(SUM(CASE WHEN sm.type = 'IN' THEN sm.quantity ELSE -sm.quantity END), 0) AS current_stock
+FROM items i
+LEFT JOIN stock_movements sm ON sm.item_id = i.id
+GROUP BY i.id, i.name, i.sku, i.category`,
+)
 
 // ─── payment_methods ──────────────────────────────────────────────────────────
 export const paymentMethods = pgTable('payment_methods', {
@@ -183,84 +232,104 @@ export const paymentMethods = pgTable('payment_methods', {
 })
 
 // ─── expenses ────────────────────────────────────────────────────────────────
-export const expenses = pgTable('expenses', {
-  id: serial('id').primaryKey(),
-  description: text('description').notNull(),
-  amount: numeric('amount', { precision: 15, scale: 2 }).notNull(),
-  category: text('category', { enum: ['operational', 'utilities', 'rent', 'salary', 'others'] }).notNull().default('others'),
-  expense_date: date('expense_date').notNull(),
-  payment_method_id: integer('payment_method_id'),
-  notes: text('notes'),
-  created_by: uuid('created_by'),
-  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
+export const expenses = pgTable(
+  'expenses',
+  {
+    id: serial('id').primaryKey(),
+    description: text('description').notNull(),
+    amount: numeric('amount', { precision: 15, scale: 2 }).notNull(),
+    category: text('category', { enum: ['operational', 'utilities', 'rent', 'salary', 'others'] }).notNull().default('others'),
+    expense_date: date('expense_date').notNull(),
+    payment_method_id: integer('payment_method_id').references(() => paymentMethods.id),
+    notes: text('notes'),
+    created_by: uuid('created_by').references(() => profiles.id),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('idx_expenses_expense_date').on(t.expense_date)],
+)
 
 // ─── sales_returns ───────────────────────────────────────────────────────────
-export const salesReturns = pgTable('sales_returns', {
-  id: serial('id').primaryKey(),
-  sale_id: integer('sale_id').notNull(),
-  return_date: date('return_date').notNull(),
-  reason: text('reason').notNull(),
-  total_refund: numeric('total_refund', { precision: 15, scale: 2 }).notNull(),
-  status: text('status', { enum: ['pending', 'processed', 'rejected'] }).notNull().default('pending'),
-  processed_by: uuid('processed_by'),
-  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-})
+export const salesReturns = pgTable(
+  'sales_returns',
+  {
+    id: serial('id').primaryKey(),
+    sale_id: integer('sale_id').notNull().references(() => sales.id),
+    return_date: date('return_date').notNull(),
+    reason: text('reason').notNull(),
+    total_refund: numeric('total_refund', { precision: 15, scale: 2 }).notNull(),
+    status: text('status', { enum: ['pending', 'processed', 'rejected'] }).notNull().default('pending'),
+    processed_by: uuid('processed_by'),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('idx_sales_returns_sale_id').on(t.sale_id)],
+)
 
 // ─── sales_return_details ─────────────────────────────────────────────────────
 export const salesReturnDetails = pgTable('sales_return_details', {
   id: serial('id').primaryKey(),
-  return_id: integer('return_id').notNull(),
-  item_id: integer('item_id').notNull(),
+  return_id: integer('return_id').notNull().references(() => salesReturns.id),
+  item_id: integer('item_id').notNull().references(() => items.id),
   quantity: integer('quantity').notNull(),
   refund_amount: numeric('refund_amount', { precision: 15, scale: 2 }).notNull(),
 })
 
 // ─── purchase_returns ─────────────────────────────────────────────────────────
-export const purchaseReturns = pgTable('purchase_returns', {
-  id: serial('id').primaryKey(),
-  purchase_id: integer('purchase_id').notNull(),
-  return_date: date('return_date').notNull(),
-  reason: text('reason').notNull(),
-  total_refund: numeric('total_refund', { precision: 15, scale: 2 }).notNull(),
-  status: text('status', { enum: ['pending', 'processed', 'rejected'] }).notNull().default('pending'),
-  processed_by: uuid('processed_by'),
-  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-})
+export const purchaseReturns = pgTable(
+  'purchase_returns',
+  {
+    id: serial('id').primaryKey(),
+    purchase_id: integer('purchase_id').notNull().references(() => purchases.id),
+    return_date: date('return_date').notNull(),
+    reason: text('reason').notNull(),
+    total_refund: numeric('total_refund', { precision: 15, scale: 2 }).notNull(),
+    status: text('status', { enum: ['pending', 'processed', 'rejected'] }).notNull().default('pending'),
+    processed_by: uuid('processed_by'),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('idx_purchase_returns_purchase_id').on(t.purchase_id)],
+)
 
 // ─── purchase_return_details ──────────────────────────────────────────────────
 export const purchaseReturnDetails = pgTable('purchase_return_details', {
   id: serial('id').primaryKey(),
-  return_id: integer('return_id').notNull(),
-  item_id: integer('item_id').notNull(),
+  return_id: integer('return_id').notNull().references(() => purchaseReturns.id),
+  item_id: integer('item_id').notNull().references(() => items.id),
   quantity: integer('quantity').notNull(),
   refund_amount: numeric('refund_amount', { precision: 15, scale: 2 }).notNull(),
 })
 
 // ─── activity_logs ───────────────────────────────────────────────────────────
-export const activityLogs = pgTable('activity_logs', {
-  id: serial('id').primaryKey(),
-  user_id: uuid('user_id'),
-  action: text('action', { enum: ['create', 'update', 'delete'] }).notNull(),
-  entity: text('entity').notNull(),
-  entity_id: text('entity_id'),
-  description: text('description'),
-  metadata: text('metadata'),
-  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-})
+export const activityLogs = pgTable(
+  'activity_logs',
+  {
+    id: serial('id').primaryKey(),
+    user_id: uuid('user_id').references(() => profiles.id),
+    action: text('action', { enum: ['create', 'update', 'delete'] }).notNull(),
+    entity: text('entity').notNull(),
+    entity_id: text('entity_id'),
+    description: text('description'),
+    metadata: text('metadata'),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('idx_activity_logs_created_at').on(t.created_at)],
+)
 
 // ─── notifications ───────────────────────────────────────────────────────────
-export const notifications = pgTable('notifications', {
-  id: serial('id').primaryKey(),
-  user_id: uuid('user_id').notNull(),
-  title: text('title').notNull(),
-  message: text('message').notNull(),
-  type: text('type', { enum: ['info', 'success', 'warning', 'error'] }).notNull().default('info'),
-  is_read: boolean('is_read').notNull().default(false),
-  link: text('link'),
-  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-})
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: serial('id').primaryKey(),
+    user_id: uuid('user_id').notNull().references(() => profiles.id),
+    title: text('title').notNull(),
+    message: text('message').notNull(),
+    type: text('type', { enum: ['info', 'success', 'warning', 'error'] }).notNull().default('info'),
+    is_read: boolean('is_read').notNull().default(false),
+    link: text('link'),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('idx_notifications_user_id').on(t.user_id)],
+)
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Relations

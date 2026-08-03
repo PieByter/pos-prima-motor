@@ -13,6 +13,8 @@ type SaleFilters = {
   customer_id?: number
   mechanic_id?: string
   status?: string
+  sale_type?: string
+  payment_status?: string
   start_date?: string
   end_date?: string
   page?: number
@@ -22,6 +24,7 @@ type SaleFilters = {
 type SaleListItem = Sale & {
   customer?: { name: string | null } | null
   mechanic?: { name: string | null } | null
+  vehicle?: { plate_number: string | null; brand: string | null; model: string | null } | null
 }
 
 type SupabaseRow = Record<string, unknown>
@@ -30,6 +33,8 @@ function mapSale(row: SupabaseRow): Sale {
   return {
     ...row,
     total_amount: Number(row.total_amount),
+    paid_amount: row.paid_amount != null ? Number(row.paid_amount) : null,
+    remaining_amount: row.remaining_amount != null ? Number(row.remaining_amount) : null,
     cash_amount: row.cash_amount != null ? Number(row.cash_amount) : null,
     change_amount: row.change_amount != null ? Number(row.change_amount) : null,
   } as unknown as Sale
@@ -40,13 +45,13 @@ export async function getSales(
   filters: SaleFilters = {},
 ): Promise<{ data: PaginatedResponse<Sale> | null; error: Error | null }> {
   try {
-    const { search, customer_id, mechanic_id, status, start_date, end_date, page = 1, limit = 10 } = filters
+    const { search, customer_id, mechanic_id, status, sale_type, payment_status, start_date, end_date, page = 1, limit = 10 } = filters
     const from = (page - 1) * limit
     const to = from + limit - 1
 
     let query = supabase
       .from('sales')
-      .select('*, customers(name), profiles!sales_mechanic_id_profiles_id_fk(name)', { count: 'exact' })
+      .select('*, customers(name), profiles!sales_mechanic_id_profiles_id_fk(name), vehicles(plate_number, brand, model)', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(from, to)
 
@@ -54,6 +59,8 @@ export async function getSales(
     if (customer_id) query = query.eq('customer_id', customer_id)
     if (mechanic_id) query = query.eq('mechanic_id', mechanic_id)
     if (status) query = query.eq('status', status)
+    if (sale_type) query = query.eq('sale_type', sale_type)
+    if (payment_status) query = query.eq('payment_status', payment_status)
     if (start_date) query = query.gte('sale_date', start_date)
     if (end_date) query = query.lte('sale_date', end_date)
 
@@ -64,8 +71,10 @@ export async function getSales(
       ...mapSale(r),
       customer: r.customers ?? null,
       mechanic: r.profiles ?? null,
+      vehicle: r.vehicles ?? null,
       customers: undefined,
       profiles: undefined,
+      vehicles: undefined,
     }))
 
     return {
@@ -90,7 +99,7 @@ export async function getSaleById(
   try {
     const { data: sale, error } = await supabase
       .from('sales')
-      .select('*, customers(*), profiles!sales_mechanic_id_profiles_id_fk(*), payment_methods(*)')
+      .select('*, customers(*), profiles!sales_mechanic_id_profiles_id_fk(*), payment_methods(*), vehicles(*)')
       .eq('id', id)
       .single()
 
@@ -121,6 +130,7 @@ export async function getSaleById(
       data: {
         ...mapSale(sale),
         customer: sale.customers ?? null,
+        vehicle: sale.vehicles ?? null,
         mechanic: sale.profiles ?? undefined,
         payment_method: sale.payment_methods ?? undefined,
         details,

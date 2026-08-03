@@ -12,6 +12,19 @@ type ItemFilters = {
 
 type SupabaseRow = Record<string, unknown>
 
+type SupplierEmbed = { id: number; name: string } | null
+
+/** Extract suppliers from item_suppliers(suppliers(...)) embed */
+function mapSuppliers(row: SupabaseRow): { id: number; name: string }[] {
+  const links = (row.item_suppliers as Array<{ suppliers?: SupplierEmbed }> | undefined) ?? []
+  const result: { id: number; name: string }[] = []
+  for (const l of links) {
+    const s = l.suppliers
+    if (s) result.push({ id: s.id, name: s.name })
+  }
+  return result
+}
+
 /** Ensure numeric fields come back as numbers (Postgres returns decimal as string) */
 function mapItem(row: SupabaseRow): Item {
   return {
@@ -21,8 +34,11 @@ function mapItem(row: SupabaseRow): Item {
     service_fee: Number(row.service_fee),
     category_name: (row.categories as Record<string, string> | undefined)?.name ?? null,
     brand_name: (row.brands as Record<string, string> | undefined)?.name ?? null,
+    supplier_ids: mapSuppliers(row).map((s) => s.id),
+    suppliers: mapSuppliers(row),
     categories: undefined,
     brands: undefined,
+    item_suppliers: undefined,
   } as unknown as Item
 }
 
@@ -37,7 +53,7 @@ export async function getItems(
 
     let query = supabase
       .from('items')
-      .select('*, categories(name), brands(name)', { count: 'exact' })
+      .select('*, categories(name), brands(name), item_suppliers(suppliers(id, name))', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(from, to)
 
@@ -80,7 +96,7 @@ export async function getItemById(
   try {
     const { data, error } = await supabase
       .from('items')
-      .select('*')
+      .select('*, categories(name), brands(name), item_suppliers(suppliers(id, name))')
       .eq('id', id)
       .single()
 
@@ -91,20 +107,48 @@ export async function getItemById(
   }
 }
 
+/** Replace an item's supplier links in the junction table */
+async function replaceItemSuppliers(
+  supabase: SupabaseClient,
+  itemId: number,
+  supplierIds: number[] = [],
+): Promise<Error | null> {
+  try {
+    await supabase.from('item_suppliers').delete().eq('item_id', itemId)
+    if (supplierIds.length > 0) {
+      const rows = [...new Set(supplierIds)].map((supplier_id) => ({ item_id: itemId, supplier_id }))
+      const { error } = await supabase.from('item_suppliers').insert(rows)
+      if (error) return new Error(error.message)
+    }
+    return null
+  } catch (err) {
+    return err as Error
+  }
+}
+
 export async function createItem(
   supabase: SupabaseClient,
   data: ItemInsert,
 ): Promise<{ data: Item | null; error: Error | null }> {
   try {
+    const { supplier_ids, ...rest } = data
+
     const { data: row, error } = await supabase
       .from('items')
-      .insert(data)
+      .insert(rest)
       .select()
       .single()
 
     if (error || !row) {
       return { data: null, error: new Error(error?.message ?? 'Failed to create item') }
     }
+
+    const relError = await replaceItemSuppliers(supabase, row.id, supplier_ids)
+    if (relError) {
+      await supabase.from('items').delete().eq('id', row.id)
+      return { data: null, error: relError }
+    }
+
     return { data: mapItem(row), error: null }
   } catch (err) {
     const error = err instanceof Error ? err : new Error('Failed to create item')
@@ -118,14 +162,20 @@ export async function updateItem(
   data: ItemUpdate,
 ): Promise<{ data: Item | null; error: Error | null }> {
   try {
+    const { supplier_ids, ...rest } = data
+
     const { data: row, error } = await supabase
       .from('items')
-      .update({ ...data, updated_at: new Date().toISOString() })
+      .update({ ...rest, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single()
 
     if (error || !row) return { data: null, error: new Error('Item not found') }
+
+    const relError = await replaceItemSuppliers(supabase, id, supplier_ids)
+    if (relError) return { data: null, error: relError }
+
     return { data: mapItem(row), error: null }
   } catch (err) {
     const error = err instanceof Error ? err : new Error('Failed to update item')

@@ -27,6 +27,8 @@ export type Item = {
   brand_id: number | null
   category_name: string | null
   brand_name: string | null
+  supplier_ids: number[]
+  suppliers: { id: number; name: string }[]
   purchase_price: number
   selling_price: number
   service_fee: number
@@ -35,7 +37,9 @@ export type Item = {
   updated_at: string
 }
 
-export type ItemInsert = Omit<Item, 'id' | 'created_at' | 'updated_at'>
+export type ItemInsert = Omit<Item, 'id' | 'created_at' | 'updated_at' | 'supplier_ids' | 'suppliers'> & {
+  supplier_ids?: number[]
+}
 export type ItemUpdate = Partial<ItemInsert>
 
 // --- Categories ---
@@ -71,6 +75,27 @@ export type Customer = {
 
 export type CustomerInsert = Omit<Customer, 'id' | 'created_at' | 'updated_at'>
 export type CustomerUpdate = Partial<CustomerInsert>
+
+// --- Vehicles (motor milik customer) ---
+export type Vehicle = {
+  id: number
+  customer_id: number
+  plate_number: string
+  brand: string | null
+  model: string | null
+  year: number | null
+  color: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type VehicleInsert = Omit<Vehicle, 'id' | 'created_at' | 'updated_at'>
+export type VehicleUpdate = Partial<VehicleInsert>
+
+export type CustomerWithVehicles = Customer & {
+  vehicles?: Vehicle[]
+}
 
 // --- Suppliers ---
 export type Supplier = {
@@ -130,14 +155,22 @@ export type PaymentMethodInsert = Omit<PaymentMethod, 'id'>
 export type PaymentMethodUpdate = Partial<PaymentMethodInsert>
 
 // --- Sales ---
+export type SaleType = 'purchase' | 'service' | 'hybrid'
+export type PaymentStatus = 'paid' | 'partial' | 'unpaid'
+
 export type Sale = {
   id: number
   customer_id: number | null
+  vehicle_id: number | null
   mechanic_id: string // UUID
   invoice_number: string
   sale_date: string
   total_amount: number
   status: 'completed' | 'pending' | 'in_progress' | 'cancelled'
+  sale_type: SaleType
+  payment_status: PaymentStatus
+  paid_amount: number | null
+  remaining_amount: number | null
   payment_method_id: number | null
   cash_amount: number | null
   change_amount: number | null
@@ -167,6 +200,7 @@ export type SaleDetailInsert = Omit<SaleDetail, 'id'>
 // --- Sales with joined data ---
 export type SaleWithDetails = Sale & {
   customer?: Customer | null
+  vehicle?: Vehicle | null
   mechanic?: Profile
   payment_method?: PaymentMethod | null
   details: (SaleDetail & { item?: Item })[]

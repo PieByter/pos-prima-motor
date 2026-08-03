@@ -19,6 +19,8 @@ export type InvoiceDetail = {
   id: number;
   invoiceNumber: string;
   status: TransactionStatus;
+  saleType?: string;
+  paymentStatus?: string;
   createdAt: string;
   transactionType: TransactionType;
   // Customer / Supplier
@@ -37,6 +39,8 @@ export type InvoiceDetail = {
   transactionId: string;
   cashAmount: number | null;
   changeAmount: number | null;
+  paidAmount?: number | null;
+  remainingAmount?: number | null;
   // Items
   items: InvoiceItem[];
   subtotal: number;

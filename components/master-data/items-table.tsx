@@ -52,7 +52,27 @@ type ApiItem = {
   current_stock?: number | null;
   picture?: string | null;
   created_at?: string;
+  supplier_ids?: number[];
+  suppliers?: { id: number; name: string }[];
 };
+
+function mapApiItem(row: ApiItem): Item {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description ?? "",
+    sku: row.sku ?? "-",
+    category: row.category ?? "Uncategorized",
+    purchasePrice: Number(row.purchase_price ?? 0),
+    sellingPrice: Number(row.selling_price ?? 0),
+    serviceFee: Number(row.service_fee ?? 0),
+    stock: Number(row.stock ?? row.current_stock ?? 0),
+    picture: row.picture ?? null,
+    createdAt: row.created_at ?? new Date().toISOString().slice(0, 10),
+    supplierIds: row.supplier_ids ?? [],
+    supplierNames: (row.suppliers ?? []).map((s) => s.name),
+  };
+}
 
 export function ItemsTable() {
   const { showToast } = useToast();
@@ -92,19 +112,7 @@ export function ItemsTable() {
         }
         const result = await response.json();
         const rows: ApiItem[] = result.data || result || [];
-        const mapped: Item[] = rows.map((row) => ({
-          id: row.id,
-          name: row.name,
-          description: row.description ?? "",
-          sku: row.sku ?? "-",
-          category: row.category ?? "Uncategorized",
-          purchasePrice: Number(row.purchase_price ?? 0),
-          sellingPrice: Number(row.selling_price ?? 0),
-          serviceFee: Number(row.service_fee ?? 0),
-          stock: Number(row.stock ?? row.current_stock ?? 0),
-          picture: row.picture ?? null,
-          createdAt: row.created_at ?? new Date().toISOString().slice(0, 10),
-        }));
+        const mapped: Item[] = rows.map(mapApiItem);
         setItems(mapped);
       } catch (error) {
         console.error("Error fetching items:", error);
@@ -194,19 +202,7 @@ export function ItemsTable() {
       if (refresh.ok) {
         const result = await refresh.json();
         const rows: ApiItem[] = result.data || [];
-        setItems(rows.map((row) => ({
-          id: row.id,
-          name: row.name,
-          description: row.description ?? "",
-          sku: row.sku ?? "-",
-          category: row.category ?? "Uncategorized",
-          purchasePrice: Number(row.purchase_price ?? 0),
-          sellingPrice: Number(row.selling_price ?? 0),
-          serviceFee: Number(row.service_fee ?? 0),
-          stock: Number(row.stock ?? row.current_stock ?? 0),
-          picture: row.picture ?? null,
-          createdAt: row.created_at ?? new Date().toISOString().slice(0, 10),
-        })));
+        setItems(rows.map(mapApiItem));
       }
     } catch {
       showToast("Gagal menghapus item", "error");
@@ -234,6 +230,7 @@ export function ItemsTable() {
       selling_price: data.sellingPrice,
       service_fee: data.serviceFee,
       picture: data.picture,
+      supplier_ids: data.supplierIds ?? [],
     };
 
     try {
@@ -265,19 +262,7 @@ export function ItemsTable() {
       if (refresh.ok) {
         const result = await refresh.json();
         const rows: ApiItem[] = result.data || result || [];
-        const mapped: Item[] = rows.map((row) => ({
-          id: row.id,
-          name: row.name,
-          description: row.description ?? "",
-          sku: row.sku ?? "-",
-          category: row.category ?? "Uncategorized",
-          purchasePrice: Number(row.purchase_price ?? 0),
-          sellingPrice: Number(row.selling_price ?? 0),
-          serviceFee: Number(row.service_fee ?? 0),
-          stock: Number(row.stock ?? row.current_stock ?? 0),
-          picture: row.picture ?? null,
-          createdAt: row.created_at ?? new Date().toISOString().slice(0, 10),
-        }));
+        const mapped: Item[] = rows.map(mapApiItem);
         setItems(mapped);
       }
     } catch (error) {
@@ -433,6 +418,9 @@ export function ItemsTable() {
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Kategori
                 </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Supplier
+                </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">
                   Harga Beli
                 </TableHead>
@@ -450,7 +438,7 @@ export function ItemsTable() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-16">
+                  <TableCell colSpan={10} className="text-center py-16">
                     <div className="flex flex-col items-center gap-3">
                       <Loader className="h-7 w-7 animate-spin text-sky-500" />
                       <span className="text-sm text-slate-500 dark:text-slate-400">
@@ -461,7 +449,7 @@ export function ItemsTable() {
                 </TableRow>
               ) : paginatedItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-16">
+                  <TableCell colSpan={10} className="text-center py-16">
                     <div className="flex flex-col items-center gap-3">
                       <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-full">
                         <Package2 className="h-6 w-6 text-slate-400" />
@@ -540,6 +528,29 @@ export function ItemsTable() {
                         >
                           {item.category}
                         </Badge>
+                      </TableCell>
+
+                      {/* Suppliers */}
+                      <TableCell>
+                        {item.supplierNames && item.supplierNames.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 max-w-52">
+                            {item.supplierNames.slice(0, 2).map((name) => (
+                              <span
+                                key={name}
+                                className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800 px-2 py-0.5 text-[11px] font-medium truncate"
+                              >
+                                {name}
+                              </span>
+                            ))}
+                            {item.supplierNames.length > 2 && (
+                              <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 px-2 py-0.5 text-[11px] font-medium">
+                                +{item.supplierNames.length - 2}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400 dark:text-slate-500">—</span>
+                        )}
                       </TableCell>
 
                       {/* Purchase Price */}

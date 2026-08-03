@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -15,8 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader, Users } from "lucide-react";
-import type { Customer } from "@/lib/types/database";
+import { Loader, Users, Bike, Plus, Trash2 } from "lucide-react";
+import type { Customer, Vehicle } from "@/lib/types/database";
 import { customerSchema, type CustomerFormData } from "@/lib/validations";
 
 type Props = {
@@ -26,8 +26,14 @@ type Props = {
   onSave: (data: Omit<Customer, "id" | "created_at" | "updated_at">) => void;
 };
 
+const emptyVehicleForm = { plate_number: "", brand: "", model: "", year: "" };
+
 export function CustomerFormDialog({ open, onOpenChange, customer, onSave }: Props) {
   const isEdit = !!customer;
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [vehicleForm, setVehicleForm] = useState(emptyVehicleForm);
+  const [vehicleError, setVehicleError] = useState<string | null>(null);
+  const [savingVehicles, setSavingVehicles] = useState(false);
 
   const {
     register,
@@ -51,8 +57,73 @@ export function CustomerFormDialog({ open, onOpenChange, customer, onSave }: Pro
         phone: customer?.phone ?? "",
         address: customer?.address ?? "",
       });
+      setVehicleForm(emptyVehicleForm);
+      setVehicleError(null);
+      setVehicles([]);
+
+      // Load vehicles in edit mode
+      if (customer) {
+        fetch(`/api/vehicles?customer_id=${customer.id}`, { cache: "no-store" })
+          .then((r) => (r.ok ? r.json() : []))
+          .then((list) => setVehicles(Array.isArray(list) ? list : []))
+          .catch(() => setVehicles([]));
+      }
     }
   }, [open, customer, reset]);
+
+  function updateVehicleForm(patch: Partial<typeof emptyVehicleForm>) {
+    setVehicleForm((prev) => ({ ...prev, ...patch }));
+  }
+
+  async function addVehicle() {
+    if (!customer) return;
+    setVehicleError(null);
+
+    const plate = vehicleForm.plate_number.trim();
+    if (!plate) {
+      setVehicleError("Nomor plat wajib diisi.");
+      return;
+    }
+
+    setSavingVehicles(true);
+    try {
+      const res = await fetch("/api/vehicles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer_id: customer.id,
+          plate_number: plate,
+          brand: vehicleForm.brand.trim() || null,
+          model: vehicleForm.model.trim() || null,
+          year: vehicleForm.year ? Number(vehicleForm.year) : null,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error ?? "Gagal menambah motor");
+      }
+
+      const created = (await res.json()) as Vehicle;
+      setVehicles((prev) => [created, ...prev]);
+      setVehicleForm(emptyVehicleForm);
+    } catch (err) {
+      setVehicleError(err instanceof Error ? err.message : "Gagal menambah motor");
+    } finally {
+      setSavingVehicles(false);
+    }
+  }
+
+  async function removeVehicle(id: number) {
+    setVehicleError(null);
+    try {
+      const res = await fetch(`/api/vehicles?id=${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Gagal menghapus motor");
+      setVehicles((prev) => prev.filter((v) => v.id !== id));
+    } catch (err) {
+      setVehicleError(err instanceof Error ? err.message : "Gagal menghapus motor");
+    }
+  }
 
   async function onSubmit(data: CustomerFormData) {
     await onSave({
@@ -64,7 +135,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer, onSave }: Pro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
@@ -133,6 +204,124 @@ export function CustomerFormDialog({ open, onOpenChange, customer, onSave }: Pro
               <p className="text-xs text-red-500 mt-1">{errors.address.message}</p>
             )}
           </div>
+
+          {/* Kendaraan / Motor (edit mode) */}
+          {isEdit && (
+            <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Bike className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                  Kendaraan / Motor ({vehicles.length})
+                </h4>
+              </div>
+
+              {/* List motor */}
+              {vehicles.length > 0 && (
+                <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                  {vehicles.map((v) => (
+                    <div
+                      key={v.id}
+                      className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                          {v.plate_number}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                          {[v.brand, v.model, v.year ? `(${v.year})` : null]
+                            .filter(Boolean)
+                            .join(" · ") || "—"}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeVehicle(v.id)}
+                        className="shrink-0 rounded-md p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 transition-colors"
+                        aria-label={`Hapus ${v.plate_number}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Form tambah motor */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label htmlFor="vehicle-plate" className="text-xs font-medium">
+                    Plat Nomor <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="vehicle-plate"
+                    placeholder="B 1234 ABC"
+                    value={vehicleForm.plate_number}
+                    onChange={(e) => updateVehicleForm({ plate_number: e.target.value.toUpperCase() })}
+                    className="bg-white dark:bg-slate-800"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="vehicle-brand" className="text-xs font-medium">
+                    Merk
+                  </Label>
+                  <Input
+                    id="vehicle-brand"
+                    placeholder="Honda / Yamaha..."
+                    value={vehicleForm.brand}
+                    onChange={(e) => updateVehicleForm({ brand: e.target.value })}
+                    className="bg-white dark:bg-slate-800"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="vehicle-model" className="text-xs font-medium">
+                    Tipe
+                  </Label>
+                  <Input
+                    id="vehicle-model"
+                    placeholder="Vario 125, NMAX..."
+                    value={vehicleForm.model}
+                    onChange={(e) => updateVehicleForm({ model: e.target.value })}
+                    className="bg-white dark:bg-slate-800"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="vehicle-year" className="text-xs font-medium">
+                    Tahun
+                  </Label>
+                  <Input
+                    id="vehicle-year"
+                    type="number"
+                    min={1980}
+                    max={2100}
+                    placeholder="2023"
+                    value={vehicleForm.year}
+                    onChange={(e) => updateVehicleForm({ year: e.target.value })}
+                    className="bg-white dark:bg-slate-800"
+                  />
+                </div>
+              </div>
+
+              {vehicleError && (
+                <p className="text-xs text-red-500">{vehicleError}</p>
+              )}
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addVehicle}
+                disabled={savingVehicles}
+                className="gap-1.5 border-dashed text-emerald-600 dark:text-emerald-400"
+              >
+                {savingVehicles ? (
+                  <Loader className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Plus className="h-3.5 w-3.5" />
+                )}
+                Tambah Motor
+              </Button>
+            </div>
+          )}
 
           <DialogFooter className="pt-2">
             <Button

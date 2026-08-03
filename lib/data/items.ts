@@ -10,6 +10,10 @@ export type Item = {
   stock: number;
   picture: string | null;
   createdAt: string;
+  /** IDs supplier terpilih (many-to-many via item_suppliers) */
+  supplierIds?: number[];
+  /** Nama supplier terpilih (untuk tampilan) */
+  supplierNames?: string[];
 };
 
 export const CATEGORIES = [

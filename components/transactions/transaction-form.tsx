@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { type TransactionType } from "@/lib/data/transactions";
 import { formatRupiah } from "@/lib/data/items";
+import type { Vehicle } from "@/lib/types/database";
 import { CameraBarcodeScanner } from "@/components/transactions/camera-barcode-scanner";
 
 /* ------------------------------------------------------------------ */
@@ -145,7 +146,6 @@ export function TransactionForm({
   const trxId = transactionId ?? generateTrxId();
 
   /* ---- state ---- */
-  const [customer, setCustomer] = useState(initialData?.customer ?? "");
   const [customerId, setCustomerId] = useState<string>("");
   const [customerOptions, setCustomerOptions] = useState<CustomerOption[]>([]);
   const [supplierOptions, setSupplierOptions] = useState<CustomerOption[]>([]);
@@ -162,6 +162,11 @@ export function TransactionForm({
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodOption[]>([]);
   const [paymentMethodId, setPaymentMethodId] = useState<string>("");
   const [cashAmount, setCashAmount] = useState<string>("");
+  const [saleType, setSaleType] = useState<"purchase" | "service" | "hybrid">("purchase");
+  const [vehicleOptions, setVehicleOptions] = useState<Vehicle[]>([]);
+  const [vehicleId, setVehicleId] = useState<string>("");
+  const [paymentStatus, setPaymentStatus] = useState<"paid" | "partial" | "unpaid">("paid");
+  const [paidAmount, setPaidAmount] = useState<string>("");
   const [barcodeInput, setBarcodeInput] = useState("");
   const [barcodeMsg, setBarcodeMsg] = useState<string | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -224,7 +229,7 @@ export function TransactionForm({
     };
 
     loadOptions();
-  }, []);
+  }, [isSale]);
 
   /* ---- derived totals ---- */
   const totals = useMemo(() => {
@@ -254,6 +259,32 @@ export function TransactionForm({
   /* ---- payment method helpers ---- */
   const selectedPaymentMethod = paymentMethods.find((pm) => pm.id.toString() === paymentMethodId);
   const isCashPayment = selectedPaymentMethod?.name?.toLowerCase() === "tunai";
+
+  /* ---- payment status helpers ---- */
+  const paidValue =
+    paymentStatus === "paid" ? totals.grandTotal : Number(paidAmount) || 0;
+  const remainingAmount = Math.max(0, totals.grandTotal - paidValue);
+
+  // Auto-fill paid amount when payment status changes
+  const handlePaymentStatusChange = (val: "paid" | "partial" | "unpaid") => {
+    setPaymentStatus(val);
+    if (val === "paid") setPaidAmount(totals.grandTotal.toString());
+    else if (val === "unpaid") setPaidAmount("0");
+  };
+
+  // Load vehicles when customer is selected (sale only)
+  const handleCustomerChange = (val: string) => {
+    setCustomerId(val);
+    setVehicleId("");
+    setVehicleOptions([]);
+
+    if (isSale && val) {
+      fetch(`/api/vehicles?customer_id=${val}`, { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : []))
+        .then((list) => setVehicleOptions(Array.isArray(list) ? list : []))
+        .catch(() => setVehicleOptions([]));
+    }
+  };
 
   const getPaymentIcon = (icon: string | null) => {
     switch (icon) {
@@ -364,10 +395,15 @@ export function TransactionForm({
         // ── Submit sale to API ─────────────────────────────────────────
         const header = {
           customer_id: customerId ? Number(customerId) : null,
+          vehicle_id: vehicleId ? Number(vehicleId) : null,
           mechanic_id: mechanicId || null,
           sale_date: date,
           total_amount: totals.grandTotal,
           status: "completed" as const,
+          sale_type: saleType,
+          payment_status: paymentStatus,
+          paid_amount: paymentStatus === "unpaid" ? 0 : paidValue,
+          remaining_amount: paymentStatus === "paid" ? 0 : remainingAmount,
           payment_method_id: paymentMethodId ? Number(paymentMethodId) : null,
           cash_amount: isCashPayment ? totals.cashAmount : null,
           change_amount: isCashPayment ? totals.changeAmount : null,
@@ -475,11 +511,7 @@ export function TransactionForm({
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 z-10 pointer-events-none" />
                   {isSale ? (
-                    <Select value={customerId} onValueChange={(val) => {
-                      setCustomerId(val);
-                      const cust = customerOptions.find((c) => c.id.toString() === val);
-                      setCustomer(cust?.name ?? "");
-                    }}>
+                    <Select value={customerId} onValueChange={handleCustomerChange}>
                       <SelectTrigger className="pl-9">
                         <SelectValue placeholder="Cari customer..." />
                       </SelectTrigger>
@@ -504,8 +536,6 @@ export function TransactionForm({
                   ) : (
                     <Select value={customerId} onValueChange={(val) => {
                       setCustomerId(val);
-                      const sup = supplierOptions.find((s) => s.id.toString() === val);
-                      setCustomer(sup?.name ?? "");
                     }}>
                       <SelectTrigger className="pl-9">
                         <SelectValue placeholder="Cari supplier..." />
@@ -574,6 +604,68 @@ export function TransactionForm({
                 </div>
               </div>
             </div>
+
+            {/* Sale type + Vehicle (sale only) */}
+            {isSale && (
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                {/* Jenis Transaksi */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Jenis Transaksi
+                  </label>
+                  <Select value={saleType} onValueChange={(v) => setSaleType(v as typeof saleType)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih jenis transaksi..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="purchase">🛒 Beli Barang (Sparepart)</SelectItem>
+                      <SelectItem value="service">🔧 Service Saja</SelectItem>
+                      <SelectItem value="hybrid">⚙️ Hybrid (Beli + Service)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-slate-400">
+                    {saleType === "purchase" && "Transaksi hanya penjualan barang/sparepart."}
+                    {saleType === "service" && "Transaksi hanya jasa service tanpa penjualan barang."}
+                    {saleType === "hybrid" && "Transaksi gabungan: beli sparepart + jasa service."}
+                  </p>
+                </div>
+
+                {/* Kendaraan */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Kendaraan / Plat Motor
+                  </label>
+                  <Select
+                    value={vehicleId}
+                    onValueChange={setVehicleId}
+                    disabled={!customerId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={
+                        customerId
+                          ? vehicleOptions.length > 0
+                            ? "Pilih motor customer..."
+                            : "Customer belum punya motor terdaftar"
+                          : "Pilih customer dulu..."
+                      } />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {vehicleOptions.map((v) => (
+                        <SelectItem key={v.id} value={v.id.toString()}>
+                          <span className="font-medium">{v.plate_number}</span>
+                          {v.model && (
+                            <span className="ml-2 text-xs text-slate-400">{v.model}</span>
+                          )}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-slate-400">
+                    Pilih motor yang diservice / dibelikan sparepart (opsional).
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Divider */}
             <div className="border-t border-slate-200 dark:border-slate-700" />
@@ -801,6 +893,58 @@ export function TransactionForm({
 
               {/* Payment & Totals */}
               <div className="w-full sm:w-5/12 lg:w-1/3 space-y-3">
+                {/* Payment Status (sale only) */}
+                {isSale && (
+                  <>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        Status Pembayaran
+                      </label>
+                      <Select
+                        value={paymentStatus}
+                        onValueChange={(v) => handlePaymentStatusChange(v as typeof paymentStatus)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih status..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="paid">✅ Lunas</SelectItem>
+                          <SelectItem value="partial">💰 Sebagian (DP)</SelectItem>
+                          <SelectItem value="unpaid">📝 Utang (Belum Bayar)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Paid amount for partial/unpaid */}
+                    {paymentStatus !== "paid" && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                            Jumlah Dibayar
+                          </label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={totals.grandTotal}
+                            placeholder="0"
+                            value={paidAmount}
+                            onChange={(e) => setPaidAmount(e.target.value)}
+                            className="text-right"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                            Sisa Tagihan
+                          </label>
+                          <div className="flex h-10 w-full items-center justify-end rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 px-3 text-sm font-semibold text-amber-600 dark:text-amber-400">
+                            {formatRupiah(remainingAmount)}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
                 {/* Payment Method */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">

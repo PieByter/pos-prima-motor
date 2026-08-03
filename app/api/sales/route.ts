@@ -18,6 +18,8 @@ export async function GET(request: NextRequest) {
       customer_id: searchParams.get('customer_id') ? Number(searchParams.get('customer_id')) : undefined,
       mechanic_id: searchParams.get('mechanic_id') ?? undefined,
       status: searchParams.get('status') ?? undefined,
+      sale_type: searchParams.get('sale_type') ?? undefined,
+      payment_status: searchParams.get('payment_status') ?? undefined,
       start_date: searchParams.get('start_date') ?? undefined,
       end_date: searchParams.get('end_date') ?? undefined,
       page: Number(searchParams.get('page') ?? 1),

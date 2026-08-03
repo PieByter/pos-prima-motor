@@ -64,6 +64,11 @@ export function CameraBarcodeScanner({
       detectedRef.current = false;
       setDetectedCode(null);
 
+      // mediaDevices hanya tersedia di secure context (HTTPS / localhost)
+      if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+        throw new Error("MEDIA_DEVICES_UNAVAILABLE");
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: "environment",
@@ -83,11 +88,28 @@ export function CameraBarcodeScanner({
     } catch (err) {
       console.error("Camera access error:", err);
       setHasCamera(false);
-      setError(
-        err instanceof DOMException && err.name === "NotAllowedError"
-          ? "Izin kamera ditolak. Izinkan akses kamera di pengaturan browser."
-          : "Tidak dapat mengakses kamera. Pastikan perangkat memiliki kamera."
-      );
+
+      if (err instanceof Error && err.message === "MEDIA_DEVICES_UNAVAILABLE") {
+        setError(
+          typeof window !== "undefined" && window.isSecureContext
+            ? "Browser tidak mendukung akses kamera. Gunakan browser terbaru (Chrome/Edge/Safari)."
+            : "Kamera hanya berfungsi di koneksi aman (HTTPS). Buka aplikasi lewat HTTPS atau localhost."
+        );
+      } else if (err instanceof DOMException && err.name === "NotAllowedError") {
+        setError(
+          "Izin kamera ditolak. Izinkan akses kamera di pengaturan browser."
+        );
+      } else if (err instanceof DOMException && err.name === "NotReadableError") {
+        setError(
+          "Kamera sedang digunakan aplikasi lain. Tutup aplikasi lain lalu coba lagi."
+        );
+      } else if (err instanceof DOMException && err.name === "NotFoundError") {
+        setError("Tidak ditemukan kamera di perangkat ini.");
+      } else {
+        setError(
+          "Tidak dapat mengakses kamera. Pastikan perangkat memiliki kamera."
+        );
+      }
     }
   }, []);
 

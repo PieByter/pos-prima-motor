@@ -86,8 +86,34 @@ function ItemFormContent({
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
+  /* ── Suppliers (many-to-many) ── */
+  const [supplierOptions, setSupplierOptions] = useState<
+    { id: number; name: string; phone: string | null }[]
+  >([]);
+  const [selectedSupplierIds, setSelectedSupplierIds] = useState<number[]>(
+    item?.supplierIds ?? []
+  );
+
+  // Load suppliers once
+  useEffect(() => {
+    fetch("/api/suppliers?limit=500", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        const list = json?.data ?? [];
+        if (Array.isArray(list)) {
+          setSupplierOptions(list as { id: number; name: string; phone: string | null }[]);
+        }
+      })
+      .catch(() => setSupplierOptions([]));
+  }, []);
+
+  const toggleSupplier = (id: number) => {
+    setSelectedSupplierIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
   const categoryValue = watch("category");
-  const pictureValue = watch("picture");
 
   // Sync form with item data when dialog opens
   useEffect(() => {
@@ -157,6 +183,7 @@ function ItemFormContent({
       serviceFee: Number(data.serviceFee || 0),
       stock: Number(data.stock || 0),
       picture: pictureUrl,
+      supplierIds: selectedSupplierIds,
     });
   }
 
@@ -319,6 +346,58 @@ function ItemFormContent({
           </Select>
           {errors.category && <p className="text-xs text-red-500">{errors.category.message}</p>}
         </div>
+      </div>
+
+      {/* Supplier (many-to-many) */}
+      <div className="flex flex-col gap-2">
+        <Label className="text-slate-900 dark:text-slate-200 text-sm font-medium">
+          Supplier
+        </Label>
+        {supplierOptions.length === 0 ? (
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Belum ada supplier terdaftar. Tambahkan di menu Suppliers terlebih dahulu.
+          </p>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700 p-2">
+              {supplierOptions.map((s) => {
+                const checked = selectedSupplierIds.includes(s.id);
+                return (
+                  <label
+                    key={s.id}
+                    className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 cursor-pointer transition-colors ${
+                      checked
+                        ? "border-sky-400 bg-sky-50 dark:bg-sky-900/20"
+                        : "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleSupplier(s.id)}
+                      className="h-4 w-4 rounded border-slate-300 accent-sky-500"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                        {s.name}
+                      </p>
+                      {s.phone && (
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                          {s.phone}
+                        </p>
+                      )}
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {selectedSupplierIds.length > 0
+                ? `${selectedSupplierIds.length} supplier dipilih — barang ini dapat dipasok oleh lebih dari satu supplier.`
+                : "Pilih satu atau lebih supplier pemasok barang ini."}
+            </p>
+          </>
+        )}
       </div>
 
       {/* Foto Produk */}

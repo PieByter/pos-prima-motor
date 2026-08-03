@@ -41,6 +41,9 @@ type UiTransaction = {
   avatarColor: string;
   mechanic: string;
   status: keyof typeof STATUS_STYLES;
+  saleType?: string;
+  paymentStatus?: string;
+  vehiclePlate?: string | null;
   totalAmount: number;
 };
 
@@ -148,6 +151,12 @@ export function TransactionTable({
             avatarColor: avatarColorForName(name),
             mechanic: mechanicName,
             status: normalizeStatus(String(row.status ?? "pending")),
+            saleType: type === "sale" ? String(row.sale_type ?? "purchase") : undefined,
+            paymentStatus: type === "sale" ? String(row.payment_status ?? "paid") : undefined,
+            vehiclePlate:
+              type === "sale"
+                ? ((row.vehicle as { plate_number?: string } | null)?.plate_number ?? null)
+                : null,
             totalAmount: Number(row.total_amount ?? 0),
           };
         });
@@ -391,14 +400,49 @@ export function TransactionTable({
 
                       {/* Status */}
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${style.bg}`}
-                        >
+                        <div className="flex flex-col gap-1.5">
                           <span
-                            className={`h-1.5 w-1.5 rounded-full ${style.dot}`}
-                          />
-                          {t.status}
-                        </span>
+                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${style.bg}`}
+                          >
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${style.dot}`}
+                            />
+                            {t.status}
+                          </span>
+                          {t.saleType && (
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                t.saleType === "service"
+                                  ? "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
+                                  : t.saleType === "hybrid"
+                                  ? "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-300"
+                                  : "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300"
+                              }`}
+                            >
+                              {t.saleType === "service"
+                                ? "🔧 Service"
+                                : t.saleType === "hybrid"
+                                ? "⚙️ Hybrid"
+                                : "🛒 Beli"}
+                            </span>
+                          )}
+                          {t.paymentStatus && t.paymentStatus !== "paid" && (
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                t.paymentStatus === "unpaid"
+                                  ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                                  : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                              }`}
+                            >
+                              {t.paymentStatus === "unpaid" ? "📝 Utang" : "💰 Sebagian"}
+                            </span>
+                          )}
+                          {t.vehiclePlate && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-700/50 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-300">
+                              🏍️ {t.vehiclePlate}
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Total */}

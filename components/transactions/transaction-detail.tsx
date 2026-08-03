@@ -87,6 +87,34 @@ export function TransactionDetail({
               <span className={`h-1.5 w-1.5 rounded-full ${statusStyle.dot}`} />
               {invoice.status}
             </span>
+            {invoice.saleType && (
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-sm font-medium ${
+                  invoice.saleType === "service"
+                    ? "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
+                    : invoice.saleType === "hybrid"
+                    ? "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-300"
+                    : "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300"
+                }`}
+              >
+                {invoice.saleType === "service"
+                  ? "🔧 Service"
+                  : invoice.saleType === "hybrid"
+                  ? "⚙️ Hybrid"
+                  : "🛒 Beli Barang"}
+              </span>
+            )}
+            {invoice.paymentStatus && invoice.paymentStatus !== "paid" && (
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-sm font-medium ${
+                  invoice.paymentStatus === "unpaid"
+                    ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                    : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                }`}
+              >
+                {invoice.paymentStatus === "unpaid" ? "📝 Utang" : "💰 Sebagian (DP)"}
+              </span>
+            )}
           </div>
           <p className="mt-1 text-slate-500 dark:text-slate-400">
             Created on {invoice.createdAt}
@@ -235,6 +263,24 @@ export function TransactionDetail({
                     </span>
                   </div>
                 )}
+              </>
+            )}
+            {invoice.paidAmount != null && invoice.paymentStatus !== "paid" && (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 dark:text-slate-400">
+                    {invoice.paymentStatus === "unpaid" ? "Uang Muka" : "Dibayar (DP)"}
+                  </span>
+                  <span className="font-medium text-slate-900 dark:text-white">
+                    {formatRupiah(invoice.paidAmount)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 dark:text-slate-400">Sisa Tagihan</span>
+                  <span className="font-medium text-amber-600 dark:text-amber-400">
+                    {formatRupiah(invoice.remainingAmount ?? invoice.grandTotal)}
+                  </span>
+                </div>
               </>
             )}
             <div className="mt-2 flex justify-between border-t border-dashed border-slate-200 dark:border-slate-600 pt-3">

@@ -29,10 +29,16 @@ export default async function SaleDetailPage({ params }: PageProps) {
           : sale.status === "in_progress"
             ? "In Progress"
             : "Cancelled",
+    saleType: sale.sale_type,
+    paymentStatus: sale.payment_status,
     createdAt: new Date(sale.created_at).toLocaleString("id-ID"),
     transactionType: "sale",
     entityName: sale.customer?.name ?? "Walk-in Customer",
     entityPhone: sale.customer?.phone ?? "-",
+    entityVehicle: sale.vehicle
+      ? [sale.vehicle.brand, sale.vehicle.model].filter(Boolean).join(" ") || undefined
+      : undefined,
+    entityPlate: sale.vehicle?.plate_number ?? undefined,
     mechanicName: sale.mechanic?.name ?? "-",
     mechanicStation: "-",
     jobStart: "-",
@@ -42,6 +48,8 @@ export default async function SaleDetailPage({ params }: PageProps) {
     transactionId: sale.invoice_number,
     cashAmount: sale.cash_amount,
     changeAmount: sale.change_amount,
+    paidAmount: sale.paid_amount,
+    remainingAmount: sale.remaining_amount,
     items: (sale.details ?? []).map((d) => ({
       id: d.id,
       name: d.item?.name ?? "Item",

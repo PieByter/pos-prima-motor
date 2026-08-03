@@ -23,6 +23,7 @@ import {
   PlusCircle,
   TrendingUp,
   ClipboardCheck,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -61,6 +62,7 @@ const sidebarNav: NavItem[] = [
     group: "Keuangan",
     items: [
       { label: "Pengeluaran", href: "/dashboard/expenses", icon: Receipt },
+      { label: "Piutang", href: "/dashboard/reports/receivables", icon: Wallet },
       { label: "Diskon", href: "/dashboard/discounts", icon: Tag },
       { label: "Retur Penjualan", href: "/dashboard/returns/sales", icon: RotateCcw },
       { label: "Retur Pembelian", href: "/dashboard/returns/purchases", icon: RotateCcw },

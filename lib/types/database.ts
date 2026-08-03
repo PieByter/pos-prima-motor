@@ -191,6 +191,23 @@ export type Sale = {
 export type SaleInsert = Omit<Sale, 'id' | 'created_at' | 'updated_at'>
 export type SaleUpdate = Partial<Omit<SaleInsert, 'created_by'>>
 
+// --- Sale Payments (riwayat pembayaran utang) ---
+export type SalePayment = {
+  id: number
+  sale_id: number
+  amount: number
+  payment_date: string
+  payment_method_id: number | null
+  notes: string | null
+  created_by: string | null
+  created_at: string
+}
+
+export type SalePaymentInsert = Omit<SalePayment, 'id' | 'created_at'>
+export type SalePaymentWithMethod = SalePayment & {
+  payment_method?: PaymentMethod | null
+}
+
 export type SaleDetail = {
   id: number
   sale_id: number
@@ -368,6 +385,32 @@ export type WeeklySalaryRow = {
   service_commission_pct: number
   commission: number
   total_earnings: number
+}
+
+// --- Receivables (piutang) ---
+export type ReceivableRow = {
+  sale_id: number
+  invoice_number: string
+  sale_date: string
+  customer_id: number | null
+  customer_name: string
+  customer_phone: string | null
+  total_amount: number
+  paid_amount: number
+  remaining_amount: number
+  payment_status: 'paid' | 'partial' | 'unpaid'
+  /** Umur utang dalam hari (dari sale_date sampai hari ini) */
+  aging_days: number
+}
+
+export type ReceivablesReport = {
+  total_outstanding: number
+  total_customers: number
+  aging_0_7: number
+  aging_8_30: number
+  aging_31_60: number
+  aging_60_plus: number
+  rows: ReceivableRow[]
 }
 
 // --- Activity Logs ---

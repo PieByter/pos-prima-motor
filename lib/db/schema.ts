@@ -189,6 +189,22 @@ export const sales = pgTable(
   ],
 )
 
+// ─── sale_payments (riwayat pembayaran utang / angsuran) ─────────────────────
+export const salePayments = pgTable(
+  'sale_payments',
+  {
+    id: serial('id').primaryKey(),
+    sale_id: integer('sale_id').notNull().references(() => sales.id, { onDelete: 'cascade' }),
+    amount: numeric('amount', { precision: 15, scale: 2 }).notNull(),
+    payment_date: date('payment_date').notNull().defaultNow(),
+    payment_method_id: integer('payment_method_id').references(() => paymentMethods.id),
+    notes: text('notes'),
+    created_by: uuid('created_by').references(() => profiles.id),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('idx_sale_payments_sale_id').on(t.sale_id), index('idx_sale_payments_payment_date').on(t.payment_date)],
+)
+
 // ─── sale_details ─────────────────────────────────────────────────────────────
 export const saleDetails = pgTable(
   'sale_details',
@@ -487,6 +503,19 @@ export const salesRelations = relations(sales, ({ one, many }) => ({
     references: [paymentMethods.id],
   }),
   details: many(saleDetails),
+  payments: many(salePayments),
+}))
+
+// ─── sale_payments ───────────────────────────────────────────────────────────
+export const salePaymentsRelations = relations(salePayments, ({ one }) => ({
+  sale: one(sales, {
+    fields: [salePayments.sale_id],
+    references: [sales.id],
+  }),
+  paymentMethod: one(paymentMethods, {
+    fields: [salePayments.payment_method_id],
+    references: [paymentMethods.id],
+  }),
 }))
 
 // ─── sale_details ─────────────────────────────────────────────────────────────

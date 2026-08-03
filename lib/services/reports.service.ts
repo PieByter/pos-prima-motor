@@ -5,6 +5,8 @@ import type {
   ProfitLossReport,
   MechanicPerformanceRow,
   WeeklySalaryRow,
+  ReceivablesReport,
+  ReceivableRow,
   ReportDateRange,
 } from '@/lib/types/database'
 
@@ -497,6 +499,66 @@ export async function getWeeklySalarySummary(
     rows.sort((a, b) => b.total_earnings - a.total_earnings)
 
     return { data: rows, error: null }
+  } catch (err) {
+    return { data: null, error: err as Error }
+  }
+}
+
+/**
+ * Laporan piutang — semua penjualan yang BELUM lunas
+ * (payment_status != 'paid'), dengan umur utang (aging).
+ */
+export async function getReceivablesReport(
+  supabase: SupabaseClient,
+): Promise<{ data: ReceivablesReport | null; error: Error | null }> {
+  try {
+    const { data: salesData, error: salesError } = await supabase
+      .from('sales')
+      .select('id, invoice_number, sale_date, customer_id, total_amount, paid_amount, remaining_amount, payment_status, customers(name, phone)')
+      .eq('status', 'completed')
+      .in('payment_status', ['partial', 'unpaid'])
+      .order('sale_date', { ascending: true })
+
+    if (salesError) return { data: null, error: new Error(salesError.message) }
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const rows: ReceivableRow[] = (salesData ?? []).map((s) => {
+      const remaining = Number(s.remaining_amount ?? s.total_amount)
+      const saleDate = new Date(s.sale_date)
+      const aging = Math.max(0, Math.floor((today.getTime() - saleDate.getTime()) / 86400000))
+
+      return {
+        sale_id: s.id,
+        invoice_number: s.invoice_number,
+        sale_date: s.sale_date,
+        customer_id: s.customer_id,
+        customer_name: (s.customers as { name?: string } | null)?.name ?? 'Walk-in',
+        customer_phone: (s.customers as { phone?: string | null } | null)?.phone ?? null,
+        total_amount: Number(s.total_amount),
+        paid_amount: Number(s.paid_amount ?? 0),
+        remaining_amount: remaining,
+        payment_status: s.payment_status,
+        aging_days: aging,
+      }
+    })
+
+    const total_outstanding = rows.reduce((sum, r) => sum + r.remaining_amount, 0)
+    const uniqueCustomers = new Set(rows.map((r) => r.customer_id))
+
+    return {
+      data: {
+        total_outstanding,
+        total_customers: uniqueCustomers.size,
+        aging_0_7: rows.filter((r) => r.aging_days <= 7).reduce((s, r) => s + r.remaining_amount, 0),
+        aging_8_30: rows.filter((r) => r.aging_days > 7 && r.aging_days <= 30).reduce((s, r) => s + r.remaining_amount, 0),
+        aging_31_60: rows.filter((r) => r.aging_days > 30 && r.aging_days <= 60).reduce((s, r) => s + r.remaining_amount, 0),
+        aging_60_plus: rows.filter((r) => r.aging_days > 60).reduce((s, r) => s + r.remaining_amount, 0),
+        rows,
+      },
+      error: null,
+    }
   } catch (err) {
     return { data: null, error: err as Error }
   }

@@ -50,6 +50,7 @@ type ApiItem = {
   service_fee?: number | null;
   stock?: number | null;
   current_stock?: number | null;
+  warranty_months?: number | null;
   picture?: string | null;
   created_at?: string;
   supplier_ids?: number[];
@@ -67,6 +68,7 @@ function mapApiItem(row: ApiItem): Item {
     sellingPrice: Number(row.selling_price ?? 0),
     serviceFee: Number(row.service_fee ?? 0),
     stock: Number(row.stock ?? row.current_stock ?? 0),
+    warrantyMonths: row.warranty_months != null ? Number(row.warranty_months) : null,
     picture: row.picture ?? null,
     createdAt: row.created_at ?? new Date().toISOString().slice(0, 10),
     supplierIds: row.supplier_ids ?? [],
@@ -230,6 +232,7 @@ export function ItemsTable() {
       purchase_price: data.purchasePrice,
       selling_price: data.sellingPrice,
       service_fee: data.serviceFee,
+      warranty_months: data.warrantyMonths ?? null,
       picture: data.picture,
       supplier_links: (data.suppliers ?? []).map((s) => ({
         supplier_id: s.id,

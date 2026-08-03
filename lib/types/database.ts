@@ -32,6 +32,7 @@ export type Item = {
   purchase_price: number
   selling_price: number
   service_fee: number
+  warranty_months: number | null
   picture: string | null
   created_at: string
   updated_at: string
@@ -126,6 +127,9 @@ export type Purchase = {
   purchase_date: string
   total_amount: number
   status: 'completed' | 'pending' | 'cancelled'
+  payment_status: 'paid' | 'partial' | 'unpaid'
+  paid_amount: number | null
+  remaining_amount: number | null
   created_by: string // UUID
   created_at: string
   updated_at: string
@@ -133,6 +137,23 @@ export type Purchase = {
 
 export type PurchaseInsert = Omit<Purchase, 'id' | 'created_at' | 'updated_at'>
 export type PurchaseUpdate = Partial<Omit<PurchaseInsert, 'created_by'>>
+
+// --- Purchase Payments (riwayat pembayaran hutang supplier) ---
+export type PurchasePayment = {
+  id: number
+  purchase_id: number
+  amount: number
+  payment_date: string
+  payment_method_id: number | null
+  notes: string | null
+  created_by: string | null
+  created_at: string
+}
+
+export type PurchasePaymentInsert = Omit<PurchasePayment, 'id' | 'created_at'>
+export type PurchasePaymentWithMethod = PurchasePayment & {
+  payment_method?: PaymentMethod | null
+}
 
 export type PurchaseDetail = {
   id: number
@@ -218,6 +239,7 @@ export type SaleDetail = {
   final_price: number
   service_fee: number
   subtotal: number
+  warranty_months: number | null
 }
 
 export type SaleDetailInsert = Omit<SaleDetail, 'id'>
@@ -411,6 +433,31 @@ export type ReceivablesReport = {
   aging_31_60: number
   aging_60_plus: number
   rows: ReceivableRow[]
+}
+
+// --- Payables (hutang supplier) ---
+export type PayableRow = {
+  purchase_id: number
+  invoice_number: string
+  purchase_date: string
+  supplier_id: number | null
+  supplier_name: string
+  supplier_phone: string | null
+  total_amount: number
+  paid_amount: number
+  remaining_amount: number
+  payment_status: 'paid' | 'partial' | 'unpaid'
+  aging_days: number
+}
+
+export type PayablesReport = {
+  total_outstanding: number
+  total_suppliers: number
+  aging_0_7: number
+  aging_8_30: number
+  aging_31_60: number
+  aging_60_plus: number
+  rows: PayableRow[]
 }
 
 // --- Activity Logs ---

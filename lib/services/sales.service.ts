@@ -177,8 +177,22 @@ export async function createSale(
 
     if (saleError || !sale) return { data: null, error: new Error(saleError?.message ?? 'Failed to create sale') }
 
-    // 3. Insert sale details
-    const detailsWithId = details.map((d) => ({ ...d, sale_id: sale.id }))
+    // 3. Insert sale details — isi warranty_months snapshot dari items.warranty_months
+    const itemIds = [...new Set(details.map((d) => d.item_id))]
+    let warrantyMap = new Map<number, number | null>()
+    if (itemIds.length > 0) {
+      const { data: items } = await supabase
+        .from('items')
+        .select('id, warranty_months')
+        .in('id', itemIds)
+      warrantyMap = new Map((items ?? []).map((i) => [i.id, i.warranty_months != null ? Number(i.warranty_months) : null]))
+    }
+
+    const detailsWithId = details.map((d) => ({
+      ...d,
+      sale_id: sale.id,
+      warranty_months: d.warranty_months != null ? d.warranty_months : (warrantyMap.get(d.item_id) ?? null),
+    }))
     const { error: detailsError } = await supabase.from('sale_details').insert(detailsWithId)
 
     if (detailsError) {

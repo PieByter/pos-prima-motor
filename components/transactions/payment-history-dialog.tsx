@@ -16,14 +16,20 @@ import { formatRupiah } from "@/lib/data/items";
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** sale atau purchase — menentukan endpoint API */
+  type?: "sale" | "purchase";
   saleId: number;
   onPaymentDone: () => void;
 };
 
-export function PaymentHistoryDialog({ open, onOpenChange, saleId, onPaymentDone }: Props) {
+export function PaymentHistoryDialog({ open, onOpenChange, type = "sale", saleId, onPaymentDone }: Props) {
   const [payments, setPayments] = useState<SalePaymentWithMethod[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const endpoint = type === "purchase"
+    ? `/api/purchases/${saleId}/payments`
+    : `/api/sales/${saleId}/payments`;
 
   useEffect(() => {
     if (!open || !saleId) return;
@@ -32,7 +38,7 @@ export function PaymentHistoryDialog({ open, onOpenChange, saleId, onPaymentDone
     // setState hanya di callback async — bukan sinkron di body effect
     (async () => {
       try {
-        const res = await fetch(`/api/sales/${saleId}/payments`, { cache: "no-store" });
+        const res = await fetch(endpoint, { cache: "no-store" });
         if (cancelled) return;
         if (!res.ok) throw new Error("Gagal memuat riwayat pembayaran");
         const data = (await res.json()) as SalePaymentWithMethod[];
@@ -47,12 +53,12 @@ export function PaymentHistoryDialog({ open, onOpenChange, saleId, onPaymentDone
     return () => {
       cancelled = true;
     };
-  }, [open, saleId]);
+  }, [open, saleId, endpoint]);
 
   async function handleDelete(paymentId: number) {
     if (!confirm("Yakin ingin menghapus pembayaran ini? Status utang akan dihitung ulang.")) return;
     try {
-      const res = await fetch(`/api/sales/${saleId}/payments?paymentId=${paymentId}`, {
+      const res = await fetch(`${endpoint}?paymentId=${paymentId}`, {
         method: "DELETE",
       });
       if (!res.ok) {

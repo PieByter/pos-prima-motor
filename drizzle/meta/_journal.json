@@ -71,6 +71,13 @@
       "when": 1785728976039,
       "tag": "0009_marvelous_nico_minoru",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785730625466,
+      "tag": "0010_happy_outlaw_kid",
+      "breakpoints": true
     }
   ]
 }

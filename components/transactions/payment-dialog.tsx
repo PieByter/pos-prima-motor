@@ -17,6 +17,8 @@ import { formatRupiah } from "@/lib/data/items";
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** sale atau purchase — menentukan endpoint API */
+  type?: "sale" | "purchase";
   saleId: number;
   invoiceNumber: string;
   totalAmount: number;
@@ -28,6 +30,7 @@ type Props = {
 export function PaymentDialog({
   open,
   onOpenChange,
+  type = "sale",
   saleId,
   invoiceNumber,
   totalAmount,
@@ -40,6 +43,9 @@ export function PaymentDialog({
   const [error, setError] = useState<string | null>(null);
 
   const remaining = Math.max(0, totalAmount - paidAmount);
+  const endpoint = type === "purchase"
+    ? `/api/purchases/${saleId}/payments`
+    : `/api/sales/${saleId}/payments`;
 
   function handleQuickFill() {
     setAmount(String(remaining));
@@ -59,7 +65,7 @@ export function PaymentDialog({
     setIsSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(`/api/sales/${saleId}/payments`, {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

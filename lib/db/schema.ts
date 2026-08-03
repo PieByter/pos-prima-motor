@@ -58,6 +58,7 @@ export const items = pgTable(
     selling_price: numeric('selling_price', { precision: 15, scale: 2 }).notNull(),
     service_fee: numeric('service_fee', { precision: 15, scale: 2 }).notNull().default('0'),
     stock: integer('stock'),
+    warranty_months: integer('warranty_months'),
     picture: text('picture'),
     created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -113,11 +114,34 @@ export const purchases = pgTable(
     purchase_date: date('purchase_date').notNull(),
     total_amount: numeric('total_amount', { precision: 15, scale: 2 }).notNull(),
     status: text('status', { enum: ['completed', 'pending', 'cancelled'] }).notNull().default('pending'),
+    // Status pembayaran ke supplier: lunas / sebagian / utang
+    payment_status: text('payment_status', { enum: ['paid', 'partial', 'unpaid'] }).notNull().default('paid'),
+    paid_amount: numeric('paid_amount', { precision: 15, scale: 2 }),
+    remaining_amount: numeric('remaining_amount', { precision: 15, scale: 2 }),
     created_by: uuid('created_by').notNull().references(() => profiles.id),
     created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('idx_purchases_purchase_date').on(t.purchase_date)],
+)
+
+// ─── purchase_payments (riwayat pembayaran hutang supplier) ──────────────────
+export const purchasePayments = pgTable(
+  'purchase_payments',
+  {
+    id: serial('id').primaryKey(),
+    purchase_id: integer('purchase_id').notNull().references(() => purchases.id, { onDelete: 'cascade' }),
+    amount: numeric('amount', { precision: 15, scale: 2 }).notNull(),
+    payment_date: date('payment_date').notNull().defaultNow(),
+    payment_method_id: integer('payment_method_id').references(() => paymentMethods.id),
+    notes: text('notes'),
+    created_by: uuid('created_by').references(() => profiles.id),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('idx_purchase_payments_purchase_id').on(t.purchase_id),
+    index('idx_purchase_payments_payment_date').on(t.payment_date),
+  ],
 )
 
 // ─── item_suppliers (many-to-many: item ↔ supplier + harga beli per supplier) ──
@@ -218,6 +242,8 @@ export const saleDetails = pgTable(
     final_price: numeric('final_price', { precision: 15, scale: 2 }).notNull(),
     service_fee: numeric('service_fee', { precision: 15, scale: 2 }).notNull().default('0'),
     subtotal: numeric('subtotal', { precision: 15, scale: 2 }).notNull(),
+    // Garansi snapshot saat transaksi (bulan). Berasal dari items.warranty_months.
+    warranty_months: integer('warranty_months'),
   },
   (t) => [index('idx_sale_details_sale_id').on(t.sale_id)],
 )
@@ -466,6 +492,19 @@ export const purchasesRelations = relations(purchases, ({ one, many }) => ({
     references: [profiles.id],
   }),
   details: many(purchaseDetails),
+  payments: many(purchasePayments),
+}))
+
+// ─── purchase_payments ───────────────────────────────────────────────────────
+export const purchasePaymentsRelations = relations(purchasePayments, ({ one }) => ({
+  purchase: one(purchases, {
+    fields: [purchasePayments.purchase_id],
+    references: [purchases.id],
+  }),
+  paymentMethod: one(paymentMethods, {
+    fields: [purchasePayments.payment_method_id],
+    references: [paymentMethods.id],
+  }),
 }))
 
 // ─── purchase_details ─────────────────────────────────────────────────────────

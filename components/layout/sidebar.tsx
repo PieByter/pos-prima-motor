@@ -24,6 +24,7 @@ import {
   TrendingUp,
   ClipboardCheck,
   Wallet,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -63,6 +64,7 @@ const sidebarNav: NavItem[] = [
     items: [
       { label: "Pengeluaran", href: "/dashboard/expenses", icon: Receipt },
       { label: "Piutang", href: "/dashboard/reports/receivables", icon: Wallet },
+      { label: "Hutang", href: "/dashboard/reports/payables", icon: Building2 },
       { label: "Diskon", href: "/dashboard/discounts", icon: Tag },
       { label: "Retur Penjualan", href: "/dashboard/returns/sales", icon: RotateCcw },
       { label: "Retur Pembelian", href: "/dashboard/returns/purchases", icon: RotateCcw },
@@ -72,6 +74,7 @@ const sidebarNav: NavItem[] = [
     group: "Laporan & Pengaturan",
     items: [
       { label: "Laporan", href: "/dashboard/reports", icon: BarChart3 },
+      { label: "Garansi", href: "/dashboard/warranty", icon: ShieldCheck },
       { label: "Activity Log", href: "/dashboard/activity-log", icon: History },
       { label: "Notifikasi", href: "/dashboard/notifications", icon: Bell },
       { label: "Pengaturan", href: "/dashboard/settings", icon: Settings },

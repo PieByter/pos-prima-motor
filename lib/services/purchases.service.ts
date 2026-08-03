@@ -24,6 +24,8 @@ function mapPurchase(row: SupabaseRow): Purchase {
   return {
     ...row,
     total_amount: Number(row.total_amount),
+    paid_amount: row.paid_amount != null ? Number(row.paid_amount) : null,
+    remaining_amount: row.remaining_amount != null ? Number(row.remaining_amount) : null,
   } as unknown as Purchase
 }
 

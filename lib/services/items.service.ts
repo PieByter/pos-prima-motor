@@ -39,6 +39,7 @@ function mapItem(row: SupabaseRow): Item {
     purchase_price: Number(row.purchase_price),
     selling_price: Number(row.selling_price),
     service_fee: Number(row.service_fee),
+    warranty_months: row.warranty_months != null ? Number(row.warranty_months) : null,
     category_name: (row.categories as Record<string, string> | undefined)?.name ?? null,
     brand_name: (row.brands as Record<string, string> | undefined)?.name ?? null,
     supplier_ids: mapSuppliers(row).map((s) => s.id),

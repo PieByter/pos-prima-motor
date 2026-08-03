@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
 import { TransactionDetail } from "@/components/transactions/transaction-detail";
+import { PurchasePaymentActions } from "@/components/transactions/purchase-payment-actions";
 import type { InvoiceDetail } from "@/lib/data/invoice-details";
 import { getPurchaseById } from "@/lib/services/purchases.service";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -66,6 +67,15 @@ export default async function PurchaseDetailPage({ params }: PageProps) {
         subtitle="Detail invoice pembelian barang"
       />
       <div className="flex-1 overflow-auto p-6">
+        <div className="flex justify-end gap-3 pb-4">
+          <PurchasePaymentActions
+            purchaseId={purchase.id}
+            invoiceNumber={purchase.invoice_number}
+            totalAmount={purchase.total_amount}
+            paidAmount={purchase.paid_amount ?? 0}
+            paymentStatus={purchase.payment_status}
+          />
+        </div>
         <TransactionDetail
           invoice={invoice}
           backHref="/dashboard/transactions/purchases"

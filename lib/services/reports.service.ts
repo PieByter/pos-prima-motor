@@ -7,6 +7,8 @@ import type {
   WeeklySalaryRow,
   ReceivablesReport,
   ReceivableRow,
+  PayablesReport,
+  PayableRow,
   ReportDateRange,
 } from '@/lib/types/database'
 
@@ -551,6 +553,66 @@ export async function getReceivablesReport(
       data: {
         total_outstanding,
         total_customers: uniqueCustomers.size,
+        aging_0_7: rows.filter((r) => r.aging_days <= 7).reduce((s, r) => s + r.remaining_amount, 0),
+        aging_8_30: rows.filter((r) => r.aging_days > 7 && r.aging_days <= 30).reduce((s, r) => s + r.remaining_amount, 0),
+        aging_31_60: rows.filter((r) => r.aging_days > 30 && r.aging_days <= 60).reduce((s, r) => s + r.remaining_amount, 0),
+        aging_60_plus: rows.filter((r) => r.aging_days > 60).reduce((s, r) => s + r.remaining_amount, 0),
+        rows,
+      },
+      error: null,
+    }
+  } catch (err) {
+    return { data: null, error: err as Error }
+  }
+}
+
+/**
+ * Laporan hutang supplier (accounts payable) — semua pembelian yang BELUM
+ * lunas (payment_status != 'paid'), dengan umur hutang (aging).
+ */
+export async function getPayablesReport(
+  supabase: SupabaseClient,
+): Promise<{ data: PayablesReport | null; error: Error | null }> {
+  try {
+    const { data: purchasesData, error: purchasesError } = await supabase
+      .from('purchases')
+      .select('id, invoice_number, purchase_date, supplier_id, total_amount, paid_amount, remaining_amount, payment_status, suppliers(name, phone)')
+      .eq('status', 'completed')
+      .in('payment_status', ['partial', 'unpaid'])
+      .order('purchase_date', { ascending: true })
+
+    if (purchasesError) return { data: null, error: new Error(purchasesError.message) }
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const rows: PayableRow[] = (purchasesData ?? []).map((p) => {
+      const remaining = Number(p.remaining_amount ?? p.total_amount)
+      const purchaseDate = new Date(p.purchase_date)
+      const aging = Math.max(0, Math.floor((today.getTime() - purchaseDate.getTime()) / 86400000))
+
+      return {
+        purchase_id: p.id,
+        invoice_number: p.invoice_number,
+        purchase_date: p.purchase_date,
+        supplier_id: p.supplier_id,
+        supplier_name: (p.suppliers as { name?: string } | null)?.name ?? 'Unknown',
+        supplier_phone: (p.suppliers as { phone?: string | null } | null)?.phone ?? null,
+        total_amount: Number(p.total_amount),
+        paid_amount: Number(p.paid_amount ?? 0),
+        remaining_amount: remaining,
+        payment_status: p.payment_status,
+        aging_days: aging,
+      }
+    })
+
+    const total_outstanding = rows.reduce((sum, r) => sum + r.remaining_amount, 0)
+    const uniqueSuppliers = new Set(rows.map((r) => r.supplier_id))
+
+    return {
+      data: {
+        total_outstanding,
+        total_suppliers: uniqueSuppliers.size,
         aging_0_7: rows.filter((r) => r.aging_days <= 7).reduce((s, r) => s + r.remaining_amount, 0),
         aging_8_30: rows.filter((r) => r.aging_days > 7 && r.aging_days <= 30).reduce((s, r) => s + r.remaining_amount, 0),
         aging_31_60: rows.filter((r) => r.aging_days > 30 && r.aging_days <= 60).reduce((s, r) => s + r.remaining_amount, 0),

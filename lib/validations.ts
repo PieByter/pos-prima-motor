@@ -48,6 +48,7 @@ export const itemSchema = z.object({
     sellingPrice: z.coerce.number().min(0, "Harga jual tidak boleh negatif"),
     serviceFee: z.coerce.number().min(0, "Biaya jasa tidak boleh negatif").optional(),
     stock: z.coerce.number().min(0, "Stok tidak boleh negatif").optional(),
+    warrantyMonths: z.coerce.number().int().min(0, "Garansi tidak boleh negatif").optional().nullable(),
     picture: z.string().nullable().optional(),
 });
 

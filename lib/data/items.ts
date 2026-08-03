@@ -8,6 +8,7 @@ export type Item = {
   sellingPrice: number;
   serviceFee: number;
   stock: number;
+  warrantyMonths?: number | null;
   picture: string | null;
   createdAt: string;
   /** IDs supplier terpilih (many-to-many via item_suppliers) */

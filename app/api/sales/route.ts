@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await getSales(admin, {
       search: searchParams.get('search') ?? undefined,
       customer_id: searchParams.get('customer_id') ? Number(searchParams.get('customer_id')) : undefined,
+      vehicle_id: searchParams.get('vehicle_id') ? Number(searchParams.get('vehicle_id')) : undefined,
       mechanic_id: searchParams.get('mechanic_id') ?? undefined,
       status: searchParams.get('status') ?? undefined,
       sale_type: searchParams.get('sale_type') ?? undefined,

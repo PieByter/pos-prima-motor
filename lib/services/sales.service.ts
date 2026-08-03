@@ -11,6 +11,7 @@ import type {
 type SaleFilters = {
   search?: string
   customer_id?: number
+  vehicle_id?: number
   mechanic_id?: string
   status?: string
   sale_type?: string
@@ -45,7 +46,7 @@ export async function getSales(
   filters: SaleFilters = {},
 ): Promise<{ data: PaginatedResponse<Sale> | null; error: Error | null }> {
   try {
-    const { search, customer_id, mechanic_id, status, sale_type, payment_status, start_date, end_date, page = 1, limit = 10 } = filters
+    const { search, customer_id, vehicle_id, mechanic_id, status, sale_type, payment_status, start_date, end_date, page = 1, limit = 10 } = filters
     const from = (page - 1) * limit
     const to = from + limit - 1
 
@@ -57,6 +58,7 @@ export async function getSales(
 
     if (search) query = query.ilike('invoice_number', `%${search}%`)
     if (customer_id) query = query.eq('customer_id', customer_id)
+    if (vehicle_id) query = query.eq('vehicle_id', vehicle_id)
     if (mechanic_id) query = query.eq('mechanic_id', mechanic_id)
     if (status) query = query.eq('status', status)
     if (sale_type) query = query.eq('sale_type', sale_type)

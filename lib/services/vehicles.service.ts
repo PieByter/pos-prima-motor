@@ -10,6 +10,91 @@ type VehicleFilters = {
     search?: string
 }
 
+export type VehicleServiceHistoryEntry = {
+    id: number
+    invoice_number: string
+    sale_date: string
+    sale_type: string
+    status: string
+    payment_status: string
+    total_amount: number
+    service_fee_total: number
+    items: { name: string; quantity: number; service_fee: number }[]
+}
+
+/** Riwayat service/penjualan untuk satu motor — lengkap dengan detail item */
+export async function getVehicleServiceHistory(
+    supabase: SupabaseClient,
+    vehicleId: number,
+    limit = 50,
+): Promise<{ data: VehicleServiceHistoryEntry[] | null; error: Error | null }> {
+    try {
+        const { data: salesData, error: salesError } = await supabase
+            .from('sales')
+            .select('id, invoice_number, sale_date, sale_type, status, payment_status, total_amount')
+            .eq('vehicle_id', vehicleId)
+            .order('sale_date', { ascending: false })
+            .limit(limit)
+
+        if (salesError) return { data: null, error: new Error(salesError.message) }
+
+        const sales = (salesData ?? []) as Array<{
+            id: number
+            invoice_number: string
+            sale_date: string
+            sale_type: string
+            status: string
+            payment_status: string
+            total_amount: number
+        }>
+
+        // Ambil detail item untuk semua sale sekaligus
+        const saleIds = sales.map((s) => s.id)
+        let detailsBySale = new Map<number, { name: string; quantity: number; service_fee: number }[]>()
+
+        if (saleIds.length > 0) {
+            const { data: detailData, error: detailError } = await supabase
+                .from('sale_details')
+                .select('sale_id, quantity, service_fee, items(name)')
+                .in('sale_id', saleIds)
+
+            if (detailError) return { data: null, error: new Error(detailError.message) }
+
+            const map = new Map<number, { name: string; quantity: number; service_fee: number }[]>()
+            for (const d of detailData ?? []) {
+                const item = {
+                    name: (d.items as { name?: string } | null)?.name ?? 'Item',
+                    quantity: Number(d.quantity),
+                    service_fee: Number(d.service_fee ?? 0),
+                }
+                const list = map.get(d.sale_id) ?? []
+                list.push(item)
+                map.set(d.sale_id, list)
+            }
+            detailsBySale = map
+        }
+
+        const entries: VehicleServiceHistoryEntry[] = sales.map((s) => {
+            const items = detailsBySale.get(s.id) ?? []
+            return {
+                id: s.id,
+                invoice_number: s.invoice_number,
+                sale_date: s.sale_date,
+                sale_type: s.sale_type,
+                status: s.status,
+                payment_status: s.payment_status,
+                total_amount: Number(s.total_amount),
+                service_fee_total: items.reduce((sum, i) => sum + i.service_fee, 0),
+                items,
+            }
+        })
+
+        return { data: entries, error: null }
+    } catch (err) {
+        return { data: null, error: err as Error }
+    }
+}
+
 export async function getVehicles(
     supabase: SupabaseClient,
     filters: VehicleFilters = {},

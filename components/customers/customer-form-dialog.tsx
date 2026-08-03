@@ -15,9 +15,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader, Users, Bike, Plus, Trash2 } from "lucide-react";
+import { Loader, Users, Bike, Plus, Trash2, History } from "lucide-react";
 import type { Customer, Vehicle } from "@/lib/types/database";
 import { customerSchema, type CustomerFormData } from "@/lib/validations";
+import { VehicleHistoryDialog } from "./vehicle-history-dialog";
 
 type Props = {
   open: boolean;
@@ -34,6 +35,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer, onSave }: Pro
   const [vehicleForm, setVehicleForm] = useState(emptyVehicleForm);
   const [vehicleError, setVehicleError] = useState<string | null>(null);
   const [savingVehicles, setSavingVehicles] = useState(false);
+  const [historyVehicle, setHistoryVehicle] = useState<Vehicle | null>(null);
 
   const {
     register,
@@ -134,7 +136,8 @@ export function CustomerFormDialog({ open, onOpenChange, customer, onSave }: Pro
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <div className="flex items-center gap-3">
@@ -233,14 +236,25 @@ export function CustomerFormDialog({ open, onOpenChange, customer, onSave }: Pro
                             .join(" · ") || "—"}
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeVehicle(v.id)}
-                        className="shrink-0 rounded-md p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 transition-colors"
-                        aria-label={`Hapus ${v.plate_number}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setHistoryVehicle(v)}
+                          className="rounded-md p-1.5 text-slate-400 hover:bg-sky-50 dark:hover:bg-sky-900/20 hover:text-sky-600 transition-colors"
+                          aria-label={`Riwayat ${v.plate_number}`}
+                          title="Riwayat service"
+                        >
+                          <History className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeVehicle(v.id)}
+                          className="rounded-md p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 transition-colors"
+                          aria-label={`Hapus ${v.plate_number}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -344,5 +358,15 @@ export function CustomerFormDialog({ open, onOpenChange, customer, onSave }: Pro
         </form>
       </DialogContent>
     </Dialog>
+
+    {/* Riwayat service motor — dialog terpisah (tidak nested di atas) */}
+    <VehicleHistoryDialog
+      open={!!historyVehicle}
+      onOpenChange={(open) => {
+        if (!open) setHistoryVehicle(null);
+      }}
+      vehicle={historyVehicle}
+    />
+    </>
   );
 }

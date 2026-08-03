@@ -120,12 +120,14 @@ export const purchases = pgTable(
   (t) => [index('idx_purchases_purchase_date').on(t.purchase_date)],
 )
 
-// ─── item_suppliers (many-to-many: item ↔ supplier) ──────────────────────────
+// ─── item_suppliers (many-to-many: item ↔ supplier + harga beli per supplier) ──
 export const itemSuppliers = pgTable(
   'item_suppliers',
   {
     item_id: integer('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
     supplier_id: integer('supplier_id').notNull().references(() => suppliers.id, { onDelete: 'cascade' }),
+    // Harga beli khusus dari supplier ini (nullable → pakai items.purchase_price sebagai fallback)
+    purchase_price: numeric('purchase_price', { precision: 15, scale: 2 }),
   },
   (t) => [
     primaryKey({ columns: [t.item_id, t.supplier_id] }),

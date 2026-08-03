@@ -53,7 +53,7 @@ type ApiItem = {
   picture?: string | null;
   created_at?: string;
   supplier_ids?: number[];
-  suppliers?: { id: number; name: string }[];
+  suppliers?: { id: number; name: string; purchase_price: number | null }[];
 };
 
 function mapApiItem(row: ApiItem): Item {
@@ -71,6 +71,7 @@ function mapApiItem(row: ApiItem): Item {
     createdAt: row.created_at ?? new Date().toISOString().slice(0, 10),
     supplierIds: row.supplier_ids ?? [],
     supplierNames: (row.suppliers ?? []).map((s) => s.name),
+    suppliers: row.suppliers ?? [],
   };
 }
 
@@ -230,7 +231,10 @@ export function ItemsTable() {
       selling_price: data.sellingPrice,
       service_fee: data.serviceFee,
       picture: data.picture,
-      supplier_ids: data.supplierIds ?? [],
+      supplier_links: (data.suppliers ?? []).map((s) => ({
+        supplier_id: s.id,
+        purchase_price: s.purchase_price,
+      })),
     };
 
     try {
@@ -532,19 +536,24 @@ export function ItemsTable() {
 
                       {/* Suppliers */}
                       <TableCell>
-                        {item.supplierNames && item.supplierNames.length > 0 ? (
-                          <div className="flex flex-wrap gap-1 max-w-52">
-                            {item.supplierNames.slice(0, 2).map((name) => (
+                        {item.suppliers && item.suppliers.length > 0 ? (
+                          <div className="flex flex-col gap-1 max-w-52">
+                            {item.suppliers.slice(0, 2).map((s) => (
                               <span
-                                key={name}
-                                className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800 px-2 py-0.5 text-[11px] font-medium truncate"
+                                key={s.id}
+                                className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800 px-2 py-0.5 text-[11px] font-medium truncate"
                               >
-                                {name}
+                                <span className="truncate">{s.name}</span>
+                                {s.purchase_price != null && (
+                                  <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-300 shrink-0">
+                                    {formatRupiah(s.purchase_price)}
+                                  </span>
+                                )}
                               </span>
                             ))}
-                            {item.supplierNames.length > 2 && (
+                            {item.suppliers.length > 2 && (
                               <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 px-2 py-0.5 text-[11px] font-medium">
-                                +{item.supplierNames.length - 2}
+                                +{item.suppliers.length - 2} supplier
                               </span>
                             )}
                           </div>

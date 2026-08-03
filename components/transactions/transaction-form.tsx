@@ -64,6 +64,7 @@ type ItemOption = {
   purchase_price: number;
   selling_price: number;
   service_fee: number;
+  suppliers?: { id: number; name: string; purchase_price: number | null }[];
 };
 
 type MechanicOption = {
@@ -327,14 +328,30 @@ export function TransactionForm({
     (key: number, itemId: string) => {
       const item = itemOptions.find((i) => i.id === Number(itemId));
       if (!item) return;
+
+      let unitPrice: number;
+      if (isSale) {
+        unitPrice = item.selling_price;
+      } else {
+        // Mode pembelian: coba harga khusus dari supplier terpilih, fallback ke harga beli utama
+        const supplierPrice =
+          supplierOptions.find((s) => s.id.toString() === customerId)
+            ?.id != null
+            ? (item.suppliers ?? []).find(
+                (s) => s.id === Number(customerId)
+              )?.purchase_price
+            : null;
+        unitPrice = supplierPrice ?? item.purchase_price;
+      }
+
       updateLine(key, {
         itemId: item.id,
         name: item.name,
-        unitPrice: isSale ? item.selling_price : item.purchase_price,
+        unitPrice,
         serviceFee: isSale ? item.service_fee : 0,
       });
     },
-    [updateLine, isSale, itemOptions]
+    [updateLine, isSale, itemOptions, supplierOptions, customerId]
   );
 
   /* ---- barcode scanner ---- */

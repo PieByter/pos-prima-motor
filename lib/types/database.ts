@@ -28,7 +28,7 @@ export type Item = {
   category_name: string | null
   brand_name: string | null
   supplier_ids: number[]
-  suppliers: { id: number; name: string }[]
+  suppliers: { id: number; name: string; purchase_price: number | null }[]
   purchase_price: number
   selling_price: number
   service_fee: number
@@ -37,8 +37,16 @@ export type Item = {
   updated_at: string
 }
 
+/** Relasi item ↔ supplier + harga beli khusus dari supplier tsb */
+export type ItemSupplierLink = {
+  supplier_id: number
+  purchase_price?: number | null
+}
+
 export type ItemInsert = Omit<Item, 'id' | 'created_at' | 'updated_at' | 'supplier_ids' | 'suppliers'> & {
   supplier_ids?: number[]
+  /** Prioritas: kalau ada, pakai ini (bisa berisi harga per supplier) */
+  supplier_links?: ItemSupplierLink[]
 }
 export type ItemUpdate = Partial<ItemInsert>
 

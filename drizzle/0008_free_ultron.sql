@@ -1,0 +1,1 @@
+ALTER TABLE "item_suppliers" ADD COLUMN "purchase_price" numeric(15, 2);

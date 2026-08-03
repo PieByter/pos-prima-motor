@@ -13,14 +13,21 @@ type ItemFilters = {
 type SupabaseRow = Record<string, unknown>
 
 type SupplierEmbed = { id: number; name: string } | null
+type LinkRow = { suppliers?: SupplierEmbed; purchase_price?: string | number | null }
 
-/** Extract suppliers from item_suppliers(suppliers(...)) embed */
-function mapSuppliers(row: SupabaseRow): { id: number; name: string }[] {
-  const links = (row.item_suppliers as Array<{ suppliers?: SupplierEmbed }> | undefined) ?? []
-  const result: { id: number; name: string }[] = []
+/** Extract suppliers with per-supplier purchase price from item_suppliers embed */
+function mapSuppliers(row: SupabaseRow): { id: number; name: string; purchase_price: number | null }[] {
+  const links = (row.item_suppliers as LinkRow[] | undefined) ?? []
+  const result: { id: number; name: string; purchase_price: number | null }[] = []
   for (const l of links) {
     const s = l.suppliers
-    if (s) result.push({ id: s.id, name: s.name })
+    if (s) {
+      result.push({
+        id: s.id,
+        name: s.name,
+        purchase_price: l.purchase_price != null ? Number(l.purchase_price) : null,
+      })
+    }
   }
   return result
 }
@@ -53,7 +60,7 @@ export async function getItems(
 
     let query = supabase
       .from('items')
-      .select('*, categories(name), brands(name), item_suppliers(suppliers(id, name))', { count: 'exact' })
+      .select('*, categories(name), brands(name), item_suppliers(purchase_price, suppliers(id, name))', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(from, to)
 
@@ -96,7 +103,7 @@ export async function getItemById(
   try {
     const { data, error } = await supabase
       .from('items')
-      .select('*, categories(name), brands(name), item_suppliers(suppliers(id, name))')
+      .select('*, categories(name), brands(name), item_suppliers(purchase_price, suppliers(id, name))')
       .eq('id', id)
       .single()
 
@@ -107,16 +114,20 @@ export async function getItemById(
   }
 }
 
-/** Replace an item's supplier links in the junction table */
+/** Replace an item's supplier links in the junction table (with optional per-supplier price) */
 async function replaceItemSuppliers(
   supabase: SupabaseClient,
   itemId: number,
-  supplierIds: number[] = [],
+  links: { supplier_id: number; purchase_price?: number | null }[] = [],
 ): Promise<Error | null> {
   try {
     await supabase.from('item_suppliers').delete().eq('item_id', itemId)
-    if (supplierIds.length > 0) {
-      const rows = [...new Set(supplierIds)].map((supplier_id) => ({ item_id: itemId, supplier_id }))
+    if (links.length > 0) {
+      const rows = links.map((l) => ({
+        item_id: itemId,
+        supplier_id: l.supplier_id,
+        purchase_price: l.purchase_price != null ? Number(l.purchase_price) : null,
+      }))
       const { error } = await supabase.from('item_suppliers').insert(rows)
       if (error) return new Error(error.message)
     }
@@ -131,7 +142,12 @@ export async function createItem(
   data: ItemInsert,
 ): Promise<{ data: Item | null; error: Error | null }> {
   try {
-    const { supplier_ids, ...rest } = data
+    const { supplier_ids, supplier_links, ...rest } = data
+
+    // supplier_links lebih prioritas (bisa bawa harga per supplier);
+    // fallback: supplier_ids → harga null
+    const links = supplier_links
+      ?? (supplier_ids ?? []).map((supplier_id) => ({ supplier_id }))
 
     const { data: row, error } = await supabase
       .from('items')
@@ -143,7 +159,7 @@ export async function createItem(
       return { data: null, error: new Error(error?.message ?? 'Failed to create item') }
     }
 
-    const relError = await replaceItemSuppliers(supabase, row.id, supplier_ids)
+    const relError = await replaceItemSuppliers(supabase, row.id, links)
     if (relError) {
       await supabase.from('items').delete().eq('id', row.id)
       return { data: null, error: relError }
@@ -162,7 +178,10 @@ export async function updateItem(
   data: ItemUpdate,
 ): Promise<{ data: Item | null; error: Error | null }> {
   try {
-    const { supplier_ids, ...rest } = data
+    const { supplier_ids, supplier_links, ...rest } = data
+
+    const links = supplier_links
+      ?? (supplier_ids ? supplier_ids.map((supplier_id) => ({ supplier_id })) : undefined)
 
     const { data: row, error } = await supabase
       .from('items')
@@ -173,8 +192,10 @@ export async function updateItem(
 
     if (error || !row) return { data: null, error: new Error('Item not found') }
 
-    const relError = await replaceItemSuppliers(supabase, id, supplier_ids)
-    if (relError) return { data: null, error: relError }
+    if (links) {
+      const relError = await replaceItemSuppliers(supabase, id, links)
+      if (relError) return { data: null, error: relError }
+    }
 
     return { data: mapItem(row), error: null }
   } catch (err) {

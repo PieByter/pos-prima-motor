@@ -86,12 +86,17 @@ function ItemFormContent({
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
-  /* ── Suppliers (many-to-many) ── */
+  /* ── Suppliers (many-to-many + harga per supplier) ── */
   const [supplierOptions, setSupplierOptions] = useState<
     { id: number; name: string; phone: string | null }[]
   >([]);
-  const [selectedSupplierIds, setSelectedSupplierIds] = useState<number[]>(
-    item?.supplierIds ?? []
+  const [supplierLinks, setSupplierLinks] = useState<
+    { supplier_id: number; purchase_price: string }[]
+  >(
+    (item?.suppliers ?? []).map((s) => ({
+      supplier_id: s.id,
+      purchase_price: s.purchase_price != null ? String(s.purchase_price) : "",
+    }))
   );
 
   // Load suppliers once
@@ -107,9 +112,19 @@ function ItemFormContent({
       .catch(() => setSupplierOptions([]));
   }, []);
 
+  const isSupplierChecked = (id: number) => supplierLinks.some((l) => l.supplier_id === id);
+
   const toggleSupplier = (id: number) => {
-    setSelectedSupplierIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    setSupplierLinks((prev) =>
+      prev.some((l) => l.supplier_id === id)
+        ? prev.filter((l) => l.supplier_id !== id)
+        : [...prev, { supplier_id: id, purchase_price: "" }]
+    );
+  };
+
+  const setSupplierPrice = (id: number, price: string) => {
+    setSupplierLinks((prev) =>
+      prev.map((l) => (l.supplier_id === id ? { ...l, purchase_price: price } : l))
     );
   };
 
@@ -183,7 +198,11 @@ function ItemFormContent({
       serviceFee: Number(data.serviceFee || 0),
       stock: Number(data.stock || 0),
       picture: pictureUrl,
-      supplierIds: selectedSupplierIds,
+      suppliers: supplierLinks.map((l) => ({
+        id: l.supplier_id,
+        name: supplierOptions.find((s) => s.id === l.supplier_id)?.name ?? "",
+        purchase_price: l.purchase_price ? Number(l.purchase_price) : null,
+      })),
     });
   }
 
@@ -348,7 +367,7 @@ function ItemFormContent({
         </div>
       </div>
 
-      {/* Supplier (many-to-many) */}
+      {/* Supplier (many-to-many + harga per supplier) */}
       <div className="flex flex-col gap-2">
         <Label className="text-slate-900 dark:text-slate-200 text-sm font-medium">
           Supplier
@@ -359,41 +378,59 @@ function ItemFormContent({
           </p>
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700 p-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700 p-2">
               {supplierOptions.map((s) => {
-                const checked = selectedSupplierIds.includes(s.id);
+                const checked = isSupplierChecked(s.id);
+                const price = supplierLinks.find((l) => l.supplier_id === s.id)?.purchase_price ?? "";
                 return (
-                  <label
+                  <div
                     key={s.id}
-                    className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 cursor-pointer transition-colors ${
+                    className={`rounded-lg border px-3 py-2 transition-colors ${
                       checked
                         ? "border-sky-400 bg-sky-50 dark:bg-sky-900/20"
                         : "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
                     }`}
                   >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleSupplier(s.id)}
-                      className="h-4 w-4 rounded border-slate-300 accent-sky-500"
-                    />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                        {s.name}
-                      </p>
-                      {s.phone && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                          {s.phone}
+                    <label className="flex items-center gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleSupplier(s.id)}
+                        className="h-4 w-4 rounded border-slate-300 accent-sky-500"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                          {s.name}
                         </p>
-                      )}
-                    </div>
-                  </label>
+                        {s.phone && (
+                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                            {s.phone}
+                          </p>
+                        )}
+                      </div>
+                    </label>
+                    {checked && (
+                      <div className="mt-2 flex items-center gap-1.5 pl-6">
+                        <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">
+                          Harga beli
+                        </span>
+                        <input
+                          type="number"
+                          min={0}
+                          placeholder="0"
+                          value={price}
+                          onChange={(e) => setSupplierPrice(s.id, e.target.value)}
+                          className="w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
+                        />
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              {selectedSupplierIds.length > 0
-                ? `${selectedSupplierIds.length} supplier dipilih — barang ini dapat dipasok oleh lebih dari satu supplier.`
+              {supplierLinks.length > 0
+                ? `${supplierLinks.length} supplier dipilih — isi harga beli khusus per supplier (opsional, kosongkan untuk pakai harga beli utama).`
                 : "Pilih satu atau lebih supplier pemasok barang ini."}
             </p>
           </>

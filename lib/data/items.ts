@@ -14,6 +14,8 @@ export type Item = {
   supplierIds?: number[];
   /** Nama supplier terpilih (untuk tampilan) */
   supplierNames?: string[];
+  /** Supplier lengkap + harga beli per supplier */
+  suppliers?: { id: number; name: string; purchase_price: number | null }[];
 };
 
 export const CATEGORIES = [

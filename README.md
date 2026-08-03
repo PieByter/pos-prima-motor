@@ -21,7 +21,7 @@
 ## 🛠️ Tech Stack
 
 | Layer | Teknologi |
-|-------|-----------|
+| ------- | ----------- |
 | Framework | Next.js 16 (App Router) + React 19 |
 | Language | TypeScript 5 |
 | Styling | Tailwind CSS 4 + shadcn/ui (New York) |
@@ -67,7 +67,7 @@ pnpm dev
 ### Environment Variables
 
 | Variable | Dari mana |
-|----------|-----------|
+| ---------- | ----------- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Settings → API → Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Settings → API → anon/public key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API → service_role key |
@@ -78,7 +78,7 @@ pnpm dev
 ## 📦 Scripts
 
 | Command | Fungsi |
-|---------|--------|
+| --------- | -------- |
 | `pnpm dev` | Dev server (Turbopack) |
 | `pnpm build` | Production build |
 | `pnpm lint` | ESLint |
@@ -88,7 +88,7 @@ pnpm dev
 
 ## 📁 Struktur Project
 
-```
+```text
 app/                    # Next.js App Router
 ├── (auth)/             # Login, register, forgot password
 ├── (dashboard)/        # Dashboard + semua halaman POS
@@ -143,4 +143,3 @@ npx drizzle-kit migrate
 ## 📄 License
 
 Private — Prima Motor.
-

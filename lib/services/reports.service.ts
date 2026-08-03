@@ -315,8 +315,7 @@ export async function getMechanicPerformance(
 
     // 3. Get sale_details for service_fee
     const saleIds = (salesData ?? []).map((s) => s.id)
-    let detailsBySale = new Map<number, { serviceFees: number; itemId: number; quantity: number }[]>()
-    let allDetailRows: { sale_id: number; item_id: number; quantity: number; service_fee: number }[] = []
+    const allDetailRows: { sale_id: number; item_id: number; quantity: number; service_fee: number }[] = []
 
     if (saleIds.length > 0) {
       // Batch sale_ids in chunks of 300 to avoid oversized queries

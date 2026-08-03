@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
@@ -62,7 +62,7 @@ function ItemFormContent({
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<ItemFormData>({
     resolver: zodResolver(itemSchema),
@@ -128,23 +128,7 @@ function ItemFormContent({
     );
   };
 
-  const categoryValue = watch("category");
-
-  // Sync form with item data when dialog opens
-  useEffect(() => {
-    if (item) {
-      setValue("name", item.name ?? "");
-      setValue("description", item.description ?? "");
-      setValue("sku", item.sku ?? "");
-      setValue("category", item.category ?? "");
-      setValue("purchasePrice", item.purchasePrice ?? 0);
-      setValue("sellingPrice", item.sellingPrice ?? 0);
-      setValue("serviceFee", item.serviceFee ?? 0);
-      setValue("stock", item.stock ?? 0);
-      setValue("picture", item.picture ?? null);
-      setPreviewUrl(item.picture ?? null);
-    }
-  }, [item, setValue]);
+  const categoryValue = useWatch({ control, name: "category" });
 
   function handleFile(file: File) {
     if (!file.type.startsWith("image/")) return;

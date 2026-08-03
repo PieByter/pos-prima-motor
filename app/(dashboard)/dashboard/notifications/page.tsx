@@ -4,12 +4,10 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import {
   Bell,
   CheckCheck,
-  Loader2,
   AlertCircle,
   Info,
   CheckCircle,
   AlertTriangle,
-  Trash2,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -47,42 +45,58 @@ const ITEMS_PER_PAGE = 10;
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<UiNotification[]>([]);
   const [totalUnread, setTotalUnread] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const refreshRef = useRef(page);
 
-  refreshRef.current = page;
+  // Sinkronkan ref dengan page TANPA mengakses ref saat render
+  useEffect(() => {
+    refreshRef.current = page;
+  }, [page]);
 
   const loadNotifications = useCallback(async (p = page) => {
-    setIsLoading(true);
-    try {
-      const res = await fetch(`/api/notifications?page=${p}&limit=${ITEMS_PER_PAGE}`);
-      if (!res.ok) return;
+    const res = await fetch(`/api/notifications?page=${p}&limit=${ITEMS_PER_PAGE}`);
+    if (!res.ok) return;
+    const json = await res.json();
+    setNotifications(json.data ?? []);
+    setTotalUnread(json.totalUnread ?? 0);
+    setTotal(json.total ?? 0);
+  }, [page]);
+
+  // Muat data saat page berubah — setState dipanggil di dalam async (setelah await),
+  // bukan sinkron di body effect, supaya memenuhi React Compiler rules.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await fetch(`/api/notifications?page=${page}&limit=${ITEMS_PER_PAGE}`);
+      if (cancelled || !res.ok) return;
       const json = await res.json();
       setNotifications(json.data ?? []);
       setTotalUnread(json.totalUnread ?? 0);
       setTotal(json.total ?? 0);
-    } catch (err) {
-      console.error("Failed to load notifications:", err);
-    } finally {
-      setIsLoading(false);
-    }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [page]);
-
-  useEffect(() => {
-    loadNotifications();
-  }, [loadNotifications]);
 
   // ── Real-time: refresh when new notification arrives ─────────────
   useEffect(() => {
     const supabase = createClient();
+    let active = true;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session?.user?.id) return;
+      if (!active || !session?.user?.id) return;
 
-      supabase
-        .channel(`notifications-page-${session.user.id}`)
+      const topic = `notifications-page-${session.user.id}`;
+
+      // StrictMode double-mount: pastikan channel lama dihapus dulu
+      // sebelum menambah callback (kalau tidak → "cannot add ... after subscribe()")
+      supabase.removeChannel(supabase.channel(topic));
+
+      channel = supabase
+        .channel(topic)
         .on(
           "postgres_changes",
           {
@@ -93,7 +107,7 @@ export default function NotificationsPage() {
           },
           () => {
             // Refresh current page when new notification comes in
-            loadNotifications(refreshRef.current);
+            if (active) loadNotifications(refreshRef.current);
           },
         )
         .on(
@@ -105,14 +119,18 @@ export default function NotificationsPage() {
             filter: `user_id=eq.${session.user.id}`,
           },
           () => {
-            loadNotifications(refreshRef.current);
+            if (active) loadNotifications(refreshRef.current);
           },
         )
         .subscribe();
     });
 
     return () => {
-      // Channel cleanup via Supabase client lifecycle
+      active = false;
+      if (channel) {
+        supabase.removeChannel(channel);
+        channel = null;
+      }
     };
   }, [loadNotifications]);
 
@@ -146,16 +164,13 @@ export default function NotificationsPage() {
     }
   }
 
-  function timeAgo(dateStr: string) {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return "Baru saja";
-    if (mins < 60) return `${mins} menit lalu`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs} jam lalu`;
-    const days = Math.floor(hrs / 24);
-    if (days < 7) return `${days} hari lalu`;
-    return new Date(dateStr).toLocaleDateString("id-ID");
+  function formatTime(dateStr: string) {
+    return new Date(dateStr).toLocaleString("id-ID", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   }
 
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
@@ -188,11 +203,7 @@ export default function NotificationsPage() {
 
       {/* List */}
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
-          </div>
-        ) : notifications.length === 0 ? (
+        {notifications.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-slate-400">
             <Bell className="h-12 w-12 mb-3 opacity-30" />
             <p className="text-sm font-medium">Belum ada notifikasi</p>
@@ -241,7 +252,7 @@ export default function NotificationsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 mt-2">
-                      <span className="text-xs text-slate-400">{timeAgo(n.created_at)}</span>
+                      <span className="text-xs text-slate-400">{formatTime(n.created_at)}</span>
                       {n.link && (
                         <Link
                           href={n.link}

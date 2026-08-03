@@ -29,9 +29,7 @@ export function PaymentHistoryDialog({ open, onOpenChange, saleId, onPaymentDone
     if (!open || !saleId) return;
     let cancelled = false;
 
-    setIsLoading(true);
-    setError(null);
-
+    // setState hanya di callback async — bukan sinkron di body effect
     (async () => {
       try {
         const res = await fetch(`/api/sales/${saleId}/payments`, { cache: "no-store" });

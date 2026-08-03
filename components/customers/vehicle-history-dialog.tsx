@@ -53,9 +53,8 @@ export function VehicleHistoryDialog({ open, onOpenChange, vehicle }: Props) {
     if (!open || !vehicle) return;
     let cancelled = false;
 
-    setIsLoading(true);
-    setError(null);
-
+    // Jangan setState sinkron di body effect — state awal sudah cukup,
+    // setState hanya di callback async setelah fetch.
     (async () => {
       try {
         const res = await fetch(`/api/vehicles/history?vehicle_id=${vehicle.id}`, {

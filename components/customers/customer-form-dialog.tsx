@@ -29,49 +29,52 @@ type Props = {
 
 const emptyVehicleForm = { plate_number: "", brand: "", model: "", year: "" };
 
-export function CustomerFormDialog({ open, onOpenChange, customer, onSave }: Props) {
+function CustomerFormContent({
+  customer,
+  onSave,
+  onCancel,
+  onOpenHistory,
+}: {
+  customer: Customer | null;
+  onSave: Props["onSave"];
+  onCancel: () => void;
+  onOpenHistory: (v: Vehicle) => void;
+}) {
   const isEdit = !!customer;
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehicleForm, setVehicleForm] = useState(emptyVehicleForm);
   const [vehicleError, setVehicleError] = useState<string | null>(null);
   const [savingVehicles, setSavingVehicles] = useState(false);
-  const [historyVehicle, setHistoryVehicle] = useState<Vehicle | null>(null);
 
   const {
     register,
     handleSubmit,
-    reset,
     formState: { errors, isSubmitting },
   } = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
     defaultValues: {
-      name: "",
-      phone: "",
-      address: "",
+      name: customer?.name ?? "",
+      phone: customer?.phone ?? "",
+      address: customer?.address ?? "",
     },
   });
 
-  // Reset form when dialog opens with new data
+  // Muat motor saat komponen mount (edit mode) — setState dipanggil di callback async
   useEffect(() => {
-    if (open) {
-      reset({
-        name: customer?.name ?? "",
-        phone: customer?.phone ?? "",
-        address: customer?.address ?? "",
+    if (!customer) return;
+    let cancelled = false;
+    fetch(`/api/vehicles?customer_id=${customer.id}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list) => {
+        if (!cancelled) setVehicles(Array.isArray(list) ? list : []);
+      })
+      .catch(() => {
+        if (!cancelled) setVehicles([]);
       });
-      setVehicleForm(emptyVehicleForm);
-      setVehicleError(null);
-      setVehicles([]);
-
-      // Load vehicles in edit mode
-      if (customer) {
-        fetch(`/api/vehicles?customer_id=${customer.id}`, { cache: "no-store" })
-          .then((r) => (r.ok ? r.json() : []))
-          .then((list) => setVehicles(Array.isArray(list) ? list : []))
-          .catch(() => setVehicles([]));
-      }
-    }
-  }, [open, customer, reset]);
+    return () => {
+      cancelled = true;
+    };
+  }, [customer]);
 
   function updateVehicleForm(patch: Partial<typeof emptyVehicleForm>) {
     setVehicleForm((prev) => ({ ...prev, ...patch }));
@@ -136,28 +139,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer, onSave }: Pro
   }
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
-              <Users className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div>
-              <DialogTitle className="text-lg">
-                {isEdit ? "Edit Customer" : "Tambah Customer Baru"}
-              </DialogTitle>
-              <DialogDescription className="mt-0.5 text-sm">
-                {isEdit
-                  ? "Perbarui informasi customer."
-                  : "Isi data customer baru di bawah ini."}
-              </DialogDescription>
-            </div>
-          </div>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-2">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-2">
           {/* Nama */}
           <div className="space-y-1.5">
             <Label htmlFor="customer-name" className="text-sm font-medium">
@@ -239,7 +221,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer, onSave }: Pro
                       <div className="flex items-center gap-0.5 shrink-0">
                         <button
                           type="button"
-                          onClick={() => setHistoryVehicle(v)}
+                          onClick={() => onOpenHistory(v)}
                           className="rounded-md p-1.5 text-slate-400 hover:bg-sky-50 dark:hover:bg-sky-900/20 hover:text-sky-600 transition-colors"
                           aria-label={`Riwayat ${v.plate_number}`}
                           title="Riwayat service"
@@ -341,7 +323,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer, onSave }: Pro
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={onCancel}
               disabled={isSubmitting}
             >
               Batal
@@ -356,17 +338,54 @@ export function CustomerFormDialog({ open, onOpenChange, customer, onSave }: Pro
             </Button>
           </DialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+  );
+}
 
-    {/* Riwayat service motor — dialog terpisah (tidak nested di atas) */}
-    <VehicleHistoryDialog
-      open={!!historyVehicle}
-      onOpenChange={(open) => {
-        if (!open) setHistoryVehicle(null);
-      }}
-      vehicle={historyVehicle}
-    />
+export function CustomerFormDialog({ open, onOpenChange, customer, onSave }: Props) {
+  const isEdit = !!customer;
+  const [historyVehicle, setHistoryVehicle] = useState<Vehicle | null>(null);
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
+                <Users className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg">
+                  {isEdit ? "Edit Customer" : "Tambah Customer Baru"}
+                </DialogTitle>
+                <DialogDescription className="mt-0.5 text-sm">
+                  {isEdit
+                    ? "Perbarui informasi customer."
+                    : "Isi data customer baru di bawah ini."}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {/* key memaksa remount setiap dialog dibuka → state reset otomatis (React Compiler friendly) */}
+          <CustomerFormContent
+            key={open ? (customer?.id ?? "new") : "closed"}
+            customer={customer}
+            onSave={onSave}
+            onCancel={() => onOpenChange(false)}
+            onOpenHistory={setHistoryVehicle}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Riwayat service motor — dialog terpisah (tidak nested di atas) */}
+      <VehicleHistoryDialog
+        open={!!historyVehicle}
+        onOpenChange={(open) => {
+          if (!open) setHistoryVehicle(null);
+        }}
+        vehicle={historyVehicle}
+      />
     </>
   );
 }

@@ -8,6 +8,61 @@ import type {
   ReportDateRange,
 } from '@/lib/types/database'
 
+/**
+ * Hitung biaya modal rata-rata tertimbang (weighted average cost) per item
+ * dari purchase_details — pembelian status 'completed' sampai end_date.
+ *
+ * Item yang belum punya riwayat pembelian → fallback ke items.purchase_price
+ * (jadi kolom itu tetap berguna sebagai referensi/default).
+ */
+async function getWeightedAverageCostMap(
+  supabase: SupabaseClient,
+  itemIds: number[],
+  endDate: string,
+): Promise<Map<number, number>> {
+  const ids = [...new Set(itemIds)]
+  const avg = new Map<number, number>()
+  if (ids.length === 0) return avg
+
+  // Ambil semua pembelian completed s.d. akhir periode beserta detailnya
+  const { data: purchasesData } = await supabase
+    .from('purchases')
+    .select('id, purchase_details(item_id, quantity, price)')
+    .eq('status', 'completed')
+    .lte('purchase_date', endDate)
+
+  const accum = new Map<number, { qty: number; total: number }>()
+  for (const p of purchasesData ?? []) {
+    const details = (p.purchase_details as Array<{ item_id: number; quantity: number; price: number }> | undefined) ?? []
+    for (const d of details) {
+      const qty = Number(d.quantity)
+      if (qty <= 0) continue
+      const cur = accum.get(d.item_id) ?? { qty: 0, total: 0 }
+      cur.qty += qty
+      cur.total += Number(d.price) * qty
+      accum.set(d.item_id, cur)
+    }
+  }
+
+  for (const [itemId, c] of accum) {
+    avg.set(itemId, c.total / c.qty)
+  }
+
+  // Fallback: item tanpa riwayat pembelian → items.purchase_price
+  const missing = ids.filter((id) => !avg.has(id))
+  if (missing.length > 0) {
+    const { data: items } = await supabase
+      .from('items')
+      .select('id, purchase_price')
+      .in('id', missing)
+    for (const i of items ?? []) {
+      avg.set(i.id, Number(i.purchase_price) || 0)
+    }
+  }
+
+  return avg
+}
+
 export async function getSalesReport(
   supabase: SupabaseClient,
   dateRange: ReportDateRange,
@@ -131,21 +186,14 @@ export async function getProfitLossReport(
 
       total_service_fees = (detailData ?? []).reduce((sum, sd) => sum + Number(sd.service_fee), 0)
 
-      // HPP: get purchase_price from items for each sold item
+      // HPP: biaya modal aktual (rata-rata tertimbang dari purchase_details s.d. akhir periode)
       const itemIds = [...new Set((detailData ?? []).map((d) => d.item_id))]
-      if (itemIds.length > 0) {
-        const { data: items } = await supabase
-          .from('items')
-          .select('id, purchase_price')
-          .in('id', itemIds)
+      const costMap = await getWeightedAverageCostMap(supabase, itemIds, dateRange.end_date)
 
-        const priceMap = new Map((items ?? []).map((i) => [i.id, Number(i.purchase_price)]))
-
-        hpp_total = (detailData ?? []).reduce((sum, sd) => {
-          const purchasePrice = priceMap.get(sd.item_id) ?? 0
-          return sum + purchasePrice * sd.quantity
-        }, 0)
-      }
+      hpp_total = (detailData ?? []).reduce((sum, sd) => {
+        const cost = costMap.get(sd.item_id) ?? 0
+        return sum + cost * sd.quantity
+      }, 0)
     }
 
     const total_sales = (salesData ?? []).reduce((sum, s) => sum + Number(s.total_amount), 0)
@@ -288,16 +336,9 @@ export async function getMechanicPerformance(
       }
     }
 
-    // 4. Get items for HPP
+    // 4. HPP: biaya modal aktual (rata-rata tertimbang dari purchase_details s.d. akhir periode)
     const itemIds = [...new Set(allDetailRows.map((d) => d.item_id))]
-    let priceMap = new Map<number, number>()
-    if (itemIds.length > 0) {
-      const { data: items } = await supabase
-        .from('items')
-        .select('id, purchase_price')
-        .in('id', itemIds)
-      priceMap = new Map((items ?? []).map((i) => [i.id, Number(i.purchase_price)]))
-    }
+    const priceMap = await getWeightedAverageCostMap(supabase, itemIds, dateRange.end_date)
 
     // 5. Aggregate per mechanic
     type MechAgg = {

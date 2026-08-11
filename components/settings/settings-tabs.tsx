@@ -1,9 +1,10 @@
 "use client";
 
-import { User, Users, Palette, ShieldAlert } from "lucide-react";
+import { User, Users, Palette, ShieldAlert, Store } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProfileSection } from "@/components/settings/profile-section";
 import { UsersTable } from "@/components/settings/users-table";
+import { BusinessSettingsSection } from "@/components/settings/business-settings-section";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { useUserRole } from "@/lib/hooks/use-user-role";
@@ -34,6 +35,15 @@ export function SettingsTabs() {
             Kelola Pengguna
           </TabsTrigger>
         )}
+        {isAdmin && (
+          <TabsTrigger
+            value="business"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-sky-500 data-[state=active]:text-sky-500 data-[state=active]:shadow-none bg-transparent px-1 pb-4 pt-2 font-medium text-sm gap-2"
+          >
+            <Store className="h-5 w-5" />
+            Pengaturan Toko
+          </TabsTrigger>
+        )}
         <TabsTrigger
           value="appearance"
           className="rounded-none border-b-2 border-transparent data-[state=active]:border-sky-500 data-[state=active]:text-sky-500 data-[state=active]:shadow-none bg-transparent px-1 pb-4 pt-2 font-medium text-sm gap-2"
@@ -59,6 +69,23 @@ export function SettingsTabs() {
             <ShieldAlert className="h-8 w-8 mx-auto mb-2 text-red-500" />
             <p className="text-sm font-medium text-red-700 dark:text-red-400">
               Hanya admin yang dapat mengelola pengguna.
+            </p>
+          </div>
+        )}
+      </TabsContent>
+
+      <TabsContent value="business" className="space-y-6">
+        {loading ? (
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <ShieldAlert className="h-4 w-4" /> Memuat...
+          </div>
+        ) : isAdmin ? (
+          <BusinessSettingsSection />
+        ) : (
+          <div className="rounded-xl border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20 p-6 text-center">
+            <ShieldAlert className="h-8 w-8 mx-auto mb-2 text-red-500" />
+            <p className="text-sm font-medium text-red-700 dark:text-red-400">
+              Hanya admin yang dapat mengubah pengaturan toko.
             </p>
           </div>
         )}

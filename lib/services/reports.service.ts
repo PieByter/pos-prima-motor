@@ -625,3 +625,107 @@ export async function getPayablesReport(
     return { data: null, error: err as Error }
   }
 }
+
+export type ItemProfitRow = {
+  item_id: number
+  item_name: string
+  sku: string | null
+  quantity_sold: number
+  revenue: number
+  hpp: number
+  profit: number
+  margin_pct: number
+}
+
+/**
+ * Laporan laba per item — penjualan completed dalam rentang,
+ * HPP pakai weighted average cost (konsisten dengan profit-loss).
+ */
+export async function getItemProfitReport(
+  supabase: SupabaseClient,
+  dateRange: ReportDateRange,
+): Promise<{ data: ItemProfitRow[] | null; error: Error | null }> {
+  try {
+    // 1. Ambil sale_ids completed dalam rentang
+    const { data: salesData, error: salesError } = await supabase
+      .from('sales')
+      .select('id')
+      .eq('status', 'completed')
+      .gte('sale_date', dateRange.start_date)
+      .lte('sale_date', dateRange.end_date)
+
+    if (salesError) return { data: null, error: new Error(salesError.message) }
+
+    const saleIds = (salesData ?? []).map((s) => s.id)
+
+    // 2. Ambil detail penjualan + nama item
+    const detailRows: {
+      item_id: number
+      quantity: number
+      subtotal: number
+      discount_amount: number
+      service_fee: number
+      items?: { name?: string; sku?: string | null } | null
+    }[] = []
+
+    if (saleIds.length > 0) {
+      const chunks: number[][] = []
+      for (let i = 0; i < saleIds.length; i += 300) {
+        chunks.push(saleIds.slice(i, i + 300))
+      }
+      for (const chunk of chunks) {
+        const { data: chunkRows, error: detailError } = await supabase
+          .from('sale_details')
+          .select('item_id, quantity, subtotal, discount_amount, service_fee, items(name, sku)')
+          .in('sale_id', chunk)
+        if (detailError) return { data: null, error: new Error(detailError.message) }
+        detailRows.push(...((chunkRows ?? []) as typeof detailRows))
+      }
+    }
+
+    // 3. HPP per item
+    const itemIds = [...new Set(detailRows.map((d) => d.item_id))]
+    const costMap = await getWeightedAverageCostMap(supabase, itemIds, dateRange.end_date)
+
+    // 4. Agregasi per item
+    const agg = new Map<number, { name: string; sku: string | null; qty: number; revenue: number; hpp: number; discount: number }>()
+    for (const d of detailRows) {
+      const cur = agg.get(d.item_id) ?? {
+        name: d.items?.name ?? `Item #${d.item_id}`,
+        sku: d.items?.sku ?? null,
+        qty: 0,
+        revenue: 0,
+        hpp: 0,
+        discount: 0,
+      }
+      const qty = Number(d.quantity ?? 0)
+      cur.qty += qty
+      cur.revenue += Number(d.subtotal ?? 0)
+      cur.discount += Number(d.discount_amount ?? 0)
+      cur.hpp += (costMap.get(d.item_id) ?? 0) * qty
+      agg.set(d.item_id, cur)
+    }
+
+    // 5. Susun hasil — profit = revenue - discount - hpp
+    const rows: ItemProfitRow[] = [...agg.entries()].map(([itemId, a]) => {
+      const netRevenue = a.revenue - a.discount
+      const profit = netRevenue - a.hpp
+      return {
+        item_id: itemId,
+        item_name: a.name,
+        sku: a.sku,
+        quantity_sold: a.qty,
+        revenue: netRevenue,
+        hpp: a.hpp,
+        profit,
+        margin_pct: netRevenue > 0 ? Math.round((profit / netRevenue) * 1000) / 10 : 0,
+      }
+    })
+
+    rows.sort((a, b) => b.profit - a.profit)
+
+    return { data: rows, error: null }
+  } catch (err) {
+    return { data: null, error: err as Error }
+  }
+}

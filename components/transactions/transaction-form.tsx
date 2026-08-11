@@ -22,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useBusinessSettings } from "@/lib/hooks/use-business-settings";
 import {
   Select,
   SelectContent,
@@ -236,6 +237,7 @@ export function TransactionForm({
   }, [isSale]);
 
   /* ---- derived totals ---- */
+  const taxPercent = useBusinessSettings().settings.tax_percent ?? 11;
   const totals = useMemo(() => {
     let itemsSubtotal = 0;
     let serviceFees = 0;
@@ -250,7 +252,7 @@ export function TransactionForm({
     }
 
     const beforeTax = itemsSubtotal + serviceFees - totalDiscount;
-    const taxRate = 0.11; // PPN 11%
+    const taxRate = taxPercent / 100; // PPN dinamis dari pengaturan bisnis
     const tax = Math.round(beforeTax * taxRate);
     const grandTotal = beforeTax + tax;
 
@@ -258,7 +260,7 @@ export function TransactionForm({
     const changeAmount = cash >= grandTotal ? cash - grandTotal : 0;
 
     return { itemsSubtotal, serviceFees, totalDiscount, taxRate, tax, grandTotal, cashAmount: cash, changeAmount };
-  }, [lines, cashAmount]);
+  }, [lines, cashAmount, taxPercent]);
 
   /* ---- payment method helpers ---- */
   const selectedPaymentMethod = paymentMethods.find((pm) => pm.id.toString() === paymentMethodId);

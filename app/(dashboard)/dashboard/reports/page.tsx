@@ -14,6 +14,7 @@ import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { MechanicPerformanceTable } from "@/components/reports/mechanic-performance-table";
 import { WeeklySalarySummary } from "@/components/reports/weekly-salary-summary";
+import { ItemProfitTable } from "@/components/reports/item-profit-table";
 
 /* ───── Types ───── */
 
@@ -218,6 +219,12 @@ export default function ReportsPage() {
             className="data-[state=active]:border-b-2 data-[state=active]:border-sky-500 data-[state=active]:text-sky-600 data-[state=active]:shadow-none rounded-none px-5 py-2.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white border-b-2 border-transparent"
           >
             💰 Gaji Mingguan
+          </TabsTrigger>
+          <TabsTrigger
+            value="item"
+            className="data-[state=active]:border-b-2 data-[state=active]:border-sky-500 data-[state=active]:text-sky-600 data-[state=active]:shadow-none rounded-none px-5 py-2.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white border-b-2 border-transparent"
+          >
+            📦 Laba per Item
           </TabsTrigger>
         </TabsList>
 
@@ -439,6 +446,13 @@ export default function ReportsPage() {
 
         <TabsContent value="gaji" className="mt-0">
           <WeeklySalarySummary
+            startDate={startDate}
+            endDate={endDate}
+          />
+        </TabsContent>
+
+        <TabsContent value="item" className="mt-0">
+          <ItemProfitTable
             startDate={startDate}
             endDate={endDate}
           />

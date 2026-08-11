@@ -24,6 +24,23 @@ export const paymentMethods = pgTable('payment_methods', {
     is_active: boolean('is_active').notNull().default(true),
 })
 
+// ─── business_settings (pengaturan toko: nama, PPN, low stock threshold, dll) ─
+export const businessSettings = pgTable('business_settings', {
+    id: serial('id').primaryKey(),
+    shop_name: text('shop_name').notNull().default('Prima Motor'),
+    shop_address: text('shop_address'),
+    shop_phone: text('shop_phone'),
+    whatsapp_number: text('whatsapp_number'),
+    // Pajak PPN dalam persen (mis. 11) — dipakai form transaksi
+    tax_percent: numeric('tax_percent', { precision: 5, scale: 2 }).notNull().default('11'),
+    // Ambang stok menipis untuk peringatan (low stock)
+    low_stock_threshold: integer('low_stock_threshold').notNull().default(5),
+    // Catatan struk (footer)
+    receipt_footer: text('receipt_footer'),
+    updated_by: uuid('updated_by').references(() => profiles.id),
+    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
 // ─── expenses ────────────────────────────────────────────────────────────────
 export const expenses = pgTable(
     'expenses',

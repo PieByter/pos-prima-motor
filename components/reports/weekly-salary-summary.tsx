@@ -72,9 +72,6 @@ export function WeeklySalarySummary({ startDate, endDate }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const loadWeeklySalary = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
     try {
       const query = `start_date=${startDate}&end_date=${endDate}`;
       const res = await fetch(`/api/reports/weekly-salary?${query}`, {
@@ -90,6 +87,7 @@ export function WeeklySalarySummary({ startDate, endDate }: Props) {
       }
 
       const json = await res.json();
+      setError(null);
       setData((json ?? []) as WeeklySalaryRow[]);
     } catch (err) {
       console.error(err);
@@ -100,7 +98,10 @@ export function WeeklySalarySummary({ startDate, endDate }: Props) {
   }, [startDate, endDate]);
 
   useEffect(() => {
-    loadWeeklySalary();
+    const t = window.setTimeout(() => {
+      void loadWeeklySalary();
+    }, 0);
+    return () => window.clearTimeout(t);
   }, [loadWeeklySalary]);
 
   const totals = {

@@ -308,7 +308,10 @@ function EditProfileDialog({
 
   useEffect(() => {
     if (open) {
-      setName(data?.profile?.name ?? "");
+      const t = window.setTimeout(() => {
+        setName(data?.profile?.name ?? "");
+      }, 0);
+      return () => window.clearTimeout(t);
     }
   }, [open, data]);
 

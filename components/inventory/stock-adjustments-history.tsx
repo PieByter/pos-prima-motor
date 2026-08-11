@@ -32,7 +32,6 @@ export function StockAdjustmentsHistoryPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchAdjustments = useCallback(async (page = currentPage) => {
-    setIsLoading(true);
     try {
       const res = await fetch(`/api/stock-adjustments?page=${page}&limit=${ITEMS_PER_PAGE}`, { cache: "no-store" });
       const result = (await res.json()) as PaginatedResponse<StockAdjustmentWithItem>;
@@ -46,7 +45,10 @@ export function StockAdjustmentsHistoryPage() {
   }, [currentPage]);
 
   useEffect(() => {
-    fetchAdjustments();
+    const t = window.setTimeout(() => {
+      void fetchAdjustments();
+    }, 0);
+    return () => window.clearTimeout(t);
   }, [fetchAdjustments]);
 
   return (

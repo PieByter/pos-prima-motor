@@ -76,7 +76,6 @@ export function PurchaseOrdersPage() {
   const [rows, setRows] = useState<POItemRow[]>([{ item_id: "", quantity: "1", price: "" }]);
 
   const fetchOrders = useCallback(async (page = currentPage) => {
-    setIsLoading(true);
     try {
       const res = await fetch(`/api/purchase-orders?page=${page}&limit=${ITEMS_PER_PAGE}`, { cache: "no-store" });
       const result = (await res.json()) as PaginatedResponse<PurchaseOrderWithDetails>;
@@ -91,7 +90,10 @@ export function PurchaseOrdersPage() {
   }, [currentPage]);
 
   useEffect(() => {
-    fetchOrders();
+    const t = window.setTimeout(() => {
+      void fetchOrders();
+    }, 0);
+    return () => window.clearTimeout(t);
   }, [fetchOrders]);
 
   useEffect(() => {

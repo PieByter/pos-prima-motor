@@ -36,12 +36,11 @@ export function ReceivablesTable() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
     try {
       const res = await fetch("/api/reports/receivables", { cache: "no-store" });
       if (!res.ok) throw new Error("Gagal memuat laporan piutang");
       const json = (await res.json()) as ReceivablesReport;
+      setError(null);
       setData(json);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat laporan");
@@ -51,7 +50,10 @@ export function ReceivablesTable() {
   }, []);
 
   useEffect(() => {
-    load();
+    const t = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(t);
   }, [load]);
 
   const rows: ReceivableRow[] = data?.rows ?? [];

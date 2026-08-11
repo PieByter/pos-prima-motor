@@ -64,18 +64,21 @@ export function I18nProvider({
     dictionaries,
     defaultLocale = "id",
 }: I18nProviderProps) {
-    const [locale, setLocaleState] = useState<LocaleCode>(defaultLocale);
+    const [locale, setLocaleState] = useState<LocaleCode>(() => {
+        if (typeof window === "undefined") return defaultLocale;
+        const saved = localStorage.getItem("locale") as LocaleCode | null;
+        return saved && dictionaries[saved] ? saved : defaultLocale;
+    });
     const [mounted, setMounted] = useState(false);
     const dict = dictionaries[locale] ?? dictionaries[defaultLocale];
 
     // Load saved preference after mount
     useEffect(() => {
-        setMounted(true);
-        const saved = localStorage.getItem("locale") as LocaleCode | null;
-        if (saved && dictionaries[saved]) {
-            setLocaleState(saved);
-        }
-    }, [dictionaries]);
+        const t = window.setTimeout(() => {
+            setMounted(true);
+        }, 0);
+        return () => window.clearTimeout(t);
+    }, []);
 
     const setLocale = useCallback(
         (code: LocaleCode) => {

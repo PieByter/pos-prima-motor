@@ -83,6 +83,7 @@ export default function EditSalePage() {
         type="sale"
         initialData={initialData}
         transactionId={invoiceNumber}
+        numericId={params.id}
       />
     </>
   );

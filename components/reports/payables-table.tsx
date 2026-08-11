@@ -36,12 +36,11 @@ export function PayablesTable() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
     try {
       const res = await fetch("/api/reports/payables", { cache: "no-store" });
       if (!res.ok) throw new Error("Gagal memuat laporan hutang");
       const json = (await res.json()) as PayablesReport;
+      setError(null);
       setData(json);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat laporan");
@@ -51,7 +50,10 @@ export function PayablesTable() {
   }, []);
 
   useEffect(() => {
-    load();
+    const t = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(t);
   }, [load]);
 
   const rows: PayableRow[] = data?.rows ?? [];

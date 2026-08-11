@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Trash2, Loader2, Download } from "lucide-react";
+import { Plus, Trash2, Loader2, Download } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/lib/toast-provider";
@@ -30,13 +30,20 @@ export default function ExpensesPage() {
   const { showToast } = useToast();
   const [expenses, setExpenses] = useState<ExpenseRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [search] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ description: "", amount: "", category: "others", expense_date: new Date().toISOString().slice(0, 10), notes: "" });
+  const [form, setForm] = useState({ description: "", amount: "", category: "others", expense_date: new Date().toISOString().slice(0, 10), notes: "", payment_method_id: "" });
+  const [paymentMethods, setPaymentMethods] = useState<{ id: number; name: string }[]>([]);
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    fetch("/api/payment-methods", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list) => setPaymentMethods(Array.isArray(list) ? list : []))
+      .catch(() => {});
+  }, []);
+
   const fetchExpenses = useCallback(async () => {
-    setIsLoading(true);
     try {
       const params = new URLSearchParams({ limit: "50" });
       if (search) params.append("search", search);
@@ -50,7 +57,12 @@ export default function ExpensesPage() {
     }
   }, [search]);
 
-  useEffect(() => { fetchExpenses() }, [fetchExpenses]);
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      void fetchExpenses();
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [fetchExpenses]);
 
   const handleCreate = async () => {
     if (!form.description || !form.amount) return;
@@ -64,12 +76,13 @@ export default function ExpensesPage() {
           amount: Number(form.amount),
           category: form.category,
           expense_date: form.expense_date,
+          payment_method_id: form.payment_method_id ? Number(form.payment_method_id) : null,
           notes: form.notes || null,
         }),
       });
       if (res.ok) {
         setShowForm(false);
-        setForm({ description: "", amount: "", category: "others", expense_date: new Date().toISOString().slice(0, 10), notes: "" });
+        setForm({ description: "", amount: "", category: "others", expense_date: new Date().toISOString().slice(0, 10), notes: "", payment_method_id: "" });
         showToast("Pengeluaran berhasil dicatat", "success");
         fetchExpenses();
       } else {
@@ -116,11 +129,15 @@ export default function ExpensesPage() {
         {/* Add Form */}
         {showForm && (
           <div className="rounded-xl border bg-white p-4 dark:bg-slate-800">
-            <div className="grid gap-3 sm:grid-cols-5">
+            <div className="grid gap-3 sm:grid-cols-6">
               <Input placeholder="Deskripsi" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               <Input type="number" placeholder="Jumlah (Rp)" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
               <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="rounded-lg border px-3 py-2 text-sm dark:bg-slate-700">
                 {Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+              <select value={form.payment_method_id} onChange={(e) => setForm({ ...form, payment_method_id: e.target.value })} className="rounded-lg border px-3 py-2 text-sm dark:bg-slate-700">
+                <option value="">Metode bayar</option>
+                {paymentMethods.map((pm) => <option key={pm.id} value={pm.id}>{pm.name}</option>)}
               </select>
               <Input type="date" value={form.expense_date} onChange={(e) => setForm({ ...form, expense_date: e.target.value })} />
               <div className="flex gap-2">

@@ -163,6 +163,7 @@ export async function updatePurchase(
   supabase: SupabaseClient,
   id: number,
   header: PurchaseUpdate,
+  details?: Omit<PurchaseDetailInsert, 'purchase_id'>[],
 ): Promise<{ data: Purchase | null; error: Error | null }> {
   try {
     const { data: row, error } = await supabase
@@ -173,6 +174,27 @@ export async function updatePurchase(
       .single()
 
     if (error || !row) return { data: null, error: new Error('Purchase not found') }
+
+    // Jika details dikirim → replace seluruh detail + stock movement (hindari duplikat)
+    if (details) {
+      await supabase.from('stock_movements').delete().eq('reference_type', 'purchase').eq('reference_id', id)
+      await supabase.from('purchase_details').delete().eq('purchase_id', id)
+
+      const detailsWithId = details.map((d) => ({ ...d, purchase_id: id }))
+      const { error: detailsError } = await supabase.from('purchase_details').insert(detailsWithId)
+      if (detailsError) return { data: null, error: new Error(detailsError.message) }
+
+      const stockMovs = details.map((d) => ({
+        item_id: d.item_id,
+        type: 'IN' as const,
+        quantity: d.quantity,
+        reference_type: 'purchase' as const,
+        reference_id: id,
+      }))
+      const { error: stockError } = await supabase.from('stock_movements').insert(stockMovs)
+      if (stockError) return { data: null, error: new Error(stockError.message) }
+    }
+
     return { data: mapPurchase(row), error: null }
   } catch (err) {
     return { data: null, error: err as Error }

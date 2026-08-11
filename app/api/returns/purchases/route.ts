@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: retError?.message ?? 'Failed' }, { status: 400 })
         }
 
-        const details = (body.items ?? []).map((item: any) => ({
+        const details = (body.items ?? []).map((item: { item_id: number; quantity: number; refund_amount: number }) => ({
             return_id: ret.id,
             item_id: item.item_id,
             quantity: item.quantity,

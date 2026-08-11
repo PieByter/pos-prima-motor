@@ -434,6 +434,12 @@ export function ItemsTable() {
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">
                   Harga Jual
                 </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">
+                  Jasa
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center">
+                  Garansi
+                </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center">
                   Stok
                 </TableHead>
@@ -445,7 +451,7 @@ export function ItemsTable() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-16">
+                  <TableCell colSpan={12} className="text-center py-16">
                     <div className="flex flex-col items-center gap-3">
                       <Loader className="h-7 w-7 animate-spin text-sky-500" />
                       <span className="text-sm text-slate-500 dark:text-slate-400">
@@ -456,7 +462,7 @@ export function ItemsTable() {
                 </TableRow>
               ) : paginatedItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-16">
+                  <TableCell colSpan={12} className="text-center py-16">
                     <div className="flex flex-col items-center gap-3">
                       <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-full">
                         <Package2 className="h-6 w-6 text-slate-400" />
@@ -573,6 +579,25 @@ export function ItemsTable() {
                       {/* Selling Price */}
                       <TableCell className="text-right text-sm font-semibold text-slate-900 dark:text-white font-mono">
                         {formatRupiah(item.sellingPrice)}
+                      </TableCell>
+
+                      {/* Service Fee */}
+                      <TableCell className="text-right text-sm text-slate-600 dark:text-slate-400 font-mono">
+                        {item.serviceFee > 0 ? formatRupiah(item.serviceFee) : "—"}
+                      </TableCell>
+
+                      {/* Warranty */}
+                      <TableCell className="text-center">
+                        {item.warrantyMonths != null && item.warrantyMonths > 0 ? (
+                          <Badge
+                            variant="secondary"
+                            className="text-[11px] font-medium bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-900/20 dark:text-violet-400 dark:border-violet-800"
+                          >
+                            {item.warrantyMonths} bln
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-slate-400 dark:text-slate-500">—</span>
+                        )}
                       </TableCell>
 
                       {/* Stock */}

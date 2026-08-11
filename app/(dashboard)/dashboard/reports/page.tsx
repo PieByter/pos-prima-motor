@@ -105,9 +105,6 @@ export default function ReportsPage() {
   const [tab, setTab] = useState("keuangan");
 
   const loadReports = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
     try {
       const query = `start_date=${startDate}&end_date=${endDate}`;
       const [salesRes, purchasesRes, profitLossRes] = await Promise.all([
@@ -148,6 +145,7 @@ export default function ReportsPage() {
         profitLossRes.json(),
       ]);
 
+      setError(null);
       setSales(salesData);
       setPurchases(purchasesData);
       setProfitLoss(profitLossData);
@@ -160,7 +158,10 @@ export default function ReportsPage() {
   }, [startDate, endDate]);
 
   useEffect(() => {
-    loadReports();
+    const t = window.setTimeout(() => {
+      void loadReports();
+    }, 0);
+    return () => window.clearTimeout(t);
   }, [loadReports]);
 
   const dailyRows = useMemo(() => {

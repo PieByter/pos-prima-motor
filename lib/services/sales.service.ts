@@ -226,6 +226,7 @@ export async function updateSale(
   supabase: SupabaseClient,
   id: number,
   header: SaleUpdate,
+  details?: Omit<SaleDetailInsert, 'sale_id'>[],
 ): Promise<{ data: Sale | null; error: Error | null }> {
   try {
     const { data: row, error } = await supabase
@@ -236,6 +237,41 @@ export async function updateSale(
       .single()
 
     if (error || !row) return { data: null, error: new Error('Sale not found') }
+
+    // Jika details dikirim → replace seluruh detail + stock movement (hindari duplikat)
+    if (details) {
+      await supabase.from('stock_movements').delete().eq('reference_type', 'sale').eq('reference_id', id)
+      await supabase.from('sale_details').delete().eq('sale_id', id)
+
+      const itemIds = [...new Set(details.map((d) => d.item_id))]
+      let warrantyMap = new Map<number, number | null>()
+      if (itemIds.length > 0) {
+        const { data: items } = await supabase
+          .from('items')
+          .select('id, warranty_months')
+          .in('id', itemIds)
+        warrantyMap = new Map((items ?? []).map((i) => [i.id, i.warranty_months != null ? Number(i.warranty_months) : null]))
+      }
+
+      const detailsWithId = details.map((d) => ({
+        ...d,
+        sale_id: id,
+        warranty_months: d.warranty_months != null ? d.warranty_months : (warrantyMap.get(d.item_id) ?? null),
+      }))
+      const { error: detailsError } = await supabase.from('sale_details').insert(detailsWithId)
+      if (detailsError) return { data: null, error: new Error(detailsError.message) }
+
+      const stockMovs = details.map((d) => ({
+        item_id: d.item_id,
+        type: 'OUT' as const,
+        quantity: d.quantity,
+        reference_type: 'sale' as const,
+        reference_id: id,
+      }))
+      const { error: stockError } = await supabase.from('stock_movements').insert(stockMovs)
+      if (stockError) return { data: null, error: new Error(stockError.message) }
+    }
+
     return { data: mapSale(row), error: null }
   } catch (err) {
     return { data: null, error: err as Error }

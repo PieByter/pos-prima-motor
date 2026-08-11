@@ -79,7 +79,6 @@ export function WarrantyClaimsPage() {
   });
 
   const fetchClaims = useCallback(async (page = currentPage) => {
-    setIsLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), limit: String(ITEMS_PER_PAGE) });
       if (statusFilter) params.append("status", statusFilter);
@@ -96,7 +95,10 @@ export function WarrantyClaimsPage() {
   }, [statusFilter, currentPage]);
 
   useEffect(() => {
-    fetchClaims();
+    const t = window.setTimeout(() => {
+      void fetchClaims();
+    }, 0);
+    return () => window.clearTimeout(t);
   }, [fetchClaims]);
 
   async function handleSubmit() {

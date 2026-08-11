@@ -74,9 +74,6 @@ export function MechanicPerformanceTable({ startDate, endDate }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const loadMechanicReport = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
     try {
       const query = `start_date=${startDate}&end_date=${endDate}`;
       const res = await fetch(`/api/reports/mechanic-performance?${query}`, {
@@ -92,6 +89,7 @@ export function MechanicPerformanceTable({ startDate, endDate }: Props) {
       }
 
       const json = await res.json();
+      setError(null);
       setData((json ?? []) as MechanicPerformanceRow[]);
     } catch (err) {
       console.error(err);
@@ -102,7 +100,10 @@ export function MechanicPerformanceTable({ startDate, endDate }: Props) {
   }, [startDate, endDate]);
 
   useEffect(() => {
-    loadMechanicReport();
+    const t = window.setTimeout(() => {
+      void loadMechanicReport();
+    }, 0);
+    return () => window.clearTimeout(t);
   }, [loadMechanicReport]);
 
   const totals = {

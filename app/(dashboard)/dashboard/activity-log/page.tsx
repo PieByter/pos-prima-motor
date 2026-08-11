@@ -127,7 +127,7 @@ export default function ActivityLogPage() {
             <div className="divide-y">
               {logs.map((log) => {
                 const Icon = ACTION_ICONS[log.action] ?? History;
-                const userName = (log as any).profiles?.name ?? "Sistem";
+                const userName = log.profiles?.name ?? "Sistem";
                 return (
                   <button
                     key={log.id}
@@ -184,7 +184,7 @@ export default function ActivityLogPage() {
                   <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Oleh</p>
                   <p className="mt-1 flex items-center gap-1.5 text-slate-900 dark:text-white">
                     <User className="h-3.5 w-3.5 text-slate-400" />
-                    {(selectedLog as any).profiles?.name ?? "Sistem"}
+                    {(selectedLog.profiles?.name ?? "Sistem")}
                   </p>
                 </div>
                 <div>

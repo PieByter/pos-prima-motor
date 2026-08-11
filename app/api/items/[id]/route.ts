@@ -50,8 +50,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       const priceChanges: Array<{ item_id: number; field: string; old_price: number; new_price: number; changed_by: string }> = []
 
       for (const field of priceFields) {
-        const oldVal = Number((oldItem as any)[field] ?? 0)
-        const newVal = Number((data as any)[field] ?? 0)
+        const oldVal = Number((oldItem as Record<string, unknown>)[field] ?? 0)
+        const newVal = Number((data as Record<string, unknown>)[field] ?? 0)
         if (oldVal !== newVal) {
           priceChanges.push({
             item_id: numericId,

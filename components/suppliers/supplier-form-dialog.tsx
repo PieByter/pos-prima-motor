@@ -52,10 +52,23 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onSave }: Pro
     },
   });
 
-  // Reset form when dialog opens with new data
+  // Reset kontak saat dialog dibuka — pola "adjust state during render" (resmi React),
+  // menghindari setState sinkron di dalam effect
+  const [lastSyncKey, setLastSyncKey] = useState("");
+  const syncKey = `${open ? "open" : "closed"}-${supplier?.id ?? "new"}`;
+  if (open && syncKey !== lastSyncKey) {
+    setLastSyncKey(syncKey);
+    const supplierContacts = (supplier as Supplier & { contacts?: SupplierContactFormData[] })?.contacts ?? [];
+    setContacts(
+      supplierContacts.length > 0
+        ? supplierContacts
+        : [{ name: "", phone: "", position: "", email: "", is_primary: true, notes: "" }],
+    );
+  }
+
+  // Reset RHF form ketika dialog dibuka dengan data baru
   useEffect(() => {
     if (open) {
-      const supplierContacts = (supplier as Supplier & { contacts?: SupplierContactFormData[] })?.contacts ?? [];
       reset({
         name: supplier?.name ?? "",
         phone: supplier?.phone ?? "",
@@ -68,11 +81,6 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onSave }: Pro
         npwp: (supplier as Supplier & { npwp?: string | null })?.npwp ?? "",
         notes: (supplier as Supplier & { notes?: string | null })?.notes ?? "",
       });
-      setContacts(
-        supplierContacts.length > 0
-          ? supplierContacts
-          : [{ name: "", phone: "", position: "", email: "", is_primary: true, notes: "" }],
-      );
     }
   }, [open, supplier, reset]);
 
@@ -363,7 +371,7 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onSave }: Pro
               </div>
             ))}
             {contacts.length === 0 && (
-              <p className="text-xs text-slate-400 text-center py-1">Belum ada kontak. Klik "Tambah" untuk menambahkan.</p>
+              <p className="text-xs text-slate-400 text-center py-1">Belum ada kontak. Klik &quot;Tambah&quot; untuk menambahkan.</p>
             )}
           </div>
 

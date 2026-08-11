@@ -112,9 +112,6 @@ export default function InventoryPage() {
   };
 
   const loadInventory = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
     try {
       const stockQuery = new URLSearchParams({
         page: String(page),
@@ -156,6 +153,7 @@ export default function InventoryPage() {
         movementRes.json(),
       ]);
 
+      setError(null);
       setStock(stockData);
       setLowStock(lowStockData ?? []);
       setMovements(movementData);
@@ -168,7 +166,10 @@ export default function InventoryPage() {
   }, [page, search, status]);
 
   useEffect(() => {
-    loadInventory();
+    const t = window.setTimeout(() => {
+      void loadInventory();
+    }, 0);
+    return () => window.clearTimeout(t);
   }, [loadInventory]);
 
   const totalCurrentStock = useMemo(() => {

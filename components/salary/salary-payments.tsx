@@ -59,7 +59,6 @@ export function SalaryPaymentsPage() {
   });
 
   const fetchPayments = useCallback(async (page = currentPage) => {
-    setIsLoading(true);
     try {
       const res = await fetch(`/api/salary-payments?page=${page}&limit=${ITEMS_PER_PAGE}`, { cache: "no-store" });
       const result = (await res.json()) as PaginatedResponse<SalaryPaymentWithMechanic>;
@@ -74,7 +73,10 @@ export function SalaryPaymentsPage() {
   }, [currentPage]);
 
   useEffect(() => {
-    fetchPayments();
+    const t = window.setTimeout(() => {
+      void fetchPayments();
+    }, 0);
+    return () => window.clearTimeout(t);
   }, [fetchPayments]);
 
   useEffect(() => {

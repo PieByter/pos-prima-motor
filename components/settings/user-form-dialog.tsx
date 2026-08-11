@@ -71,19 +71,22 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: Props) {
 
   useEffect(() => {
     if (open) {
-      setName(user?.name ?? "");
-      setRole(
-        user?.role === "Admin"
-          ? "admin"
-          : user?.role === "Mekanik"
-            ? "mekanik"
-            : "mekanik",
-      );
-      setIsActive(user?.status === "Aktif");
-      setPassword("");
-      setWeeklySalary(user?.weekly_salary ? user.weekly_salary.toString() : "0");
-      setCommissionPct(user?.service_commission_pct ? user.service_commission_pct.toString() : "0");
-      setHireDate(user?.hire_date ?? "");
+      const t = window.setTimeout(() => {
+        setName(user?.name ?? "");
+        setRole(
+          user?.role === "Admin"
+            ? "admin"
+            : user?.role === "Mekanik"
+              ? "mekanik"
+              : "mekanik",
+        );
+        setIsActive(user?.status === "Aktif");
+        setPassword("");
+        setWeeklySalary(user?.weekly_salary ? user.weekly_salary.toString() : "0");
+        setCommissionPct(user?.service_commission_pct ? user.service_commission_pct.toString() : "0");
+        setHireDate(user?.hire_date ?? "");
+      }, 0);
+      return () => window.clearTimeout(t);
     }
   }, [open, user]);
 

@@ -67,8 +67,6 @@ export function CustomersTable() {
 
   const fetchCustomers = useCallback(
     async (page = currentPage) => {
-      setIsLoading(true);
-      setError(null);
       try {
         const params = new URLSearchParams();
         if (search.trim()) params.append("search", search.trim());
@@ -95,6 +93,7 @@ export function CustomersTable() {
         }
 
         const result = (await res.json()) as PaginatedResponse<Customer>;
+        setError(null);
         setCustomers(result.data ?? []);
         setTotal(result.total ?? 0);
         setTotalPages(result.totalPages ?? 1);
@@ -109,7 +108,10 @@ export function CustomersTable() {
   );
 
   useEffect(() => {
-    fetchCustomers();
+    const t = window.setTimeout(() => {
+      void fetchCustomers();
+    }, 0);
+    return () => window.clearTimeout(t);
   }, [fetchCustomers]);
 
   function handleAdd() {
@@ -154,7 +156,7 @@ export function CustomersTable() {
       setSelectedIds(new Set());
       setCurrentPage(1);
       await fetchCustomers(1);
-    } catch (err) {
+    } catch {
       showToast("Gagal menghapus", "error");
     }
   }
@@ -272,10 +274,16 @@ export function CustomersTable() {
                   Nama Customer
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5">
+                  Tipe
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5">
                   <div className="flex items-center gap-1.5">
                     <Phone className="h-3 w-3" />
                     No. HP
                   </div>
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5">
+                  Email
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5">
                   <div className="flex items-center gap-1.5">
@@ -297,7 +305,7 @@ export function CustomersTable() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-16 text-center">
+                  <TableCell colSpan={8} className="py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <Loader className="h-7 w-7 animate-spin text-emerald-500" />
                       <span className="text-sm text-slate-500 dark:text-slate-400">
@@ -308,7 +316,7 @@ export function CustomersTable() {
                 </TableRow>
               ) : customers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-16 text-center">
+                  <TableCell colSpan={8} className="py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-full">
                         <Users className="h-6 w-6 text-slate-400" />
@@ -352,6 +360,20 @@ export function CustomersTable() {
                       </div>
                     </TableCell>
 
+                    {/* Tipe */}
+                    <TableCell className="px-5">
+                      <Badge
+                        variant="secondary"
+                        className={`text-[10px] px-1.5 py-0 border ${
+                          customer.customer_type === "garage"
+                            ? "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/20 dark:text-sky-400 dark:border-sky-800"
+                            : "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
+                        }`}
+                      >
+                        {customer.customer_type === "garage" ? "Bengkel" : "Retail"}
+                      </Badge>
+                    </TableCell>
+
                     {/* Phone */}
                     <TableCell className="px-5">
                       {customer.phone ? (
@@ -361,6 +383,17 @@ export function CustomersTable() {
                         >
                           {customer.phone}
                         </a>
+                      ) : (
+                        <span className="text-sm text-slate-400 dark:text-slate-600 italic">—</span>
+                      )}
+                    </TableCell>
+
+                    {/* Email */}
+                    <TableCell className="px-5">
+                      {customer.email ? (
+                        <span className="text-sm text-slate-500 dark:text-slate-400 truncate max-w-40 block">
+                          {customer.email}
+                        </span>
                       ) : (
                         <span className="text-sm text-slate-400 dark:text-slate-600 italic">—</span>
                       )}

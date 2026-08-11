@@ -48,7 +48,6 @@ export function SalesChart({ dateRange }: { dateRange?: { start: string; end: st
   const [growth, setGrowth] = useState<number | null>(null);
 
   const fetchChartData = useCallback(async () => {
-    setIsLoading(true);
     try {
       let start: Date, end: Date, prevStart: Date | null, prevEnd: Date | null;
 
@@ -127,7 +126,10 @@ export function SalesChart({ dateRange }: { dateRange?: { start: string; end: st
   }, [period, dateRange?.start, dateRange?.end, compareMode]);
 
   useEffect(() => {
-    fetchChartData();
+    const t = window.setTimeout(() => {
+      void fetchChartData();
+    }, 0);
+    return () => window.clearTimeout(t);
   }, [fetchChartData]);
 
   const totalSales = data.reduce((sum, d) => sum + d.sales, 0);

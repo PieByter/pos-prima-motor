@@ -4,6 +4,10 @@ export type Item = {
   description: string;
   sku: string;
   category: string;
+  /** ID kategori dari tabel categories (nullable) */
+  categoryId?: number | null;
+  /** ID brand dari tabel brands (nullable) */
+  brandId?: number | null;
   purchasePrice: number;
   sellingPrice: number;
   serviceFee: number;

@@ -32,7 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatRupiah, getStockStatus, CATEGORIES, type Item } from "@/lib/data/items";
+import { formatRupiah, getStockStatus, type Item } from "@/lib/data/items";
 import { Loader } from "lucide-react";
 import { useToast } from "@/lib/toast-provider";
 import { ItemFormDialog } from "./item-form-dialog";
@@ -45,6 +45,8 @@ type ApiItem = {
   description?: string | null;
   sku?: string | null;
   category?: string | null;
+  category_id?: number | null;
+  brand_id?: number | null;
   purchase_price: number;
   selling_price: number;
   service_fee?: number | null;
@@ -64,6 +66,8 @@ function mapApiItem(row: ApiItem): Item {
     description: row.description ?? "",
     sku: row.sku ?? "-",
     category: row.category ?? "Uncategorized",
+    categoryId: row.category_id ?? null,
+    brandId: row.brand_id ?? null,
     purchasePrice: Number(row.purchase_price ?? 0),
     sellingPrice: Number(row.selling_price ?? 0),
     serviceFee: Number(row.service_fee ?? 0),
@@ -82,10 +86,21 @@ export function ItemsTable() {
   const [items, setItems] = useState<Item[]>([]);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [categoryOptions, setCategoryOptions] = useState<{ id: number; name: string }[]>([]);
   const [stockFilter, setStockFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      void fetch("/api/categories", { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : []))
+        .then((list) => setCategoryOptions(Array.isArray(list) ? list : []))
+        .catch(() => {});
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -93,7 +108,7 @@ export function ItemsTable() {
       try {
         const params = new URLSearchParams();
         if (search) params.append("search", search);
-        if (categoryFilter !== "all") params.append("category", categoryFilter);
+        if (categoryFilter !== "all") params.append("category_id", categoryFilter);
         params.append("page", currentPage.toString());
         params.append("limit", ITEMS_PER_PAGE.toString());
 
@@ -229,6 +244,8 @@ export function ItemsTable() {
       description: data.description,
       sku: data.sku,
       category: data.category,
+      category_id: data.categoryId ?? null,
+      brand_id: data.brandId ?? null,
       purchase_price: data.purchasePrice,
       selling_price: data.sellingPrice,
       service_fee: data.serviceFee,
@@ -333,9 +350,9 @@ export function ItemsTable() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Semua Kategori</SelectItem>
-              {CATEGORIES.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat}
+              {categoryOptions.map((cat) => (
+                <SelectItem key={cat.id} value={String(cat.id)}>
+                  {cat.name}
                 </SelectItem>
               ))}
             </SelectContent>

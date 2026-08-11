@@ -141,7 +141,7 @@ export const itemSchema = z.object({
     name: z.string().min(1, "Nama barang wajib diisi").max(200, "Nama maksimal 200 karakter"),
     description: z.string().optional().or(z.literal("")),
     sku: z.string().min(1, "SKU wajib diisi").max(20, "SKU maksimal 20 karakter"),
-    category: z.string().min(1, "Kategori wajib dipilih"),
+    category: z.string().optional().or(z.literal("")),
     purchasePrice: z.coerce.number().min(0, "Harga beli tidak boleh negatif"),
     sellingPrice: z.coerce.number().min(0, "Harga jual tidak boleh negatif"),
     serviceFee: z.coerce.number().min(0, "Biaya jasa tidak boleh negatif").optional(),

@@ -26,6 +26,7 @@ import {
   ShieldCheck,
   PlusCircle,
   History,
+  Tags,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -45,6 +46,7 @@ const sidebarNav: NavItem[] = [
     group: "Data Master",
     items: [
       { label: "Produk / Sparepart", href: "/dashboard/master-data", icon: Database },
+      { label: "Kategori & Brand", href: "/dashboard/master-data/categories", icon: Tags },
       { label: "Data Customer", href: "/dashboard/customers", icon: Users },
       { label: "Data Supplier", href: "/dashboard/suppliers", icon: Building2 },
     ],

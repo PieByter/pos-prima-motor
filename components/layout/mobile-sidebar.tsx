@@ -21,6 +21,11 @@ import {
   RotateCcw,
   Bell,
   Tag,
+  FileText,
+  BadgeDollarSign,
+  ShieldCheck,
+  PlusCircle,
+  History,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -49,13 +54,17 @@ const sidebarNav: NavItem[] = [
     items: [
       { label: "Penjualan", href: "/dashboard/transactions/sales", icon: ShoppingCart },
       { label: "Pembelian", href: "/dashboard/transactions/purchases", icon: ClipboardList },
+      { label: "Purchase Order", href: "/dashboard/transactions/purchase-orders", icon: FileText },
       { label: "Inventory", href: "/dashboard/inventory", icon: Package },
+      { label: "Adjust Stok", href: "/dashboard/inventory/adjust", icon: PlusCircle },
+      { label: "Riwayat Adjust", href: "/dashboard/inventory/adjustments", icon: History },
     ],
   },
   {
     group: "Keuangan",
     items: [
       { label: "Pengeluaran", href: "/dashboard/expenses", icon: Receipt },
+      { label: "Gaji Mekanik", href: "/dashboard/salary-payments", icon: BadgeDollarSign },
       { label: "Diskon", href: "/dashboard/discounts", icon: Tag },
       { label: "Retur Penjualan", href: "/dashboard/returns/sales", icon: RotateCcw },
       { label: "Retur Pembelian", href: "/dashboard/returns/purchases", icon: RotateCcw },
@@ -65,6 +74,8 @@ const sidebarNav: NavItem[] = [
     group: "Laporan & Pengaturan",
     items: [
       { label: "Laporan", href: "/dashboard/reports", icon: BarChart3 },
+      { label: "Garansi", href: "/dashboard/warranty", icon: ShieldCheck },
+      { label: "Klaim Garansi", href: "/dashboard/warranty/claims", icon: ShieldCheck },
       { label: "Notifikasi", href: "/dashboard/notifications", icon: Bell },
       { label: "Pengaturan", href: "/dashboard/settings", icon: Settings },
     ],

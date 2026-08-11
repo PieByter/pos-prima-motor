@@ -56,6 +56,11 @@ function CustomerFormContent({
       name: customer?.name ?? "",
       phone: customer?.phone ?? "",
       address: customer?.address ?? "",
+      nik: customer?.nik ?? "",
+      email: customer?.email ?? "",
+      birth_date: customer?.birth_date ?? "",
+      customer_type: customer?.customer_type ?? "retail",
+      notes: customer?.notes ?? "",
     },
   });
 
@@ -135,6 +140,11 @@ function CustomerFormContent({
       name: data.name,
       phone: data.phone || null,
       address: data.address || null,
+      nik: data.nik || null,
+      email: data.email || null,
+      birth_date: data.birth_date || null,
+      customer_type: data.customer_type ?? "retail",
+      notes: data.notes || null,
     });
   }
 
@@ -188,6 +198,81 @@ function CustomerFormContent({
             {errors.address && (
               <p className="text-xs text-red-500 mt-1">{errors.address.message}</p>
             )}
+          </div>
+
+          {/* Tipe Customer */}
+          <div className="space-y-1.5">
+            <Label htmlFor="customer-type" className="text-sm font-medium">
+              Tipe Customer
+            </Label>
+            <select
+              id="customer-type"
+              {...register("customer_type")}
+              className="w-full h-10 rounded-md border border-input bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm"
+            >
+              <option value="retail">Retail (perorangan)</option>
+              <option value="garage">Garage / Bengkel rekanan</option>
+            </select>
+          </div>
+
+          {/* NIK */}
+          <div className="space-y-1.5">
+            <Label htmlFor="customer-nik" className="text-sm font-medium">
+              NIK
+            </Label>
+            <Input
+              id="customer-nik"
+              {...register("nik")}
+              placeholder="Nomor Induk Kependudukan"
+              className={`bg-slate-50 dark:bg-slate-800 ${errors.nik ? "border-red-500" : ""}`}
+            />
+            {errors.nik && (
+              <p className="text-xs text-red-500 mt-1">{errors.nik.message}</p>
+            )}
+          </div>
+
+          {/* Email + Tanggal Lahir */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="customer-email" className="text-sm font-medium">
+                Email
+              </Label>
+              <Input
+                id="customer-email"
+                type="email"
+                {...register("email")}
+                placeholder="email@contoh.com"
+                className={`bg-slate-50 dark:bg-slate-800 ${errors.email ? "border-red-500" : ""}`}
+              />
+              {errors.email && (
+                <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="customer-birth" className="text-sm font-medium">
+                Tanggal Lahir
+              </Label>
+              <Input
+                id="customer-birth"
+                type="date"
+                {...register("birth_date")}
+                className="bg-slate-50 dark:bg-slate-800"
+              />
+            </div>
+          </div>
+
+          {/* Catatan */}
+          <div className="space-y-1.5">
+            <Label htmlFor="customer-notes" className="text-sm font-medium">
+              Catatan
+            </Label>
+            <Textarea
+              id="customer-notes"
+              {...register("notes")}
+              placeholder="Catatan tambahan (preferensi, riwayat khusus, dll.)"
+              rows={2}
+              className="bg-slate-50 dark:bg-slate-800 resize-none"
+            />
           </div>
 
           {/* Kendaraan / Motor (edit mode) */}

@@ -26,14 +26,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import type { Supplier, PaginatedResponse } from "@/lib/types/database";
+import type { Supplier, SupplierWithContacts, PaginatedResponse } from "@/lib/types/database";
 import { SupplierFormDialog } from "@/components/suppliers/supplier-form-dialog";
 
 const ITEMS_PER_PAGE = 10;
 
 export function SuppliersTable() {
   const { showToast } = useToast();
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [suppliers, setSuppliers] = useState<SupplierWithContacts[]>([]);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -42,7 +42,7 @@ export function SuppliersTable() {
   const [error, setError] = useState<string | null>(null);
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [editingSupplier, setEditingSupplier] = useState<SupplierWithContacts | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const allSelected = suppliers.length > 0 && suppliers.every(s => selectedIds.has(s.id));
@@ -76,7 +76,7 @@ export function SuppliersTable() {
           throw new Error(`Gagal memuat data (${res.status})`);
         }
 
-        const result = (await res.json()) as PaginatedResponse<Supplier>;
+        const result = (await res.json()) as PaginatedResponse<SupplierWithContacts>;
         setSuppliers(result.data ?? []);
         setTotal(result.total ?? 0);
         setTotalPages(result.totalPages ?? 1);
@@ -99,7 +99,7 @@ export function SuppliersTable() {
     setDialogOpen(true);
   }
 
-  function handleEdit(supplier: Supplier) {
+  function handleEdit(supplier: SupplierWithContacts) {
     setEditingSupplier(supplier);
     setDialogOpen(true);
   }
@@ -133,12 +133,12 @@ export function SuppliersTable() {
       setSelectedIds(new Set());
       setCurrentPage(1);
       await fetchSuppliers(1);
-    } catch (err) {
+    } catch {
       showToast("Gagal menghapus supplier", "error");
     }
   }
 
-  async function handleSave(data: Omit<Supplier, "id" | "created_at" | "updated_at">) {
+  async function handleSave(data: Omit<Supplier, "id" | "created_at" | "updated_at"> & { contacts?: { name: string; phone?: string | null; position?: string | null; email?: string | null; is_primary: boolean; notes?: string | null }[] }) {
     try {
       if (editingSupplier) {
         const res = await fetch(`/api/suppliers/${editingSupplier.id}`, {

@@ -78,6 +78,13 @@
       "when": 1785730625466,
       "tag": "0010_happy_outlaw_kid",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1786413485926,
+      "tag": "0011_add_supplier_contacts_salary_stock_warranty_po",
+      "breakpoints": true
     }
   ]
 }

@@ -7,7 +7,6 @@ import {
   Users,
   TrendingUp,
   TrendingDown,
-  Plus,
   Receipt,
 } from "lucide-react";
 import { useFetch } from "@/lib/hooks/use-fetch";
@@ -51,12 +50,6 @@ const colorMap = {
     iconText: "text-rose-600 dark:text-rose-300",
   },
 } as const;
-
-const TrendIcon = {
-  up: TrendingUp,
-  down: TrendingDown,
-  add: Plus,
-};
 
 export function SummaryCards({ dateRange }: { dateRange?: { start: string; end: string } }) {
   const url = dateRange

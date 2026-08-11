@@ -4,7 +4,6 @@ import * as schema from './schema'
 
 // Use a global singleton to avoid exhausting connection pool in dev (Next.js hot reload)
 declare global {
-  // eslint-disable-next-line no-var
   var _pgClient: ReturnType<typeof postgres> | undefined
 }
 

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth'
-import { getNotifications, getUnreadCount, markAsRead } from '@/lib/services/notifications.service'
+import { getNotifications, markAsRead } from '@/lib/services/notifications.service'
 
 export async function GET(request: NextRequest) {
     try {
@@ -14,7 +13,6 @@ export async function GET(request: NextRequest) {
         const limit = Number(searchParams.get('limit') ?? 20)
         const unreadOnly = searchParams.get('unread_only') === 'true'
 
-        const supabase = await createClient()
         const admin = createAdminClient()
         const { data, error, totalUnread } = await getNotifications(admin, user.id, {
             page,

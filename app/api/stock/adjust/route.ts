@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
         if (errorResponse) return errorResponse
         void user
 
-        const { item_id, type, quantity, reason } = await request.json()
+        const { item_id, type, quantity } = await request.json()
 
         if (!item_id || !type || !quantity || quantity < 1) {
             return NextResponse.json({ error: 'Invalid input' }, { status: 400 })

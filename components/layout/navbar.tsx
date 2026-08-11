@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, type JSX } from "react";
-import { Search, Loader2, Package, Users, ShoppingCart, X } from "lucide-react";
+import { Search, Loader2, Package, Users, ShoppingCart } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { NotificationDropdown } from "@/components/layout/notification-dropdown";
 import { useRouter } from "next/navigation";

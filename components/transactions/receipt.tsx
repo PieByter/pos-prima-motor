@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { formatRupiah } from "@/lib/data/items";
 import type { InvoiceDetail } from "@/lib/data/invoice-details";
 import { Button } from "@/components/ui/button";

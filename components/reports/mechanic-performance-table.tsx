@@ -5,7 +5,6 @@ import {
   DashboardCard,
   SectionHeader,
 } from "@/components/dashboard/ui/dashboard-card";
-import { Button } from "@/components/ui/button";
 import { Loader2, Users, TrendingUp, Wallet, Wrench } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { ActivityLog, ActivityLogInsert, PaginatedResponse } from '@/lib/types/database'
+import type { ActivityLog, PaginatedResponse } from '@/lib/types/database'
 
 type ActivityFilters = {
     limit?: number

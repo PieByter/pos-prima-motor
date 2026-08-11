@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState, useRef } from "react";
 import { Camera, Pencil, KeyRound, Lock, Eye, EyeOff, CheckCircle, Loader, Loader2, Wallet, Wrench, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -477,10 +478,13 @@ export function ProfileSection() {
             <div className="relative group">
               <div className="size-32 rounded-full bg-slate-200 dark:bg-slate-700 ring-4 ring-slate-50 dark:ring-slate-700 flex items-center justify-center overflow-hidden">
                 {data?.profile?.profile_picture ? (
-                  <img
+                  <Image
                     src={data.profile.profile_picture}
                     alt={name}
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="128px"
+                    className="object-cover"
+                    unoptimized
                   />
                 ) : (
                   <span className="text-4xl font-bold text-slate-500 dark:text-slate-400">

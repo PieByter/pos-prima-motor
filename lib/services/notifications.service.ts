@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Notification, NotificationInsert, NotificationUpdate } from '@/lib/types/notifications'
+import type { Notification, NotificationInsert } from '@/lib/types/notifications'
 
 export type NotificationResult = {
     data: Notification[] | null
@@ -32,7 +32,7 @@ export async function getNotifications(
             query = query.eq('is_read', false)
         }
 
-        const { data, error, count } = await query
+        const { data, error } = await query
 
         if (error) return { data: null, error: new Error(error.message) }
 

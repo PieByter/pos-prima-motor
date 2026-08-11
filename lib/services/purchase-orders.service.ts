@@ -132,12 +132,13 @@ export async function createPurchaseOrder(
 
 /**
  * Update status PO + set detail item sebagai "diterima" (jika status received).
+ * Saat status received: otomatis buat transaksi pembelian + stok IN (via createPurchase).
  */
 export async function updatePurchaseOrderStatus(
     supabase: SupabaseClient,
     id: number,
     status: PurchaseOrder['status'],
-): Promise<{ data: PurchaseOrder | null; error: Error | null }> {
+): Promise<{ data: PurchaseOrder | null; error: Error | null; purchase?: { id: number; invoice_number: string } | null }> {
     try {
         const { data: row, error } = await supabase
             .from('purchase_orders')
@@ -148,14 +149,92 @@ export async function updatePurchaseOrderStatus(
 
         if (error || !row) return { data: null, error: new Error('PO not found') }
 
-        // Jika semua barang diterima → mark received_quantity = quantity
+        let createdPurchase: { id: number; invoice_number: string } | null = null
+
+        // Barang diterima → buat transaksi pembelian + update received_quantity
         if (status === 'received') {
-            const { data: details } = await supabase
+            const { data: po } = await supabase
+                .from('purchase_orders')
+                .select('*, purchase_order_details(item_id, quantity, price, subtotal)')
+                .eq('id', id)
+                .single()
+
+            const details = (po?.purchase_order_details ?? []) as {
+                item_id: number
+                quantity: number
+                price: string | number
+                subtotal: string | number
+            }[]
+
+            if (details.length > 0 && po?.supplier_id) {
+                // Generate nomor invoice pembelian
+                const year = new Date().getFullYear()
+                const { count } = await supabase
+                    .from('purchases')
+                    .select('*', { count: 'exact', head: true })
+                    .ilike('invoice_number', `PO-${year}-%`)
+                const invoiceNumber = `PO-${year}-${String((count ?? 0) + 1).padStart(3, '0')}`
+
+                const total = details.reduce((sum, d) => sum + Number(d.subtotal ?? Number(d.price) * Number(d.quantity)), 0)
+
+                // Header pembelian — lunas saat barang diterima
+                const { data: purchaseRow, error: purchaseError } = await supabase
+                    .from('purchases')
+                    .insert({
+                        supplier_id: po.supplier_id,
+                        invoice_number: invoiceNumber,
+                        purchase_date: new Date().toISOString().slice(0, 10),
+                        total_amount: String(total),
+                        status: 'completed',
+                        payment_status: 'paid',
+                        paid_amount: String(total),
+                        remaining_amount: '0',
+                        created_by: po.created_by,
+                    })
+                    .select()
+                    .single()
+
+                if (purchaseError) return { data: null, error: new Error(purchaseError.message) }
+
+                // Detail pembelian
+                const detailRows = details.map((d) => ({
+                    purchase_id: purchaseRow.id,
+                    item_id: d.item_id,
+                    quantity: Number(d.quantity),
+                    price: String(d.price),
+                    subtotal: String(d.subtotal ?? Number(d.price) * Number(d.quantity)),
+                }))
+                const { error: detError } = await supabase.from('purchase_details').insert(detailRows)
+                if (detError) {
+                    await supabase.from('purchases').delete().eq('id', purchaseRow.id)
+                    return { data: null, error: new Error(detError.message) }
+                }
+
+                // Stok masuk
+                const stockMovs = details.map((d) => ({
+                    item_id: d.item_id,
+                    type: 'IN' as const,
+                    quantity: Number(d.quantity),
+                    reference_type: 'purchase' as const,
+                    reference_id: purchaseRow.id,
+                }))
+                const { error: stockError } = await supabase.from('stock_movements').insert(stockMovs)
+                if (stockError) {
+                    await supabase.from('purchase_details').delete().eq('purchase_id', purchaseRow.id)
+                    await supabase.from('purchases').delete().eq('id', purchaseRow.id)
+                    return { data: null, error: new Error(stockError.message) }
+                }
+
+                createdPurchase = { id: purchaseRow.id, invoice_number: invoiceNumber }
+            }
+
+            // Mark received_quantity = quantity
+            const { data: odDetails } = await supabase
                 .from('purchase_order_details')
                 .select('id, quantity')
                 .eq('po_id', id)
 
-            for (const d of details ?? []) {
+            for (const d of odDetails ?? []) {
                 await supabase
                     .from('purchase_order_details')
                     .update({ received_quantity: d.quantity })
@@ -163,7 +242,7 @@ export async function updatePurchaseOrderStatus(
             }
         }
 
-        return { data: row as PurchaseOrder, error: null }
+        return { data: row as PurchaseOrder, error: null, purchase: createdPurchase }
     } catch (err) {
         return { data: null, error: err as Error }
     }

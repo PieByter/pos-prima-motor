@@ -171,13 +171,25 @@ export function PurchaseOrdersPage() {
 
   async function handleStatus(id: number, status: string) {
     try {
+      // Konfirmasi saat menerima barang — akan membuat transaksi pembelian + stok masuk
+      if (status === "received") {
+        const ok = confirm(
+          "Terima barang dari PO ini?\n\nStok akan masuk otomatis dan transaksi pembelian akan dibuat.",
+        );
+        if (!ok) return;
+      }
       const res = await fetch(`/api/purchase-orders?id=${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
       if (!res.ok) throw new Error("Gagal");
-      showToast("Status PO diperbarui", "success");
+      const json = (await res.json()) as { purchase?: { id: number; invoice_number: string } | null };
+      if (status === "received" && json.purchase) {
+        showToast(`Barang diterima — pembelian ${json.purchase.invoice_number} dibuat`, "success");
+      } else {
+        showToast("Status PO diperbarui", "success");
+      }
       await fetchOrders();
     } catch {
       showToast("Gagal update status", "error");

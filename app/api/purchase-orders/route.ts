@@ -103,11 +103,11 @@ export async function PATCH(request: NextRequest) {
         const admin = createAdminClient()
 
         if (body.status) {
-            const { data, error } = await updatePurchaseOrderStatus(admin, id, body.status)
+            const { data, error, purchase } = await updatePurchaseOrderStatus(admin, id, body.status)
             if (error || !data) {
                 return NextResponse.json({ error: error?.message ?? 'Failed to update PO status' }, { status: 400 })
             }
-            return NextResponse.json(data)
+            return NextResponse.json({ ...data, purchase })
         }
 
         return NextResponse.json({ error: 'Hanya status yang bisa diubah' }, { status: 422 })

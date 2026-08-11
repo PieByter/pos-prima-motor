@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Loader, ShieldAlert, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader, ShieldAlert, ChevronLeft, ChevronRight, Wrench } from "lucide-react";
 import type { WarrantyClaimWithDetails, PaginatedResponse } from "@/lib/types/database";
 import { formatCurrency } from "@/lib/format";
 
@@ -58,9 +58,22 @@ const resolutionLabels: Record<string, string> = {
   none: "—",
 };
 
+/** Item garansi aktif dari /api/warranty (untuk dropdown) */
+type WarrantyOption = {
+  sale_detail_id: number;
+  sale_id: number;
+  invoice_number: string;
+  item_id: number;
+  item_name: string;
+  sku: string | null;
+  customer_name: string;
+  warranty_until: string;
+};
+
 export function WarrantyClaimsPage() {
   const { showToast } = useToast();
   const [claims, setClaims] = useState<WarrantyClaimWithDetails[]>([]);
+  const [warrantyOptions, setWarrantyOptions] = useState<WarrantyOption[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -69,14 +82,21 @@ export function WarrantyClaimsPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [selectedWarranty, setSelectedWarranty] = useState<WarrantyOption | null>(null);
   const [form, setForm] = useState({
-    sale_detail_id: "",
-    item_id: "",
     claim_date: new Date().toISOString().slice(0, 10),
     description: "",
     cost: "0",
     notes: "",
   });
+
+  // Dialog proses klaim (setuju → resolution + cost)
+  const [processDialog, setProcessDialog] = useState<WarrantyClaimWithDetails | null>(null);
+  const [processForm, setProcessForm] = useState({
+    resolution: "repair" as "repair" | "replace" | "refund" | "none",
+    cost: "",
+  });
+  const [processing, setProcessing] = useState(false);
 
   const fetchClaims = useCallback(async (page = currentPage) => {
     try {
@@ -101,9 +121,20 @@ export function WarrantyClaimsPage() {
     return () => window.clearTimeout(t);
   }, [fetchClaims]);
 
+  // Load daftar garansi aktif untuk dropdown
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      void fetch("/api/warranty?status=active", { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : []))
+        .then((list) => setWarrantyOptions(Array.isArray(list) ? list : []))
+        .catch(() => setWarrantyOptions([]));
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, []);
+
   async function handleSubmit() {
-    if (!form.sale_detail_id || !form.item_id || !form.description.trim()) {
-      showToast("Lengkapi data klaim", "error");
+    if (!selectedWarranty || !form.description.trim()) {
+      showToast("Pilih barang garansi dan isi deskripsi", "error");
       return;
     }
     setSaving(true);
@@ -112,8 +143,8 @@ export function WarrantyClaimsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sale_detail_id: Number(form.sale_detail_id),
-          item_id: Number(form.item_id),
+          sale_detail_id: selectedWarranty.sale_detail_id,
+          item_id: selectedWarranty.item_id,
           claim_date: form.claim_date,
           description: form.description,
           cost: Number(form.cost || 0),
@@ -123,13 +154,49 @@ export function WarrantyClaimsPage() {
       if (!res.ok) throw new Error("Gagal");
       showToast("Klaim garansi dibuat", "success");
       setDialogOpen(false);
-      setForm({ ...form, sale_detail_id: "", item_id: "", description: "", cost: "0", notes: "" });
+      setSelectedWarranty(null);
+      setForm({ claim_date: new Date().toISOString().slice(0, 10), description: "", cost: "0", notes: "" });
       setCurrentPage(1);
       await fetchClaims(1);
     } catch {
       showToast("Gagal membuat klaim", "error");
     } finally {
       setSaving(false);
+    }
+  }
+
+  // Buka dialog proses (Setuju)
+  function openProcessDialog(claim: WarrantyClaimWithDetails) {
+    setProcessDialog(claim);
+    setProcessForm({
+      resolution: claim.resolution !== "none" ? claim.resolution : "repair",
+      cost: claim.cost ? String(claim.cost) : "0",
+    });
+  }
+
+  // Approve dengan resolution + cost
+  async function handleApprove() {
+    if (!processDialog) return;
+    setProcessing(true);
+    try {
+      const res = await fetch(`/api/warranty-claims?id=${processDialog.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "approved",
+          resolution: processForm.resolution,
+          cost: Number(processForm.cost || 0),
+          resolved_date: new Date().toISOString().slice(0, 10),
+        }),
+      });
+      if (!res.ok) throw new Error("Gagal");
+      showToast("Klaim disetujui", "success");
+      setProcessDialog(null);
+      await fetchClaims();
+    } catch {
+      showToast("Gagal update status", "error");
+    } finally {
+      setProcessing(false);
     }
   }
 
@@ -144,7 +211,7 @@ export function WarrantyClaimsPage() {
         }),
       });
       if (!res.ok) throw new Error("Gagal");
-      showToast("Status klaim diperbarui", "success");
+      showToast(status === "completed" ? "Klaim selesai" : "Klaim ditolak", "success");
       await fetchClaims();
     } catch {
       showToast("Gagal update status", "error");
@@ -236,8 +303,8 @@ export function WarrantyClaimsPage() {
                     <TableCell className="px-5">
                       {c.status === "pending" ? (
                         <div className="flex gap-1 justify-center">
-                          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleStatus(c.id, "approved")}>
-                            Setuju
+                          <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => openProcessDialog(c)}>
+                            <Wrench className="h-3.5 w-3.5" /> Proses
                           </Button>
                           <Button size="sm" variant="outline" className="h-7 text-xs text-red-500" onClick={() => handleStatus(c.id, "rejected")}>
                             Tolak
@@ -281,12 +348,34 @@ export function WarrantyClaimsPage() {
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label>Detail Penjualan (sale_detail_id) <span className="text-red-500">*</span></Label>
-              <Input type="number" value={form.sale_detail_id} onChange={(e) => setForm({ ...form, sale_detail_id: e.target.value })} placeholder="Lihat di halaman Garansi" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Item ID <span className="text-red-500">*</span></Label>
-              <Input type="number" value={form.item_id} onChange={(e) => setForm({ ...form, item_id: e.target.value })} placeholder="ID barang" />
+              <Label>Barang dalam Garansi <span className="text-red-500">*</span></Label>
+              <Select
+                value={selectedWarranty ? String(selectedWarranty.sale_detail_id) : ""}
+                onValueChange={(v) => {
+                  const opt = warrantyOptions.find((w) => String(w.sale_detail_id) === v);
+                  setSelectedWarranty(opt ?? null);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih barang garansi aktif..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {warrantyOptions.length === 0 ? (
+                    <SelectItem value="__none__" disabled>Tidak ada garansi aktif</SelectItem>
+                  ) : (
+                    warrantyOptions.map((w) => (
+                      <SelectItem key={w.sale_detail_id} value={String(w.sale_detail_id)}>
+                        {w.item_name} · {w.invoice_number} · {w.customer_name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {selectedWarranty && (
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  SKU: {selectedWarranty.sku ?? "-"} · Garansi s/d {selectedWarranty.warranty_until}
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -311,6 +400,56 @@ export function WarrantyClaimsPage() {
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Batal</Button>
             <Button onClick={handleSubmit} disabled={saving} className="gap-2">
               {saving && <Loader className="h-4 w-4 animate-spin" />} Simpan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Proses Klaim (Setuju → resolution + cost) */}
+      <Dialog open={!!processDialog} onOpenChange={(o) => { if (!o) setProcessDialog(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Proses Klaim Garansi</DialogTitle>
+            <DialogDescription>
+              {processDialog ? `Klaim #${processDialog.id} — ${processDialog.item?.name ?? ""}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label>Solusi <span className="text-red-500">*</span></Label>
+              <Select
+                value={processForm.resolution}
+                onValueChange={(v) => setProcessForm({ ...processForm, resolution: v as "repair" | "replace" | "refund" | "none" })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih solusi..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="repair">🔧 Perbaikan</SelectItem>
+                  <SelectItem value="replace">🔁 Ganti Baru</SelectItem>
+                  <SelectItem value="refund">💸 Refund</SelectItem>
+                  <SelectItem value="none">Tanpa solusi</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Biaya (Rp)</Label>
+              <Input
+                type="number"
+                min="0"
+                value={processForm.cost}
+                onChange={(e) => setProcessForm({ ...processForm, cost: e.target.value })}
+                placeholder="0"
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Menyetujui klaim akan mencatat solusi & biaya. Status klaim menjadi &quot;Disetujui&quot;.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProcessDialog(null)} disabled={processing}>Batal</Button>
+            <Button onClick={handleApprove} disabled={processing} className="gap-2">
+              {processing && <Loader className="h-4 w-4 animate-spin" />} Setujui Klaim
             </Button>
           </DialogFooter>
         </DialogContent>

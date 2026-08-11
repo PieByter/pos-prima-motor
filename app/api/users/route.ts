@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireAuth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { getUsers, createUser } from '@/lib/services/users.service'
 
 export async function GET() {
   try {
-    const { user, errorResponse } = await requireAuth()
+    const { user, errorResponse } = await requireAdmin()
     if (errorResponse) return errorResponse
     void user
 
@@ -25,7 +25,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, errorResponse } = await requireAuth()
+    const { user, errorResponse } = await requireAdmin()
     if (errorResponse) return errorResponse
     void user
 

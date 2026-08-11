@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireAuth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { updateBrand, deleteBrand } from '@/lib/services/brands.service'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
-    const auth = await requireAuth()
+    const auth = await requireAdmin()
     if (auth.errorResponse) return auth.errorResponse
 
     const { id } = await params
@@ -21,7 +21,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
-    const auth = await requireAuth()
+    const auth = await requireAdmin()
     if (auth.errorResponse) return auth.errorResponse
 
     const { id } = await params

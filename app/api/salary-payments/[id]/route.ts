@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireAuth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { deleteSalaryPayment } from '@/lib/services/salary-payments.service'
 
 export async function DELETE(
@@ -8,7 +8,7 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> },
 ) {
     try {
-        const { user, errorResponse } = await requireAuth()
+        const { user, errorResponse } = await requireAdmin()
         if (errorResponse) return errorResponse
         void user
 

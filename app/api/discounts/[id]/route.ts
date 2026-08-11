@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, requireAdmin } from '@/lib/auth'
 import { getDiscountById, updateDiscount, deleteDiscount } from '@/lib/services/discounts.service'
 
 type RouteParams = { params: Promise<{ id: string }> }
@@ -23,7 +23,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    const { user, errorResponse } = await requireAuth()
+    const { user, errorResponse } = await requireAdmin()
     if (errorResponse) return errorResponse
     void user
 
@@ -48,7 +48,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
-    const { user, errorResponse } = await requireAuth()
+    const { user, errorResponse } = await requireAdmin()
     if (errorResponse) return errorResponse
     void user
 

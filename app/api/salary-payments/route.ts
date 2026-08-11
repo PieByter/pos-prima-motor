@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, requireAdmin } from '@/lib/auth'
 import { getSalaryPayments, createSalaryPayment } from '@/lib/services/salary-payments.service'
 import type { SalaryPaymentInsert } from '@/lib/types/database'
 
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        const { user, errorResponse } = await requireAuth()
+        const { user, errorResponse } = await requireAdmin()
         if (errorResponse) return errorResponse
 
         const body = (await request.json()) as SalaryPaymentInsert & { created_by?: string }

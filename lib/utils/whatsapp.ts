@@ -39,6 +39,9 @@ export function buildReceiptMessage(invoice: InvoiceDetail): string {
     if (invoice.totalDiscount > 0) {
         lines.push(`Diskon   : ${fmtRp(invoice.totalDiscount)}`);
     }
+    if (invoice.taxAmount > 0) {
+        lines.push(`Pajak ${invoice.taxPercent > 0 ? `(${invoice.taxPercent}%)` : ""} : ${fmtRp(invoice.taxAmount)}`);
+    }
     lines.push(`*TOTAL    : ${fmtRp(invoice.grandTotal)}*`);
 
     if (invoice.paymentStatus === "unpaid") {

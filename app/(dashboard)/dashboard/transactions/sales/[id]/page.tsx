@@ -67,11 +67,19 @@ export default async function SaleDetailPage({ params }: PageProps) {
       (sum, d) => sum + d.discount_amount,
       0
     ),
+    // Rincian PPN — subtotal di sale_details = DPP (belum termasuk pajak).
+    // Pajak = total yang dibayar − DPP.
+    // (konsisten dgn form transaksi: grandTotal = beforeTax + tax)
+    taxAmount: Math.max(0, sale.total_amount - (sale.details ?? []).reduce((sum, d) => sum + d.subtotal, 0)),
     taxPercent: 0,
-    taxAmount: 0,
     grandTotal: sale.total_amount,
     createdBy: sale.created_by,
   };
+
+  // Hitung persen pajak dari nilai (untuk tampilan "Pajak (11%)")
+  if (invoice.taxAmount > 0 && invoice.subtotal > 0) {
+    invoice.taxPercent = Math.round((invoice.taxAmount / invoice.subtotal) * 1000) / 10
+  }
 
   return (
     <>

@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getLowStockAlerts } from '@/lib/services/dashboard.service'
+import { getBusinessSettings } from '@/lib/services/business-settings.service'
 
 export async function GET() {
   try {
     const admin = createAdminClient()
-    const { data, error } = await getLowStockAlerts(admin)
+
+    // Threshold dinamis dari pengaturan bisnis (default 5)
+    const { data: settings } = await getBusinessSettings(admin)
+    const threshold = settings?.low_stock_threshold ?? 5
+
+    const { data, error } = await getLowStockAlerts(admin, threshold)
 
     if (error || !data) {
       console.error('Dashboard low-stock GET failed:', error)

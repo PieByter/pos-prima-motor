@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth'
 import { getPurchaseReturns, createPurchaseReturn } from '@/lib/services/returns.service'
+import { notifyReturnCreated } from '@/lib/services/notification-triggers.service'
 
 export async function GET() {
     const auth = await requireAuth()
@@ -21,5 +22,13 @@ export async function POST(request: NextRequest) {
     const admin = createAdminClient()
     const { data, error } = await createPurchaseReturn(admin, body.header, body.details)
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+    // Notifikasi admin — fire-and-forget
+    if (data) {
+        notifyReturnCreated('purchase', data.id, body.header?.reason ?? '').catch((e) =>
+            console.error('Failed to notify return:', e),
+        )
+    }
+
     return NextResponse.json(data, { status: 201 })
 }

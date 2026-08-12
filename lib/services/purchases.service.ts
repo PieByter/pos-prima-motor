@@ -195,6 +195,41 @@ export async function updatePurchase(
       if (stockError) return { data: null, error: new Error(stockError.message) }
     }
 
+    // Recalc status pembayaran terhadap total terbaru — melindungi hutang supplier
+    // dari perubahan total saat edit (pembayaran yang sudah masuk TIDAK diubah).
+    if (row.payment_status && row.payment_status !== 'paid') {
+      const { data: paidRows } = await supabase
+        .from('purchase_payments')
+        .select('amount')
+        .eq('purchase_id', id)
+      const paidTotal = (paidRows ?? []).reduce((sum, p) => sum + Number(p.amount), 0)
+      const total = Number(row.total_amount)
+      const remaining = Math.max(0, total - paidTotal)
+
+      let newStatus: 'paid' | 'partial' | 'unpaid'
+      if (remaining <= 0) newStatus = 'paid'
+      else if (paidTotal > 0) newStatus = 'partial'
+      else newStatus = 'unpaid'
+
+      const { data: updated, error: payError } = await supabase
+        .from('purchases')
+        .update({
+          payment_status: newStatus,
+          paid_amount: Math.min(paidTotal, total),
+          remaining_amount: remaining,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (!payError && updated) {
+        row.payment_status = updated.payment_status
+        row.paid_amount = updated.paid_amount
+        row.remaining_amount = updated.remaining_amount
+      }
+    }
+
     return { data: mapPurchase(row), error: null }
   } catch (err) {
     return { data: null, error: err as Error }

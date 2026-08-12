@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader, Wallet } from "lucide-react";
 import { formatRupiah } from "@/lib/data/items";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Props = {
   open: boolean;
@@ -41,6 +48,25 @@ export function PaymentDialog({
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paymentMethodId, setPaymentMethodId] = useState("");
+  const [paymentMethods, setPaymentMethods] = useState<{ id: number; name: string }[]>([]);
+
+  // Load metode bayar saat dialog terbuka
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    fetch("/api/payment-methods", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list) => {
+        if (!cancelled) {
+          setPaymentMethods(Array.isArray(list) ? list.filter((m: { is_active: boolean }) => m.is_active) : []);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   const remaining = Math.max(0, totalAmount - paidAmount);
   const endpoint = type === "purchase"
@@ -71,6 +97,7 @@ export function PaymentDialog({
         body: JSON.stringify({
           amount: value,
           notes: notes.trim() || null,
+          payment_method_id: paymentMethodId ? Number(paymentMethodId) : null,
         }),
       });
       if (!res.ok) {
@@ -137,6 +164,24 @@ export function PaymentDialog({
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Total: {formatRupiah(totalAmount)} · Sudah dibayar: {formatRupiah(paidAmount)}
             </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="payment-method" className="text-sm font-medium">
+              Metode Pembayaran
+            </Label>
+            <Select value={paymentMethodId} onValueChange={setPaymentMethodId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih metode bayar..." />
+              </SelectTrigger>
+              <SelectContent>
+                {paymentMethods.map((m) => (
+                  <SelectItem key={m.id} value={String(m.id)}>
+                    {m.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-1.5">

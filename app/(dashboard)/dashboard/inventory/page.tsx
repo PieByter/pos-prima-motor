@@ -120,9 +120,11 @@ export default function InventoryPage() {
       if (search.trim()) stockQuery.set("search", search.trim());
       if (status !== "all") stockQuery.set("stock_status", status);
 
-      const [stockRes, lowStockRes, movementRes] = await Promise.all([
+      // Threshold low-stock dinamis dari pengaturan bisnis
+      const lowStockRes = await fetch("/api/stock/low-stock", { cache: "no-store" });
+
+      const [stockRes, movementRes] = await Promise.all([
         fetch(`/api/stock?${stockQuery.toString()}`, { cache: "no-store" }),
-        fetch("/api/stock/low-stock?threshold=5", { cache: "no-store" }),
         fetch("/api/stock/movements?page=1&limit=8", { cache: "no-store" }),
       ]);
 

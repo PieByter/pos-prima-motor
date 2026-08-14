@@ -288,6 +288,8 @@ export const discountItems = pgTable(
 
 // ─── stock_summary VIEW ──────────────────────────────────────────────────────
 // View dikelola Drizzle (definisi asli dari V1.3__create_views.sql)
+// security_invoker = true → view memakai hak/RLS pemanggil, bukan pembuat view
+// (menghindari perilaku "SECURITY DEFINER" bawaan view di Postgres 15+).
 export const stockSummary = pgView('stock_summary', {
   item_id: integer('item_id'),
   name: text('name'),
@@ -296,8 +298,10 @@ export const stockSummary = pgView('stock_summary', {
   total_in: integer('total_in'),
   total_out: integer('total_out'),
   current_stock: integer('current_stock'),
-}).as(
-  sql`SELECT
+})
+  .with({ securityInvoker: true })
+  .as(
+    sql`SELECT
   i.id AS item_id,
   i.name,
   i.sku,
@@ -308,7 +312,7 @@ export const stockSummary = pgView('stock_summary', {
 FROM items i
 LEFT JOIN stock_movements sm ON sm.item_id = i.id
 GROUP BY i.id, i.name, i.sku, i.category`,
-)
+  )
 
 // ─── payment_methods ──────────────────────────────────────────────────────────
 export const paymentMethods = pgTable('payment_methods', {

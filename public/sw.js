@@ -1,16 +1,18 @@
 // Service Worker for POS Prima Motor PWA
-// Caches static assets and provides offline fallback
+// Caches static assets and provides offline fallback.
+//
+// Strategi:
+//   • Navigasi (HTML) → NETWORK-FIRST. Selalu ambil fresh dari jaringan saat
+//     online; cache hanya dipakai saat offline. Mencegah HTML basi tersaji.
+//   • Aset statis → cache-first dengan update dari jaringan.
+//   • API & _next/ → tidak disentuh (pass-through).
 
-const CACHE_NAME = "prima-motor-v1";
+const CACHE_NAME = "prima-motor-v2"; // bump versi ini jika berubah struktural
 
-const STATIC_ASSETS = [
-  "/",
-  "/dashboard",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
-];
+const STATIC_ASSETS = ["/icons/icon-192.png", "/icons/icon-512.png"];
 
-// Install: pre-cache static assets
+// Install: pre-cache static assets (jangan pre-cache HTML/navigasi —
+// biar selalu fresh dari jaringan)
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -36,14 +38,14 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Fetch: network-first strategy for API, cache-first for static
+// Fetch: network-first for navigations, cache-first for static
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
   // Skip non-GET requests
   if (event.request.method !== "GET") return;
 
-  // Skip Supabase API & Next.js HMR
+  // Skip Supabase API & Next.js HMR & Next.js chunks
   if (
     url.pathname.startsWith("/api/") ||
     url.hostname.includes("supabase.co") ||
@@ -52,7 +54,30 @@ self.addEventListener("fetch", (event) => {
     return; // Let these pass through to network
   }
 
-  // Cache-first for static assets
+  // Navigasi (halaman HTML): NETWORK-FIRST
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, clone);
+            });
+          }
+          return response;
+        })
+        .catch(() =>
+          // Offline fallback: cache halaman terakhir, atau dashboard
+          caches
+            .match(event.request)
+            .then((cached) => cached || caches.match("/dashboard")),
+        ),
+    );
+    return;
+  }
+
+  // Aset statis (icons, dll): cache-first dengan update dari jaringan
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
@@ -68,13 +93,7 @@ self.addEventListener("fetch", (event) => {
 
           return response;
         })
-        .catch(() => {
-          // Offline fallback
-          if (event.request.mode === "navigate") {
-            return caches.match("/dashboard");
-          }
-          return new Response("Offline", { status: 503 });
-        });
+        .catch(() => new Response("Offline", { status: 503 }));
     }),
   );
 });

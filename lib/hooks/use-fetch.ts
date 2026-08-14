@@ -20,8 +20,6 @@ export function useFetch<T>(url: string | null): UseFetchResult<T> {
 
   const fetchData = useCallback(async () => {
     if (!url) return;
-    setIsLoading(true);
-    setError(null);
     try {
       const response = await fetch(url, { cache: "no-store" });
       if (!response.ok) {
@@ -35,6 +33,7 @@ export function useFetch<T>(url: string | null): UseFetchResult<T> {
         }
         throw new Error(errMsg);
       }
+      setError(null);
       const result = await response.json();
       setData(result);
     } catch (err) {
@@ -47,7 +46,10 @@ export function useFetch<T>(url: string | null): UseFetchResult<T> {
   }, [url]);
 
   useEffect(() => {
-    fetchData();
+    const t = window.setTimeout(() => {
+      void fetchData();
+    }, 0);
+    return () => window.clearTimeout(t);
   }, [fetchData]);
 
   return { data, isLoading, error, refetch: fetchData };

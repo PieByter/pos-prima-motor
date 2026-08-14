@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
@@ -27,7 +27,7 @@ import {
   Save,
   Tag,
 } from "lucide-react";
-import { type Item, CATEGORIES } from "@/lib/data/items";
+import { type Item } from "@/lib/data/items";
 import { itemSchema, type ItemFormData } from "@/lib/validations";
 
 interface ItemFormDialogProps {
@@ -62,7 +62,6 @@ function ItemFormContent({
     register,
     handleSubmit,
     setValue,
-    control,
     formState: { errors, isSubmitting },
   } = useForm<ItemFormData>({
     resolver: zodResolver(itemSchema),
@@ -87,6 +86,16 @@ function ItemFormContent({
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
+  /* ── Kategori & Brand (dari tabel DB) ── */
+  const [categoryOptions, setCategoryOptions] = useState<{ id: number; name: string }[]>([]);
+  const [brandOptions, setBrandOptions] = useState<{ id: number; name: string }[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
+    item?.categoryId ? String(item.categoryId) : ""
+  );
+  const [selectedBrandId, setSelectedBrandId] = useState<string>(
+    item?.brandId ? String(item.brandId) : ""
+  );
+
   /* ── Suppliers (many-to-many + harga per supplier) ── */
   const [supplierOptions, setSupplierOptions] = useState<
     { id: number; name: string; phone: string | null }[]
@@ -102,15 +111,34 @@ function ItemFormContent({
 
   // Load suppliers once
   useEffect(() => {
-    fetch("/api/suppliers?limit=500", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((json) => {
-        const list = json?.data ?? [];
-        if (Array.isArray(list)) {
-          setSupplierOptions(list as { id: number; name: string; phone: string | null }[]);
-        }
-      })
-      .catch(() => setSupplierOptions([]));
+    const t = window.setTimeout(() => {
+      void fetch("/api/suppliers?limit=500", { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((json) => {
+          const list = json?.data ?? [];
+          if (Array.isArray(list)) {
+            setSupplierOptions(list as { id: number; name: string; phone: string | null }[]);
+          }
+        })
+        .catch(() => setSupplierOptions([]));
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  // Load categories & brands once
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      void Promise.all([
+        fetch("/api/categories", { cache: "no-store" }).then((r) => (r.ok ? r.json() : [])),
+        fetch("/api/brands", { cache: "no-store" }).then((r) => (r.ok ? r.json() : [])),
+      ])
+        .then(([cats, brands]) => {
+          if (Array.isArray(cats)) setCategoryOptions(cats as { id: number; name: string }[]);
+          if (Array.isArray(brands)) setBrandOptions(brands as { id: number; name: string }[]);
+        })
+        .catch(() => {});
+    }, 0);
+    return () => window.clearTimeout(t);
   }, []);
 
   const isSupplierChecked = (id: number) => supplierLinks.some((l) => l.supplier_id === id);
@@ -128,8 +156,6 @@ function ItemFormContent({
       prev.map((l) => (l.supplier_id === id ? { ...l, purchase_price: price } : l))
     );
   };
-
-  const categoryValue = useWatch({ control, name: "category" });
 
   function handleFile(file: File) {
     if (!file.type.startsWith("image/")) return;
@@ -173,11 +199,19 @@ function ItemFormContent({
 
     setIsUploading(false);
 
+    const categoryId = selectedCategoryId ? Number(selectedCategoryId) : null;
+    const brandId = selectedBrandId ? Number(selectedBrandId) : null;
+    const categoryName =
+      categoryOptions.find((c) => c.id === categoryId)?.name ??
+      (data.category || "");
+
     onSave({
       name: data.name,
       description: data.description ?? "",
       sku: data.sku,
-      category: data.category,
+      category: categoryName,
+      categoryId,
+      brandId,
       purchasePrice: Number(data.purchasePrice),
       sellingPrice: Number(data.sellingPrice),
       serviceFee: Number(data.serviceFee || 0),
@@ -252,6 +286,24 @@ function ItemFormContent({
         </div>
       </div>
 
+      {/* Deskripsi */}
+      <div className="flex flex-col gap-2">
+        <Label
+          htmlFor="item-description"
+          className="text-slate-900 dark:text-slate-200 text-sm font-medium"
+        >
+          Deskripsi <span className="text-slate-400 font-normal">(opsional)</span>
+        </Label>
+        <textarea
+          id="item-description"
+          rows={2}
+          placeholder="Deskripsi singkat barang, spesifikasi, dll."
+          {...register("description")}
+          className={`w-full px-4 py-3 rounded-lg border ${errors.description ? "border-red-500" : "border-slate-200 dark:border-slate-600"} bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-shadow text-sm resize-none`}
+        />
+        {errors.description && <p className="text-xs text-red-500">{errors.description.message}</p>}
+      </div>
+
       {/* Row 2: Harga Beli & Harga Jual */}
       <div className="grid grid-cols-2 gap-6">
         <div className="flex flex-col gap-2">
@@ -301,7 +353,7 @@ function ItemFormContent({
         </div>
       </div>
 
-      {/* Row 2b: Garansi */}
+      {/* Row 2b: Garansi & Stok Awal */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
           <Label
@@ -327,6 +379,32 @@ function ItemFormContent({
           {errors.warrantyMonths && <p className="text-xs text-red-500">{errors.warrantyMonths.message}</p>}
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Garansi default untuk barang ini saat dijual (mis. 3 = 3 bulan).
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label
+            htmlFor="item-stock"
+            className="text-slate-900 dark:text-slate-200 text-sm font-medium"
+          >
+            Stok Awal
+          </Label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-semibold text-sm">
+              📦
+            </span>
+            <input
+              id="item-stock"
+              type="number"
+              placeholder="0"
+              min="0"
+              {...register("stock")}
+              className={`w-full pl-10 pr-4 py-3 rounded-lg border ${errors.stock ? "border-red-500" : "border-slate-200 dark:border-slate-600"} bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-shadow text-sm`}
+            />
+          </div>
+          {errors.stock && <p className="text-xs text-red-500">{errors.stock.message}</p>}
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Jumlah stok saat pertama kali barang dibuat.
           </p>
         </div>
       </div>
@@ -364,7 +442,7 @@ function ItemFormContent({
           <Label className="text-slate-900 dark:text-slate-200 text-sm font-medium">
             Kategori
           </Label>
-          <Select value={categoryValue} onValueChange={(val) => setValue("category", val, { shouldValidate: true })}>
+          <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
             <SelectTrigger className={`py-3 h-auto ${errors.category ? "border-red-500" : ""}`}>
               <div className="flex items-center gap-2">
                 <Tag className="h-5 w-5 text-slate-400" />
@@ -372,14 +450,49 @@ function ItemFormContent({
               </div>
             </SelectTrigger>
             <SelectContent>
-              {CATEGORIES.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat}
+              <SelectItem value="">Tanpa kategori</SelectItem>
+              {categoryOptions.map((c) => (
+                <SelectItem key={c.id} value={String(c.id)}>
+                  {c.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          {errors.category && <p className="text-xs text-red-500">{errors.category.message}</p>}
+          {categoryOptions.length === 0 && (
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Belum ada kategori di database — bisa dibiarkan kosong.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Row 3b: Brand */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="flex flex-col gap-2">
+          <Label className="text-slate-900 dark:text-slate-200 text-sm font-medium">
+            Brand / Merek
+          </Label>
+          <Select value={selectedBrandId} onValueChange={setSelectedBrandId}>
+            <SelectTrigger className="py-3 h-auto">
+              <div className="flex items-center gap-2">
+                <Tag className="h-5 w-5 text-slate-400" />
+                <SelectValue placeholder="Pilih brand" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Tanpa brand</SelectItem>
+              {brandOptions.map((b) => (
+                <SelectItem key={b.id} value={String(b.id)}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {brandOptions.length === 0 && (
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Belum ada brand di database.
+            </p>
+          )}
         </div>
       </div>
 

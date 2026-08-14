@@ -163,6 +163,7 @@ export async function updatePurchase(
   supabase: SupabaseClient,
   id: number,
   header: PurchaseUpdate,
+  details?: Omit<PurchaseDetailInsert, 'purchase_id'>[],
 ): Promise<{ data: Purchase | null; error: Error | null }> {
   try {
     const { data: row, error } = await supabase
@@ -173,6 +174,62 @@ export async function updatePurchase(
       .single()
 
     if (error || !row) return { data: null, error: new Error('Purchase not found') }
+
+    // Jika details dikirim → replace seluruh detail + stock movement (hindari duplikat)
+    if (details) {
+      await supabase.from('stock_movements').delete().eq('reference_type', 'purchase').eq('reference_id', id)
+      await supabase.from('purchase_details').delete().eq('purchase_id', id)
+
+      const detailsWithId = details.map((d) => ({ ...d, purchase_id: id }))
+      const { error: detailsError } = await supabase.from('purchase_details').insert(detailsWithId)
+      if (detailsError) return { data: null, error: new Error(detailsError.message) }
+
+      const stockMovs = details.map((d) => ({
+        item_id: d.item_id,
+        type: 'IN' as const,
+        quantity: d.quantity,
+        reference_type: 'purchase' as const,
+        reference_id: id,
+      }))
+      const { error: stockError } = await supabase.from('stock_movements').insert(stockMovs)
+      if (stockError) return { data: null, error: new Error(stockError.message) }
+    }
+
+    // Recalc status pembayaran terhadap total terbaru — melindungi hutang supplier
+    // dari perubahan total saat edit (pembayaran yang sudah masuk TIDAK diubah).
+    if (row.payment_status && row.payment_status !== 'paid') {
+      const { data: paidRows } = await supabase
+        .from('purchase_payments')
+        .select('amount')
+        .eq('purchase_id', id)
+      const paidTotal = (paidRows ?? []).reduce((sum, p) => sum + Number(p.amount), 0)
+      const total = Number(row.total_amount)
+      const remaining = Math.max(0, total - paidTotal)
+
+      let newStatus: 'paid' | 'partial' | 'unpaid'
+      if (remaining <= 0) newStatus = 'paid'
+      else if (paidTotal > 0) newStatus = 'partial'
+      else newStatus = 'unpaid'
+
+      const { data: updated, error: payError } = await supabase
+        .from('purchases')
+        .update({
+          payment_status: newStatus,
+          paid_amount: Math.min(paidTotal, total),
+          remaining_amount: remaining,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (!payError && updated) {
+        row.payment_status = updated.payment_status
+        row.paid_amount = updated.paid_amount
+        row.remaining_amount = updated.remaining_amount
+      }
+    }
+
     return { data: mapPurchase(row), error: null }
   } catch (err) {
     return { data: null, error: err as Error }

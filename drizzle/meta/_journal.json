@@ -82,8 +82,36 @@
     {
       "idx": 11,
       "version": "7",
+      "when": 1786413485926,
+      "tag": "0011_add_supplier_contacts_salary_stock_warranty_po",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1786423837435,
+      "tag": "0012_add_business_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1786424169663,
+      "tag": "0013_add_vehicle_documents",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1786424338673,
+      "tag": "0014_add_appointments",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
       "when": 1786717325644,
-      "tag": "0011_tiny_firebrand",
+      "tag": "0015_tiny_firebrand",
       "breakpoints": true
     }
   ]

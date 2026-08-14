@@ -4,14 +4,18 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, name, role } = await request.json()
+    const { email, password, name } = await request.json()
 
-    if (!email || !password || !name || !role) {
+    if (!email || !password || !name) {
       return NextResponse.json(
-        { error: 'Email, password, name, and role are required' },
+        { error: 'Email, password, dan nama wajib diisi' },
         { status: 400 },
       )
     }
+
+    // ⚠️ Keamanan: pendaftaran publik SELALU jadi mekanik.
+    // Role admin hanya bisa dibuat oleh admin lain via /api/users (admin-only).
+    const role = 'mekanik' as const
 
     const supabase = await createClient()
     const { data, error } = await signUp(supabase, email, password, { name, role })

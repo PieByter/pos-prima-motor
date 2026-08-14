@@ -48,6 +48,16 @@ export function NotificationDropdown() {
   useEffect(() => {
     if (open) refresh();
   }, [open, refresh]);
+
+  // Waktu relatif — diupdate tiap 60 detik via interval (bukan Date.now() saat render)
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      setNow(Date.now());
+    }, 60000);
+    return () => window.clearInterval(t);
+  }, []);
+
   function handleMarkOneRead(id: number, e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -55,7 +65,7 @@ export function NotificationDropdown() {
   }
 
   function timeAgo(dateStr: string) {
-    const diff = Date.now() - new Date(dateStr).getTime();
+    const diff = now - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return "Baru saja";
     if (mins < 60) return `${mins}m lalu`;

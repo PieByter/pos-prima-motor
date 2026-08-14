@@ -73,11 +73,18 @@ export type BrandInsert = Omit<Brand, 'id' | 'created_at'>
 export type BrandUpdate = Partial<BrandInsert>
 
 // --- Customers ---
+export type CustomerType = 'retail' | 'garage'
+
 export type Customer = {
   id: number
   name: string
   phone: string | null
   address: string | null
+  nik: string | null
+  email: string | null
+  birth_date: string | null
+  customer_type: CustomerType
+  notes: string | null
   created_at: string
   updated_at: string
 }
@@ -112,12 +119,155 @@ export type Supplier = {
   name: string
   phone: string | null
   address: string | null
+  email: string | null
+  is_active: boolean
+  bank_name: string | null
+  bank_account: string | null
+  bank_account_holder: string | null
+  npwp: string | null
+  notes: string | null
   created_at: string
   updated_at: string
 }
 
 export type SupplierInsert = Omit<Supplier, 'id' | 'created_at' | 'updated_at'>
 export type SupplierUpdate = Partial<SupplierInsert>
+
+// --- Supplier Contacts (banyak kontak per supplier) ---
+export type SupplierContact = {
+  id: number
+  supplier_id: number
+  name: string
+  phone: string | null
+  position: string | null
+  email: string | null
+  is_primary: boolean
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type SupplierContactInsert = Omit<SupplierContact, 'id' | 'created_at' | 'updated_at'>
+export type SupplierContactUpdate = Partial<SupplierContactInsert>
+
+export type SupplierWithContacts = Supplier & {
+  contacts?: SupplierContact[]
+}
+
+// --- Purchase Orders (PO ke supplier) ---
+export type PurchaseOrderStatus = 'draft' | 'sent' | 'partial' | 'received' | 'cancelled'
+
+export type PurchaseOrder = {
+  id: number
+  supplier_id: number
+  po_number: string
+  order_date: string
+  expected_date: string | null
+  status: PurchaseOrderStatus
+  total_amount: number
+  notes: string | null
+  created_by: string // UUID
+  created_at: string
+  updated_at: string
+}
+
+export type PurchaseOrderInsert = Omit<PurchaseOrder, 'id' | 'created_at' | 'updated_at'>
+export type PurchaseOrderUpdate = Partial<Omit<PurchaseOrderInsert, 'created_by'>>
+
+export type PurchaseOrderDetail = {
+  id: number
+  po_id: number
+  item_id: number
+  quantity: number
+  received_quantity: number
+  price: number
+  subtotal: number
+}
+
+/** Input dari form (po_id & subtotal dihitung di service) */
+export type PurchaseOrderDetailInsert = {
+  item_id: number
+  quantity: number
+  price: number
+}
+
+export type PurchaseOrderWithDetails = PurchaseOrder & {
+  supplier?: Supplier
+  details: (PurchaseOrderDetail & { item?: Item })[]
+}
+
+// --- Salary Payments (gaji mekanik) ---
+export type SalaryPayment = {
+  id: number
+  mechanic_id: string // UUID
+  payment_date: string
+  amount: number
+  period_start: string | null
+  period_end: string | null
+  payment_method_id: number | null
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type SalaryPaymentInsert = Omit<SalaryPayment, 'id' | 'created_at' | 'updated_at'>
+export type SalaryPaymentUpdate = Partial<Omit<SalaryPaymentInsert, 'created_by'>>
+
+export type SalaryPaymentWithMechanic = SalaryPayment & {
+  mechanic?: Profile
+  payment_method?: PaymentMethod | null
+}
+
+// --- Stock Adjustments (stok opname / rusak / hilang) ---
+export type StockAdjustmentType = 'IN' | 'OUT'
+export type StockAdjustmentReason = 'damaged' | 'lost' | 'count_fix' | 'stock_in' | 'other'
+
+export type StockAdjustment = {
+  id: number
+  item_id: number
+  adjustment_date: string
+  type: StockAdjustmentType
+  quantity: number
+  reason: StockAdjustmentReason
+  notes: string | null
+  created_by: string | null
+  created_at: string
+}
+
+export type StockAdjustmentInsert = Omit<StockAdjustment, 'id' | 'created_at'>
+export type StockAdjustmentWithItem = StockAdjustment & {
+  item?: Item
+}
+
+// --- Warranty Claims (klaim garansi) ---
+export type WarrantyClaimStatus = 'pending' | 'approved' | 'rejected' | 'completed'
+export type WarrantyClaimResolution = 'repair' | 'replace' | 'refund' | 'none'
+
+export type WarrantyClaim = {
+  id: number
+  sale_detail_id: number
+  item_id: number
+  claim_date: string
+  description: string
+  status: WarrantyClaimStatus
+  resolution: WarrantyClaimResolution
+  cost: number
+  resolved_date: string | null
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type WarrantyClaimInsert = Omit<WarrantyClaim, 'id' | 'created_at' | 'updated_at'>
+export type WarrantyClaimUpdate = Partial<WarrantyClaimInsert>
+
+export type WarrantyClaimWithDetails = WarrantyClaim & {
+  item?: Item
+  sale_detail?: SaleDetail
+  sale?: Sale
+}
 
 // --- Purchases ---
 export type Purchase = {

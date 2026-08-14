@@ -82,6 +82,7 @@ export default function EditPurchasePage() {
         type="purchase"
         initialData={initialData}
         transactionId={invoiceNumber}
+        numericId={params.id}
       />
     </>
   );

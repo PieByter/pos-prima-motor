@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, requireAdmin } from '@/lib/auth'
 import { getDiscounts, createDiscount } from '@/lib/services/discounts.service'
 
 export async function GET(request: NextRequest) {
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, errorResponse } = await requireAuth()
+    const { user, errorResponse } = await requireAdmin()
     if (errorResponse) return errorResponse
     void user
 

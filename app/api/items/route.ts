@@ -15,6 +15,8 @@ export async function GET(request: NextRequest) {
     const { data, error } = await getItems(admin, {
       search: searchParams.get('search') ?? undefined,
       category: searchParams.get('category') ?? undefined,
+      category_id: searchParams.get('category_id') ? Number(searchParams.get('category_id')) : undefined,
+      brand_id: searchParams.get('brand_id') ? Number(searchParams.get('brand_id')) : undefined,
       page: Number(searchParams.get('page') ?? 1),
       limit: Number(searchParams.get('limit') ?? 10),
     })

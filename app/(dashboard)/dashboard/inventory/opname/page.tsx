@@ -4,10 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/lib/toast-provider";
-import { Search, Package, CheckCircle, Loader2, ClipboardCheck, AlertTriangle } from "lucide-react";
+import { Search, Package, CheckCircle, ClipboardCheck, } from "lucide-react";
 
 type StockItem = {
   id: number;
@@ -21,7 +20,6 @@ export default function StockOpnamePage() {
   const [items, setItems] = useState<StockItem[]>([]);
   const [search, setSearch] = useState("");
   const [physicalStocks, setPhysicalStocks] = useState<Record<number, string>>({});
-  const [saving, setSaving] = useState(false);
   const [completed, setCompleted] = useState<number[]>([]);
 
   useEffect(() => {
@@ -29,7 +27,7 @@ export default function StockOpnamePage() {
       .then((r) => r.json())
       .then((json) => {
         const rows = json?.data ?? [];
-        setItems(rows.map((r: any) => ({
+        setItems(rows.map((r: { id: number; name: string; sku: string | null; stock?: number | null; current_stock?: number | null }) => ({
           id: r.id,
           name: r.name,
           sku: r.sku,

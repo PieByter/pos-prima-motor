@@ -33,7 +33,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     const body = await request.json()
     const admin = createAdminClient()
-    const { data, error } = await updatePurchase(admin, numericId, body)
+    // Edit penuh: header + details (replace) — jika hanya header, details undefined
+    const { data, error } = await updatePurchase(admin, numericId, body.header ?? body, body.details)
 
     if (error || !data) {
       console.error('Purchases PATCH failed:', error)

@@ -25,6 +25,7 @@ export default function StockAdjustmentPage() {
   const [selectedItemId, setSelectedItemId] = useState<string>("");
   const [type, setType] = useState<"IN" | "OUT">("IN");
   const [qty, setQty] = useState("1");
+  const [reasonType, setReasonType] = useState<string>("other");
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -53,14 +54,15 @@ export default function StockAdjustmentPage() {
     }
     setSaving(true);
     try {
-      const res = await fetch("/api/stock/adjust", {
+      const res = await fetch("/api/stock-adjustments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           item_id: Number(selectedItemId),
           type,
           quantity: Number(qty),
-          reason: reason || `${type === "IN" ? "Stok masuk manual" : "Stok keluar manual"}`,
+          reason: reasonType,
+          notes: reason || null,
         }),
       });
       if (!res.ok) throw new Error("Gagal");
@@ -68,6 +70,7 @@ export default function StockAdjustmentPage() {
       setSelectedItemId("");
       setQty("1");
       setReason("");
+      setReasonType("other");
       // Refresh items
       const refresh = await fetch("/api/items?page=1&limit=500", { cache: "no-store" });
       const json = await refresh.json();
@@ -77,7 +80,7 @@ export default function StockAdjustmentPage() {
     } finally {
       setSaving(false);
     }
-  }, [selectedItemId, type, qty, reason, selectedItem, showToast]);
+  }, [selectedItemId, type, qty, reason, reasonType, selectedItem, showToast]);
 
   return (
     <>
@@ -168,7 +171,23 @@ export default function StockAdjustmentPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Alasan (opsional)</Label>
+              <Label className="text-sm font-medium">Kategori Alasan</Label>
+              <Select value={reasonType} onValueChange={setReasonType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="stock_in">Stok Masuk Manual</SelectItem>
+                  <SelectItem value="count_fix">Stok Opname / Koreksi</SelectItem>
+                  <SelectItem value="damaged">Barang Rusak</SelectItem>
+                  <SelectItem value="lost">Barang Hilang</SelectItem>
+                  <SelectItem value="other">Lainnya</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Keterangan (opsional)</Label>
               <Textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}

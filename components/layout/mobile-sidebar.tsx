@@ -21,6 +21,15 @@ import {
   RotateCcw,
   Bell,
   Tag,
+  FileText,
+  BadgeDollarSign,
+  ShieldCheck,
+  PlusCircle,
+  History,
+  Tags,
+  ListOrdered,
+  CalendarClock,
+  Gauge,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -37,10 +46,17 @@ const sidebarNav: NavItem[] = [
     icon: LayoutDashboard,
   },
   {
+    label: "Dashboard Mekanik",
+    href: "/dashboard/mechanic",
+    icon: Gauge,
+  },
+  {
     group: "Data Master",
     items: [
       { label: "Produk / Sparepart", href: "/dashboard/master-data", icon: Database },
+      { label: "Kategori & Brand", href: "/dashboard/master-data/categories", icon: Tags },
       { label: "Data Customer", href: "/dashboard/customers", icon: Users },
+      { label: "Reminder Pajak", href: "/dashboard/customers/vehicle-documents", icon: CalendarClock },
       { label: "Data Supplier", href: "/dashboard/suppliers", icon: Building2 },
     ],
   },
@@ -49,13 +65,18 @@ const sidebarNav: NavItem[] = [
     items: [
       { label: "Penjualan", href: "/dashboard/transactions/sales", icon: ShoppingCart },
       { label: "Pembelian", href: "/dashboard/transactions/purchases", icon: ClipboardList },
+      { label: "Antrian Service", href: "/dashboard/transactions/appointments", icon: ListOrdered },
+      { label: "Purchase Order", href: "/dashboard/transactions/purchase-orders", icon: FileText },
       { label: "Inventory", href: "/dashboard/inventory", icon: Package },
+      { label: "Adjust Stok", href: "/dashboard/inventory/adjust", icon: PlusCircle },
+      { label: "Riwayat Adjust", href: "/dashboard/inventory/adjustments", icon: History },
     ],
   },
   {
     group: "Keuangan",
     items: [
       { label: "Pengeluaran", href: "/dashboard/expenses", icon: Receipt },
+      { label: "Gaji Mekanik", href: "/dashboard/salary-payments", icon: BadgeDollarSign },
       { label: "Diskon", href: "/dashboard/discounts", icon: Tag },
       { label: "Retur Penjualan", href: "/dashboard/returns/sales", icon: RotateCcw },
       { label: "Retur Pembelian", href: "/dashboard/returns/purchases", icon: RotateCcw },
@@ -65,6 +86,8 @@ const sidebarNav: NavItem[] = [
     group: "Laporan & Pengaturan",
     items: [
       { label: "Laporan", href: "/dashboard/reports", icon: BarChart3 },
+      { label: "Garansi", href: "/dashboard/warranty", icon: ShieldCheck },
+      { label: "Klaim Garansi", href: "/dashboard/warranty/claims", icon: ShieldCheck },
       { label: "Notifikasi", href: "/dashboard/notifications", icon: Bell },
       { label: "Pengaturan", href: "/dashboard/settings", icon: Settings },
     ],

@@ -26,14 +26,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import type { Supplier, PaginatedResponse } from "@/lib/types/database";
+import type { Supplier, SupplierWithContacts, PaginatedResponse } from "@/lib/types/database";
 import { SupplierFormDialog } from "@/components/suppliers/supplier-form-dialog";
 
 const ITEMS_PER_PAGE = 10;
 
 export function SuppliersTable() {
   const { showToast } = useToast();
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [suppliers, setSuppliers] = useState<SupplierWithContacts[]>([]);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -42,7 +42,7 @@ export function SuppliersTable() {
   const [error, setError] = useState<string | null>(null);
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [editingSupplier, setEditingSupplier] = useState<SupplierWithContacts | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const allSelected = suppliers.length > 0 && suppliers.every(s => selectedIds.has(s.id));
@@ -57,8 +57,6 @@ export function SuppliersTable() {
 
   const fetchSuppliers = useCallback(
     async (page = currentPage) => {
-      setIsLoading(true);
-      setError(null);
       try {
         const params = new URLSearchParams();
         if (search.trim()) params.append("search", search.trim());
@@ -76,7 +74,8 @@ export function SuppliersTable() {
           throw new Error(`Gagal memuat data (${res.status})`);
         }
 
-        const result = (await res.json()) as PaginatedResponse<Supplier>;
+        const result = (await res.json()) as PaginatedResponse<SupplierWithContacts>;
+        setError(null);
         setSuppliers(result.data ?? []);
         setTotal(result.total ?? 0);
         setTotalPages(result.totalPages ?? 1);
@@ -91,7 +90,10 @@ export function SuppliersTable() {
   );
 
   useEffect(() => {
-    fetchSuppliers();
+    const t = window.setTimeout(() => {
+      void fetchSuppliers();
+    }, 0);
+    return () => window.clearTimeout(t);
   }, [fetchSuppliers]);
 
   function handleAdd() {
@@ -99,7 +101,7 @@ export function SuppliersTable() {
     setDialogOpen(true);
   }
 
-  function handleEdit(supplier: Supplier) {
+  function handleEdit(supplier: SupplierWithContacts) {
     setEditingSupplier(supplier);
     setDialogOpen(true);
   }
@@ -133,12 +135,12 @@ export function SuppliersTable() {
       setSelectedIds(new Set());
       setCurrentPage(1);
       await fetchSuppliers(1);
-    } catch (err) {
+    } catch {
       showToast("Gagal menghapus supplier", "error");
     }
   }
 
-  async function handleSave(data: Omit<Supplier, "id" | "created_at" | "updated_at">) {
+  async function handleSave(data: Omit<Supplier, "id" | "created_at" | "updated_at"> & { contacts?: { name: string; phone?: string | null; position?: string | null; email?: string | null; is_primary: boolean; notes?: string | null }[] }) {
     try {
       if (editingSupplier) {
         const res = await fetch(`/api/suppliers/${editingSupplier.id}`, {
@@ -251,6 +253,9 @@ export function SuppliersTable() {
                   </div>
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5">
+                  Email
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5">
                   <div className="flex items-center gap-1.5">
                     <MapPin className="h-3 w-3" />
                     Alamat
@@ -270,7 +275,7 @@ export function SuppliersTable() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-16 text-center">
+                  <TableCell colSpan={7} className="py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <Loader className="h-7 w-7 animate-spin text-violet-500" />
                       <span className="text-sm text-slate-500 dark:text-slate-400">
@@ -281,7 +286,7 @@ export function SuppliersTable() {
                 </TableRow>
               ) : suppliers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-16 text-center">
+                  <TableCell colSpan={7} className="py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-full">
                         <Building2 className="h-6 w-6 text-slate-400" />
@@ -322,12 +327,30 @@ export function SuppliersTable() {
                           <p className="font-semibold text-slate-900 dark:text-white text-sm">
                             {supplier.name}
                           </p>
-                          <Badge
-                            variant="secondary"
-                            className="mt-0.5 text-[10px] px-1.5 py-0 bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-900/20 dark:text-violet-400 dark:border-violet-800"
-                          >
-                            Supplier
-                          </Badge>
+                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] px-1.5 py-0 bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-900/20 dark:text-violet-400 dark:border-violet-800"
+                            >
+                              Supplier
+                            </Badge>
+                            {supplier.is_active === false && (
+                              <Badge
+                                variant="secondary"
+                                className="text-[10px] px-1.5 py-0 bg-red-50 text-red-600 border border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800"
+                              >
+                                Nonaktif
+                              </Badge>
+                            )}
+                            {supplier.contacts && supplier.contacts.length > 0 && (
+                              <Badge
+                                variant="secondary"
+                                className="text-[10px] px-1.5 py-0 bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
+                              >
+                                {supplier.contacts.length} kontak
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </TableCell>
@@ -341,6 +364,17 @@ export function SuppliersTable() {
                         >
                           {supplier.phone}
                         </a>
+                      ) : (
+                        <span className="text-sm text-slate-400 dark:text-slate-600 italic">—</span>
+                      )}
+                    </TableCell>
+
+                    {/* Email */}
+                    <TableCell className="px-5">
+                      {supplier.email ? (
+                        <span className="text-sm text-slate-500 dark:text-slate-400 truncate max-w-40 block">
+                          {supplier.email}
+                        </span>
                       ) : (
                         <span className="text-sm text-slate-400 dark:text-slate-600 italic">—</span>
                       )}

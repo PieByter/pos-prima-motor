@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, requireAdmin } from '@/lib/auth'
 import { getPaymentMethods, createPaymentMethod } from '@/lib/services/payment-methods.service'
 
 export async function GET() {
@@ -24,7 +24,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
     try {
-        const { user, errorResponse } = await requireAuth()
+        const { user, errorResponse } = await requireAdmin()
         if (errorResponse) return errorResponse
         void user
 

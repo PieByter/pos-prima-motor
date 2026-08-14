@@ -22,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useBusinessSettings } from "@/lib/hooks/use-business-settings";
 import {
   Select,
   SelectContent,
@@ -130,6 +131,8 @@ interface TransactionFormProps {
   initialData?: TransactionFormData;
   /** Pre-set transaction ID (edit) */
   transactionId?: string;
+  /** Numeric DB id — dipakai untuk PATCH saat edit */
+  numericId?: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -140,6 +143,7 @@ export function TransactionForm({
   type,
   initialData,
   transactionId,
+  numericId,
 }: TransactionFormProps) {
   const router = useRouter();
   const isEdit = !!initialData;
@@ -233,6 +237,7 @@ export function TransactionForm({
   }, [isSale]);
 
   /* ---- derived totals ---- */
+  const taxPercent = useBusinessSettings().settings.tax_percent ?? 11;
   const totals = useMemo(() => {
     let itemsSubtotal = 0;
     let serviceFees = 0;
@@ -247,7 +252,7 @@ export function TransactionForm({
     }
 
     const beforeTax = itemsSubtotal + serviceFees - totalDiscount;
-    const taxRate = 0.11; // PPN 11%
+    const taxRate = taxPercent / 100; // PPN dinamis dari pengaturan bisnis
     const tax = Math.round(beforeTax * taxRate);
     const grandTotal = beforeTax + tax;
 
@@ -255,7 +260,7 @@ export function TransactionForm({
     const changeAmount = cash >= grandTotal ? cash - grandTotal : 0;
 
     return { itemsSubtotal, serviceFees, totalDiscount, taxRate, tax, grandTotal, cashAmount: cash, changeAmount };
-  }, [lines, cashAmount]);
+  }, [lines, cashAmount, taxPercent]);
 
   /* ---- payment method helpers ---- */
   const selectedPaymentMethod = paymentMethods.find((pm) => pm.id.toString() === paymentMethodId);
@@ -439,11 +444,14 @@ export function TransactionForm({
             subtotal: l.unitPrice * l.qty - Math.round(l.unitPrice * l.qty * (l.discountPercent / 100)) + l.serviceFee,
           }));
 
-        const res = await fetch("/api/sales", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ header, details }),
-        });
+        const res = await fetch(
+          isEdit && numericId ? `/api/sales/${numericId}` : "/api/sales",
+          {
+            method: isEdit && numericId ? "PATCH" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ header, details }),
+          },
+        );
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
@@ -459,6 +467,11 @@ export function TransactionForm({
           purchase_date: date,
           total_amount: totals.grandTotal,
           status: "completed" as const,
+          payment_status: paymentStatus,
+          paid_amount: paymentStatus === "unpaid" ? 0 : paidValue,
+          remaining_amount: paymentStatus === "paid" ? 0 : remainingAmount,
+          payment_method_id: paymentMethodId ? Number(paymentMethodId) : null,
+          notes: notes || null,
         };
 
         const details = lines
@@ -470,11 +483,14 @@ export function TransactionForm({
             subtotal: l.unitPrice * l.qty,
           }));
 
-        const res = await fetch("/api/purchases", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ header, details }),
-        });
+        const res = await fetch(
+          isEdit && numericId ? `/api/purchases/${numericId}` : "/api/purchases",
+          {
+            method: isEdit && numericId ? "PATCH" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ header, details }),
+          },
+        );
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
@@ -910,57 +926,55 @@ export function TransactionForm({
 
               {/* Payment & Totals */}
               <div className="w-full sm:w-5/12 lg:w-1/3 space-y-3">
-                {/* Payment Status (sale only) */}
-                {isSale && (
-                  <>
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                        Status Pembayaran
-                      </label>
-                      <Select
-                        value={paymentStatus}
-                        onValueChange={(v) => handlePaymentStatusChange(v as typeof paymentStatus)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih status..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="paid">✅ Lunas</SelectItem>
-                          <SelectItem value="partial">💰 Sebagian (DP)</SelectItem>
-                          <SelectItem value="unpaid">📝 Utang (Belum Bayar)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                {/* Payment Status (sale & purchase) */}
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Status Pembayaran
+                    </label>
+                    <Select
+                      value={paymentStatus}
+                      onValueChange={(v) => handlePaymentStatusChange(v as typeof paymentStatus)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih status..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="paid">✅ Lunas</SelectItem>
+                        <SelectItem value="partial">💰 Sebagian (DP)</SelectItem>
+                        <SelectItem value="unpaid">📝 {isSale ? "Utang (Belum Bayar)" : "Hutang ke Supplier"}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                    {/* Paid amount for partial/unpaid */}
-                    {paymentStatus !== "paid" && (
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                            Jumlah Dibayar
-                          </label>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={totals.grandTotal}
-                            placeholder="0"
-                            value={paidAmount}
-                            onChange={(e) => setPaidAmount(e.target.value)}
-                            className="text-right"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                            Sisa Tagihan
-                          </label>
-                          <div className="flex h-10 w-full items-center justify-end rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 px-3 text-sm font-semibold text-amber-600 dark:text-amber-400">
-                            {formatRupiah(remainingAmount)}
-                          </div>
+                  {/* Paid amount for partial/unpaid */}
+                  {paymentStatus !== "paid" && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                          Jumlah Dibayar
+                        </label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={totals.grandTotal}
+                          placeholder="0"
+                          value={paidAmount}
+                          onChange={(e) => setPaidAmount(e.target.value)}
+                          className="text-right"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                          Sisa Tagihan
+                        </label>
+                        <div className="flex h-10 w-full items-center justify-end rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 px-3 text-sm font-semibold text-amber-600 dark:text-amber-400">
+                          {formatRupiah(remainingAmount)}
                         </div>
                       </div>
-                    )}
-                  </>
-                )}
+                    </div>
+                  )}
+                </>
 
                 {/* Payment Method */}
                 <div className="space-y-1.5">

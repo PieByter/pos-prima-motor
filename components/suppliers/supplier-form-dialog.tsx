@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -15,19 +15,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Building2, Loader } from "lucide-react";
+import { Building2, Loader, Plus, Trash2, Star } from "lucide-react";
 import type { Supplier } from "@/lib/types/database";
-import { supplierSchema, type SupplierFormData } from "@/lib/validations";
+import { supplierSchema, type SupplierFormData, type SupplierContactFormData } from "@/lib/validations";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   supplier: Supplier | null;
-  onSave: (data: Omit<Supplier, "id" | "created_at" | "updated_at">) => void;
+  onSave: (data: Omit<Supplier, "id" | "created_at" | "updated_at"> & { contacts?: SupplierContactFormData[] }) => void;
 };
 
 export function SupplierFormDialog({ open, onOpenChange, supplier, onSave }: Props) {
   const isEdit = !!supplier;
+  const [contacts, setContacts] = useState<SupplierContactFormData[]>([]);
 
   const {
     register,
@@ -40,25 +41,99 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onSave }: Pro
       name: "",
       phone: "",
       address: "",
+      email: "",
+      is_active: true,
+      bank_name: "",
+      bank_account: "",
+      bank_account_holder: "",
+      npwp: "",
+      notes: "",
+      contacts: [],
     },
   });
 
-  // Reset form when dialog opens with new data
+  // Reset kontak saat dialog dibuka — pola "adjust state during render" (resmi React),
+  // menghindari setState sinkron di dalam effect
+  const [lastSyncKey, setLastSyncKey] = useState("");
+  const syncKey = `${open ? "open" : "closed"}-${supplier?.id ?? "new"}`;
+  if (open && syncKey !== lastSyncKey) {
+    setLastSyncKey(syncKey);
+    const supplierContacts = (supplier as Supplier & { contacts?: SupplierContactFormData[] })?.contacts ?? [];
+    setContacts(
+      supplierContacts.length > 0
+        ? supplierContacts
+        : [{ name: "", phone: "", position: "", email: "", is_primary: true, notes: "" }],
+    );
+  }
+
+  // Reset RHF form ketika dialog dibuka dengan data baru
   useEffect(() => {
     if (open) {
       reset({
         name: supplier?.name ?? "",
         phone: supplier?.phone ?? "",
         address: supplier?.address ?? "",
+        email: (supplier as Supplier & { email?: string | null })?.email ?? "",
+        is_active: (supplier as Supplier & { is_active?: boolean })?.is_active ?? true,
+        bank_name: (supplier as Supplier & { bank_name?: string | null })?.bank_name ?? "",
+        bank_account: (supplier as Supplier & { bank_account?: string | null })?.bank_account ?? "",
+        bank_account_holder: (supplier as Supplier & { bank_account_holder?: string | null })?.bank_account_holder ?? "",
+        npwp: (supplier as Supplier & { npwp?: string | null })?.npwp ?? "",
+        notes: (supplier as Supplier & { notes?: string | null })?.notes ?? "",
       });
     }
   }, [open, supplier, reset]);
 
+  function handleAddContact() {
+    setContacts((prev) => [...prev, { name: "", phone: "", position: "", email: "", is_primary: prev.length === 0, notes: "" }]);
+  }
+
+  function handleRemoveContact(index: number) {
+    setContacts((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      // Pastikan selalu ada minimal 1 kontak, dan tetap ada primary
+      if (next.length > 0 && !next.some((c) => c.is_primary)) {
+        next[0].is_primary = true;
+      }
+      return next;
+    });
+  }
+
+  function handleContactChange(index: number, field: keyof SupplierContactFormData, value: string | boolean) {
+    setContacts((prev) => {
+      const next = prev.map((c, i) => (i === index ? { ...c, [field]: value } : c));
+      // Jika menandai primary, hapus primary dari kontak lain
+      if (field === "is_primary" && value === true) {
+        return next.map((c, i) => (i === index ? c : { ...c, is_primary: false }));
+      }
+      return next;
+    });
+  }
+
   async function onSubmit(data: SupplierFormData) {
+    const cleanedContacts = contacts
+      .filter((c) => c.name.trim() !== "")
+      .map((c) => ({
+        name: c.name.trim(),
+        phone: c.phone?.trim() || undefined,
+        position: c.position?.trim() || undefined,
+        email: c.email?.trim() || undefined,
+        is_primary: c.is_primary ?? false,
+        notes: c.notes?.trim() || undefined,
+      }));
+
     await onSave({
       name: data.name,
       phone: data.phone || null,
       address: data.address || null,
+      email: data.email || null,
+      is_active: data.is_active ?? true,
+      bank_name: data.bank_name || null,
+      bank_account: data.bank_account || null,
+      bank_account_holder: data.bank_account_holder || null,
+      npwp: data.npwp || null,
+      notes: data.notes || null,
+      contacts: cleanedContacts,
     });
   }
 
@@ -131,6 +206,172 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onSave }: Pro
             />
             {errors.address && (
               <p className="text-xs text-red-500 mt-1">{errors.address.message}</p>
+            )}
+          </div>
+
+          {/* Email */}
+          <div className="space-y-1.5">
+            <Label htmlFor="supplier-email" className="text-sm font-medium">
+              Email
+            </Label>
+            <Input
+              id="supplier-email"
+              type="email"
+              {...register("email")}
+              placeholder="contoh@supplier.com"
+              className={`bg-slate-50 dark:bg-slate-800 ${errors.email ? "border-red-500" : ""}`}
+            />
+            {errors.email && (
+              <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>
+            )}
+          </div>
+
+          {/* Status aktif */}
+          <div className="flex items-center gap-2">
+            <input
+              id="supplier-active"
+              type="checkbox"
+              {...register("is_active")}
+              className="h-4 w-4 rounded border-slate-300"
+            />
+            <Label htmlFor="supplier-active" className="text-sm font-medium">
+              Supplier aktif
+            </Label>
+          </div>
+
+          {/* Informasi Bank */}
+          <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-3 space-y-3">
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+              Info Bank (untuk pembayaran transfer)
+            </p>
+            <div className="space-y-1.5">
+              <Label htmlFor="supplier-bank-name" className="text-sm font-medium">
+                Nama Bank
+              </Label>
+              <Input
+                id="supplier-bank-name"
+                {...register("bank_name")}
+                placeholder="Contoh: BCA"
+                className="bg-slate-50 dark:bg-slate-800"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="supplier-bank-account" className="text-sm font-medium">
+                No. Rekening
+              </Label>
+              <Input
+                id="supplier-bank-account"
+                {...register("bank_account")}
+                placeholder="1234567890"
+                className="bg-slate-50 dark:bg-slate-800"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="supplier-bank-holder" className="text-sm font-medium">
+                Atas Nama
+              </Label>
+              <Input
+                id="supplier-bank-holder"
+                {...register("bank_account_holder")}
+                placeholder="Nama pemilik rekening"
+                className="bg-slate-50 dark:bg-slate-800"
+              />
+            </div>
+          </div>
+
+          {/* NPWP + Catatan */}
+          <div className="space-y-1.5">
+            <Label htmlFor="supplier-npwp" className="text-sm font-medium">
+              NPWP
+            </Label>
+            <Input
+              id="supplier-npwp"
+              {...register("npwp")}
+              placeholder="00.000.000.0-000.000"
+              className="bg-slate-50 dark:bg-slate-800"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="supplier-notes" className="text-sm font-medium">
+              Catatan
+            </Label>
+            <Textarea
+              id="supplier-notes"
+              {...register("notes")}
+              placeholder="Syarat minimal order, hari pengiriman, dll."
+              rows={2}
+              className="bg-slate-50 dark:bg-slate-800 resize-none"
+            />
+          </div>
+
+          {/* Kontak Person (1 supplier bisa punya banyak kontak) */}
+          <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                Kontak Person (Sales / CS)
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddContact}
+                className="gap-1 text-xs"
+              >
+                <Plus className="h-3.5 w-3.5" /> Tambah
+              </Button>
+            </div>
+
+            {contacts.map((contact, idx) => (
+              <div key={idx} className="space-y-2 rounded-md bg-slate-50 dark:bg-slate-800/60 p-2.5 border border-slate-100 dark:border-slate-700">
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={contact.name}
+                    onChange={(e) => handleContactChange(idx, "name", e.target.value)}
+                    placeholder="Nama kontak *"
+                    className="h-8 text-sm bg-white dark:bg-slate-900"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleContactChange(idx, "is_primary", !contact.is_primary)}
+                    className={`shrink-0 p-1.5 rounded-md transition-colors ${contact.is_primary ? "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400" : "text-slate-400 hover:text-amber-500"}`}
+                    title={contact.is_primary ? "Kontak utama" : "Jadikan kontak utama"}
+                  >
+                    <Star className={`h-4 w-4 ${contact.is_primary ? "fill-amber-400 text-amber-500" : ""}`} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveContact(idx)}
+                    className="shrink-0 p-1.5 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    title="Hapus kontak"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    value={contact.position ?? ""}
+                    onChange={(e) => handleContactChange(idx, "position", e.target.value)}
+                    placeholder="Jabatan (Sales / CS)"
+                    className="h-8 text-sm bg-white dark:bg-slate-900"
+                  />
+                  <Input
+                    value={contact.phone ?? ""}
+                    onChange={(e) => handleContactChange(idx, "phone", e.target.value)}
+                    placeholder="No. HP"
+                    className="h-8 text-sm bg-white dark:bg-slate-900"
+                  />
+                </div>
+                <Input
+                  value={contact.email ?? ""}
+                  onChange={(e) => handleContactChange(idx, "email", e.target.value)}
+                  placeholder="Email (opsional)"
+                  className="h-8 text-sm bg-white dark:bg-slate-900"
+                />
+              </div>
+            ))}
+            {contacts.length === 0 && (
+              <p className="text-xs text-slate-400 text-center py-1">Belum ada kontak. Klik &quot;Tambah&quot; untuk menambahkan.</p>
             )}
           </div>
 

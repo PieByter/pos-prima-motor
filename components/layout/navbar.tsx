@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, type JSX } from "react";
-import { Search, Loader2, Package, Users, ShoppingCart, X } from "lucide-react";
+import { Search, Loader2, Package, Users, ShoppingCart } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { NotificationDropdown } from "@/components/layout/notification-dropdown";
 import { useRouter } from "next/navigation";
@@ -62,8 +62,8 @@ export function Navbar({ title, subtitle }: NavbarProps): JSX.Element {
   // Debounced search
   useEffect(() => {
     if (!searchQuery.trim()) {
-      setResults([]);
-      return;
+      const t = window.setTimeout(() => setResults([]), 0);
+      return () => window.clearTimeout(t);
     }
 
     const timer = setTimeout(async () => {
@@ -84,24 +84,24 @@ export function Navbar({ title, subtitle }: NavbarProps): JSX.Element {
         const sales = salesData?.data ?? [];
 
         const allResults: SearchResult[] = [
-          ...sales.map((s: any) => ({
+          ...sales.map((s: { id: number; invoice_number?: string | null; sale_date?: string; total_amount?: number | string }) => ({
             type: "sale" as const,
             id: s.id,
             label: `${s.invoice_number ?? "#" + s.id}`,
-            subLabel: `${new Date(s.sale_date).toLocaleDateString("id-ID")} | Rp ${Number(s.total_amount).toLocaleString("id-ID")}`,
+            subLabel: `${new Date(s.sale_date ?? "").toLocaleDateString("id-ID")} | Rp ${Number(s.total_amount ?? 0).toLocaleString("id-ID")}`,
             href: `/dashboard/transactions/sales/${s.id}`,
           })),
-          ...items.map((i: any) => ({
+          ...items.map((i: { id: number; name?: string; sku?: string | null; selling_price?: number | string }) => ({
             type: "item" as const,
             id: i.id,
-            label: i.name,
-            subLabel: `SKU: ${i.sku ?? "-"} | Rp ${Number(i.selling_price).toLocaleString("id-ID")}`,
+            label: i.name ?? "",
+            subLabel: `SKU: ${i.sku ?? "-"} | Rp ${Number(i.selling_price ?? 0).toLocaleString("id-ID")}`,
             href: `/dashboard/master-data`,
           })),
-          ...customers.map((c: any) => ({
+          ...customers.map((c: { id: number; name?: string; phone?: string | null }) => ({
             type: "customer" as const,
             id: c.id,
-            label: c.name,
+            label: c.name ?? "",
             subLabel: c.phone ?? "-",
             href: `/dashboard/customers`,
           })),

@@ -112,9 +112,6 @@ export default function InventoryPage() {
   };
 
   const loadInventory = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
     try {
       const stockQuery = new URLSearchParams({
         page: String(page),
@@ -123,9 +120,11 @@ export default function InventoryPage() {
       if (search.trim()) stockQuery.set("search", search.trim());
       if (status !== "all") stockQuery.set("stock_status", status);
 
-      const [stockRes, lowStockRes, movementRes] = await Promise.all([
+      // Threshold low-stock dinamis dari pengaturan bisnis
+      const lowStockRes = await fetch("/api/stock/low-stock", { cache: "no-store" });
+
+      const [stockRes, movementRes] = await Promise.all([
         fetch(`/api/stock?${stockQuery.toString()}`, { cache: "no-store" }),
-        fetch("/api/stock/low-stock?threshold=5", { cache: "no-store" }),
         fetch("/api/stock/movements?page=1&limit=8", { cache: "no-store" }),
       ]);
 
@@ -156,6 +155,7 @@ export default function InventoryPage() {
         movementRes.json(),
       ]);
 
+      setError(null);
       setStock(stockData);
       setLowStock(lowStockData ?? []);
       setMovements(movementData);
@@ -168,7 +168,10 @@ export default function InventoryPage() {
   }, [page, search, status]);
 
   useEffect(() => {
-    loadInventory();
+    const t = window.setTimeout(() => {
+      void loadInventory();
+    }, 0);
+    return () => window.clearTimeout(t);
   }, [loadInventory]);
 
   const totalCurrentStock = useMemo(() => {

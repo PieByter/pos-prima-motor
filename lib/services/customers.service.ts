@@ -18,6 +18,11 @@ function normalizeCustomerInsert(data: CustomerInsert): CustomerInsert {
     name: data.name.trim(),
     phone: data.phone?.trim() ? data.phone.trim() : null,
     address: data.address?.trim() ? data.address.trim() : null,
+    nik: data.nik?.trim() ? data.nik.trim() : null,
+    email: data.email?.trim() ? data.email.trim() : null,
+    birth_date: data.birth_date || null,
+    customer_type: data.customer_type ?? 'retail',
+    notes: data.notes?.trim() ? data.notes.trim() : null,
   }
 }
 
@@ -27,6 +32,11 @@ function normalizeCustomerUpdate(data: CustomerUpdate): CustomerUpdate {
     name: data.name?.trim(),
     phone: data.phone?.trim() ? data.phone.trim() : null,
     address: data.address?.trim() ? data.address.trim() : null,
+    nik: data.nik?.trim() ? data.nik.trim() : null,
+    email: data.email?.trim() ? data.email.trim() : null,
+    birth_date: data.birth_date || null,
+    customer_type: data.customer_type ?? 'retail',
+    notes: data.notes?.trim() ? data.notes.trim() : null,
   }
 }
 

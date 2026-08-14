@@ -1,6 +1,6 @@
 "use client";
 
-import { ShoppingCart, AlertTriangle, TrendingUp, ArrowRight } from "lucide-react";
+import { ShoppingCart, AlertTriangle, ArrowRight } from "lucide-react";
 import { DashboardCard, SectionHeader, EmptyState, LoadingSpinner } from "@/components/dashboard/ui/dashboard-card";
 import { useFetch } from "@/lib/hooks/use-fetch";
 import { Badge } from "@/components/ui/badge";

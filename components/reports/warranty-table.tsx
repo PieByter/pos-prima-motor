@@ -24,13 +24,12 @@ export function WarrantyTable() {
   const [filter, setFilter] = useState<"all" | "active" | "expiring" | "expired">("all");
 
   const load = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
     try {
       const query = filter === "all" ? "" : `?status=${filter}`;
       const res = await fetch(`/api/warranty${query}`, { cache: "no-store" });
       if (!res.ok) throw new Error("Gagal memuat data garansi");
       const data = (await res.json()) as WarrantyEntry[];
+      setError(null);
       setEntries(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat data");
@@ -40,7 +39,10 @@ export function WarrantyTable() {
   }, [filter]);
 
   useEffect(() => {
-    load();
+    const t = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(t);
   }, [load]);
 
   const active = entries.filter((e) => e.status === "active").length;

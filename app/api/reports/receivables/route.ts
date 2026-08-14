@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth'
 import { getReceivablesReport } from '@/lib/services/reports.service'
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
     try {
         const { user, errorResponse } = await requireAuth()
         if (errorResponse) return errorResponse

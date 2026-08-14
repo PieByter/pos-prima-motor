@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Pencil,
+  MessageCircle,
   User,
   Wrench,
   CreditCard,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Receipt } from "@/components/transactions/receipt";
+import { useToast } from "@/lib/toast-provider";
 import {
   type InvoiceDetail,
   type InvoiceItem,
@@ -27,6 +29,7 @@ import {
   formatRupiah,
 } from "@/lib/data/invoice-details";
 import { STATUS_STYLES } from "@/lib/data/transactions";
+import { openWhatsAppReceipt } from "@/lib/utils/whatsapp";
 
 const ICON_MAP: Record<InvoiceItem["icon"], React.ElementType> = {
   wrench: Wrench,
@@ -58,6 +61,16 @@ export function TransactionDetail({
   backHref,
 }: TransactionDetailProps) {
   const router = useRouter();
+  const { showToast } = useToast();
+
+  function handleWhatsApp() {
+    if (invoice.entityPhone === "-" || !invoice.entityPhone) {
+      showToast("Customer tidak punya nomor HP", "error");
+      return;
+    }
+    const ok = openWhatsAppReceipt(invoice);
+    if (!ok) showToast("Nomor HP tidak valid", "error");
+  }
   const statusStyle = STATUS_STYLES[invoice.status];
   const isSale = invoice.transactionType === "sale";
 
@@ -139,6 +152,17 @@ export function TransactionDetail({
             <Pencil className="h-4 w-4" />
             Edit
           </Button>
+          {invoice.transactionType === "sale" && (
+            <Button
+              variant="outline"
+              className="gap-2 text-emerald-600 dark:text-emerald-400 hover:text-emerald-600"
+              onClick={handleWhatsApp}
+              title="Kirim struk ke WhatsApp customer"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Kirim WA
+            </Button>
+          )}
           <Receipt invoice={invoice} />
         </div>
       </div>

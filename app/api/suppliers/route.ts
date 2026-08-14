@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth'
-import { getSuppliers, createSupplier, bulkDeleteSuppliers } from '@/lib/services/suppliers.service'
-import type { SupplierInsert } from '@/lib/types/database'
+import {
+  getSuppliers,
+  createSupplier,
+  bulkDeleteSuppliers,
+  replaceSupplierContacts,
+  getSupplierById,
+} from '@/lib/services/suppliers.service'
+import type { SupplierInsert, SupplierContactInsert } from '@/lib/types/database'
+
+type SupplierBody = SupplierInsert & { contacts?: Omit<SupplierContactInsert, 'supplier_id'>[] }
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,7 +44,7 @@ export async function POST(request: NextRequest) {
     if (errorResponse) return errorResponse
     void user
 
-    const body = (await request.json()) as SupplierInsert
+    const body = (await request.json()) as SupplierBody
 
     if (!body.name?.trim()) {
       return NextResponse.json({ error: 'Name is required' }, { status: 422 })
@@ -44,7 +52,10 @@ export async function POST(request: NextRequest) {
 
     // Use admin client for writes — bypasses RLS safely on the server
     const admin = createAdminClient()
-    const { data, error } = await createSupplier(admin, body)
+    const contacts = Array.isArray(body.contacts) ? body.contacts : undefined
+    const supplierPayload = { ...body, contacts: undefined }
+
+    const { data, error } = await createSupplier(admin, supplierPayload)
 
     if (error || !data) {
       console.error('Suppliers POST failed:', error)
@@ -54,7 +65,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return NextResponse.json(data, { status: 201 })
+    // Simpan kontak (jika dikirim)
+    if (contacts && contacts.length > 0) {
+      const { error: contactError } = await replaceSupplierContacts(admin, data.id, contacts)
+      if (contactError) {
+        console.error('Suppliers contacts insert failed:', contactError)
+        return NextResponse.json({ error: contactError.message }, { status: 400 })
+      }
+    }
+
+    const { data: withContacts } = await getSupplierById(admin, data.id)
+    return NextResponse.json(withContacts ?? data, { status: 201 })
   } catch (err) {
     console.error('Suppliers POST unexpected error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

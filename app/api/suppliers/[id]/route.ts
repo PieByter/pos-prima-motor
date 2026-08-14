@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth'
-import { getSupplierById, updateSupplier, deleteSupplier } from '@/lib/services/suppliers.service'
+import {
+  getSupplierById,
+  updateSupplier,
+  deleteSupplier,
+  replaceSupplierContacts,
+} from '@/lib/services/suppliers.service'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -45,7 +50,18 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       console.error('Suppliers PATCH failed:', error)
       return NextResponse.json({ error: error?.message ?? 'Failed to update supplier' }, { status: 400 })
     }
-    return NextResponse.json(data)
+
+    // Update kontak (jika dikirim) — replace seluruh kontak
+    if (Array.isArray(body.contacts)) {
+      const { error: contactError } = await replaceSupplierContacts(admin, numericId, body.contacts)
+      if (contactError) {
+        console.error('Suppliers contacts replace failed:', contactError)
+        return NextResponse.json({ error: contactError.message }, { status: 400 })
+      }
+    }
+
+    const { data: withContacts } = await getSupplierById(admin, numericId)
+    return NextResponse.json(withContacts ?? data)
   } catch (err) {
     console.error('Suppliers PATCH unexpected error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

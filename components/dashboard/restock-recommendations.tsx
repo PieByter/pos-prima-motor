@@ -5,6 +5,7 @@ import { DashboardCard, SectionHeader, EmptyState, LoadingSpinner } from "@/comp
 import { useFetch } from "@/lib/hooks/use-fetch";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { useLocale } from "@/lib/locales";
 
 type RestockItem = {
   item_id: number;
@@ -19,16 +20,17 @@ type RestockItem = {
 };
 
 export function RestockRecommendations() {
+  const { t } = useLocale();
   const { data: items, isLoading } = useFetch<RestockItem[]>("/api/stock/restock-recommendations");
 
   const data = items ?? [];
 
   return (
     <DashboardCard>
-      <SectionHeader label="Auto Restock" title="Rekomendasi Restock">
+      <SectionHeader label={t("dashboard.autoRestock")} title={t("dashboard.restockRecommendations")}>
         {data.length > 0 && (
           <Badge variant="outline" className="text-xs">
-            {data.filter((i) => i.urgency === "critical").length} kritis
+            {t("dashboard.criticalCount", { n: data.filter((i) => i.urgency === "critical").length })}
           </Badge>
         )}
       </SectionHeader>
@@ -37,7 +39,7 @@ export function RestockRecommendations() {
         {isLoading ? (
           <LoadingSpinner />
         ) : data.length === 0 ? (
-          <EmptyState message="Semua stok tercukupi." />
+          <EmptyState message={t("dashboard.stockSufficient")} />
         ) : (
           data.slice(0, 8).map((item) => (
             <div
@@ -62,10 +64,10 @@ export function RestockRecommendations() {
                   {item.name}
                 </p>
                 <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                  Stok: {item.current_stock} | Terjual 30 hr: {item.sold_30_days}
+                  {t("dashboard.stockSoldLine", { stock: item.current_stock, sold: item.sold_30_days })}
                   {item.days_until_empty < 30 && (
                     <span className="ml-1 text-amber-500 font-medium">
-                      | Habis ~{item.days_until_empty} hr
+                      {t("dashboard.estimatedEmpty", { n: item.days_until_empty })}
                     </span>
                   )}
                 </p>
@@ -74,7 +76,7 @@ export function RestockRecommendations() {
                 <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
                   +{item.recommended_qty}
                 </p>
-                <p className="text-[10px] text-slate-400 dark:text-slate-500">Beli</p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500">{t("dashboard.buy")}</p>
               </div>
             </div>
           ))
@@ -85,7 +87,7 @@ export function RestockRecommendations() {
             href="/dashboard/inventory"
             className="flex items-center justify-center gap-1 pt-1 text-xs font-semibold text-sky-600 hover:text-sky-500 dark:text-sky-400"
           >
-            Lihat Semua <ArrowRight className="h-3 w-3" />
+            {t("common.seeAll")} <ArrowRight className="h-3 w-3" />
           </Link>
         )}
       </div>

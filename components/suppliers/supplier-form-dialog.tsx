@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Building2, Loader, Plus, Trash2, Star } from "lucide-react";
 import type { Supplier } from "@/lib/types/database";
 import { supplierSchema, type SupplierFormData, type SupplierContactFormData } from "@/lib/validations";
+import { useLocale } from "@/lib/locales";
 
 type Props = {
   open: boolean;
@@ -27,6 +28,7 @@ type Props = {
 };
 
 export function SupplierFormDialog({ open, onOpenChange, supplier, onSave }: Props) {
+  const { t } = useLocale();
   const isEdit = !!supplier;
   const [contacts, setContacts] = useState<SupplierContactFormData[]>([]);
 
@@ -147,12 +149,12 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onSave }: Pro
             </div>
             <div>
               <DialogTitle className="text-lg">
-                {isEdit ? "Edit Supplier" : "Tambah Supplier Baru"}
+                {isEdit ? t("masterData.editSupplier") : t("masterData.addSupplierNew")}
               </DialogTitle>
               <DialogDescription className="mt-0.5 text-sm">
                 {isEdit
-                  ? "Perbarui informasi supplier/pemasok."
-                  : "Isi data supplier baru di bawah ini."}
+                  ? t("masterData.editSupplierDescription")
+                  : t("masterData.addSupplierDescription")}
               </DialogDescription>
             </div>
           </div>
@@ -162,12 +164,12 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onSave }: Pro
           {/* Nama */}
           <div className="space-y-1.5">
             <Label htmlFor="supplier-name" className="text-sm font-medium">
-              Nama Supplier / Perusahaan <span className="text-red-500">*</span>
+              {t("masterData.supplierName")} <span className="text-red-500">*</span>
             </Label>
             <Input
               id="supplier-name"
               {...register("name")}
-              placeholder="Contoh: CV Sumber Motor Jaya"
+              placeholder={t("masterData.supplierNamePlaceholder")}
               className={`bg-slate-50 dark:bg-slate-800 ${errors.name ? "border-red-500" : ""}`}
             />
             {errors.name && (
@@ -178,13 +180,13 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onSave }: Pro
           {/* No. Telepon */}
           <div className="space-y-1.5">
             <Label htmlFor="supplier-phone" className="text-sm font-medium">
-              No. Telepon
+              {t("masterData.supplierPhone")}
             </Label>
             <Input
               id="supplier-phone"
               type="tel"
               {...register("phone")}
-              placeholder="Contoh: 021-1234567"
+              placeholder={t("masterData.supplierPhonePlaceholder")}
               className={`bg-slate-50 dark:bg-slate-800 ${errors.phone ? "border-red-500" : ""}`}
             />
             {errors.phone && (
@@ -195,12 +197,12 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onSave }: Pro
           {/* Alamat */}
           <div className="space-y-1.5">
             <Label htmlFor="supplier-address" className="text-sm font-medium">
-              Alamat
+              {t("masterData.address")}
             </Label>
             <Textarea
               id="supplier-address"
               {...register("address")}
-              placeholder="Jl. Industri No. 45, Kota..."
+              placeholder={t("masterData.supplierAddressPlaceholder")}
               rows={3}
               className={`bg-slate-50 dark:bg-slate-800 resize-none ${errors.address ? "border-red-500" : ""}`}
             />
@@ -212,13 +214,13 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onSave }: Pro
           {/* Email */}
           <div className="space-y-1.5">
             <Label htmlFor="supplier-email" className="text-sm font-medium">
-              Email
+              {t("masterData.email")}
             </Label>
             <Input
               id="supplier-email"
               type="email"
               {...register("email")}
-              placeholder="contoh@supplier.com"
+              placeholder={t("masterData.supplierEmailPlaceholder")}
               className={`bg-slate-50 dark:bg-slate-800 ${errors.email ? "border-red-500" : ""}`}
             />
             {errors.email && (
@@ -235,45 +237,45 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onSave }: Pro
               className="h-4 w-4 rounded border-slate-300"
             />
             <Label htmlFor="supplier-active" className="text-sm font-medium">
-              Supplier aktif
+              {t("masterData.supplierActive")}
             </Label>
           </div>
 
           {/* Informasi Bank */}
           <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-3 space-y-3">
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-              Info Bank (untuk pembayaran transfer)
+              {t("masterData.bankInfo")}
             </p>
             <div className="space-y-1.5">
               <Label htmlFor="supplier-bank-name" className="text-sm font-medium">
-                Nama Bank
+                {t("masterData.bankName")}
               </Label>
               <Input
                 id="supplier-bank-name"
                 {...register("bank_name")}
-                placeholder="Contoh: BCA"
+                placeholder={t("masterData.bankNamePlaceholder")}
                 className="bg-slate-50 dark:bg-slate-800"
               />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="supplier-bank-account" className="text-sm font-medium">
-                No. Rekening
+                {t("masterData.bankAccount")}
               </Label>
               <Input
                 id="supplier-bank-account"
                 {...register("bank_account")}
-                placeholder="1234567890"
+                placeholder={t("masterData.bankAccountPlaceholder")}
                 className="bg-slate-50 dark:bg-slate-800"
               />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="supplier-bank-holder" className="text-sm font-medium">
-                Atas Nama
+                {t("masterData.bankHolder")}
               </Label>
               <Input
                 id="supplier-bank-holder"
                 {...register("bank_account_holder")}
-                placeholder="Nama pemilik rekening"
+                placeholder={t("masterData.bankHolderPlaceholder")}
                 className="bg-slate-50 dark:bg-slate-800"
               />
             </div>
@@ -282,24 +284,24 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onSave }: Pro
           {/* NPWP + Catatan */}
           <div className="space-y-1.5">
             <Label htmlFor="supplier-npwp" className="text-sm font-medium">
-              NPWP
+              {t("masterData.npwp")}
             </Label>
             <Input
               id="supplier-npwp"
               {...register("npwp")}
-              placeholder="00.000.000.0-000.000"
+              placeholder={t("masterData.npwpPlaceholder")}
               className="bg-slate-50 dark:bg-slate-800"
             />
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="supplier-notes" className="text-sm font-medium">
-              Catatan
+              {t("masterData.notes")}
             </Label>
             <Textarea
               id="supplier-notes"
               {...register("notes")}
-              placeholder="Syarat minimal order, hari pengiriman, dll."
+              placeholder={t("masterData.notesPlaceholder")}
               rows={2}
               className="bg-slate-50 dark:bg-slate-800 resize-none"
             />
@@ -309,7 +311,7 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onSave }: Pro
           <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-3 space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                Kontak Person (Sales / CS)
+                {t("masterData.contactPerson")}
               </p>
               <Button
                 type="button"
@@ -318,7 +320,7 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onSave }: Pro
                 onClick={handleAddContact}
                 className="gap-1 text-xs"
               >
-                <Plus className="h-3.5 w-3.5" /> Tambah
+                <Plus className="h-3.5 w-3.5" /> {t("common.add")}
               </Button>
             </div>
 
@@ -328,14 +330,14 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onSave }: Pro
                   <Input
                     value={contact.name}
                     onChange={(e) => handleContactChange(idx, "name", e.target.value)}
-                    placeholder="Nama kontak *"
+                    placeholder={t("masterData.contactNamePlaceholder")}
                     className="h-8 text-sm bg-white dark:bg-slate-900"
                   />
                   <button
                     type="button"
                     onClick={() => handleContactChange(idx, "is_primary", !contact.is_primary)}
                     className={`shrink-0 p-1.5 rounded-md transition-colors ${contact.is_primary ? "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400" : "text-slate-400 hover:text-amber-500"}`}
-                    title={contact.is_primary ? "Kontak utama" : "Jadikan kontak utama"}
+                    title={contact.is_primary ? t("masterData.contactPrimary") : t("masterData.makeContactPrimary")}
                   >
                     <Star className={`h-4 w-4 ${contact.is_primary ? "fill-amber-400 text-amber-500" : ""}`} />
                   </button>
@@ -343,7 +345,7 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onSave }: Pro
                     type="button"
                     onClick={() => handleRemoveContact(idx)}
                     className="shrink-0 p-1.5 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                    title="Hapus kontak"
+                    title={t("masterData.deleteContact")}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -352,26 +354,26 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onSave }: Pro
                   <Input
                     value={contact.position ?? ""}
                     onChange={(e) => handleContactChange(idx, "position", e.target.value)}
-                    placeholder="Jabatan (Sales / CS)"
+                    placeholder={t("masterData.contactPositionPlaceholder")}
                     className="h-8 text-sm bg-white dark:bg-slate-900"
                   />
                   <Input
                     value={contact.phone ?? ""}
                     onChange={(e) => handleContactChange(idx, "phone", e.target.value)}
-                    placeholder="No. HP"
+                    placeholder={t("masterData.contactPhonePlaceholder")}
                     className="h-8 text-sm bg-white dark:bg-slate-900"
                   />
                 </div>
                 <Input
                   value={contact.email ?? ""}
                   onChange={(e) => handleContactChange(idx, "email", e.target.value)}
-                  placeholder="Email (opsional)"
+                  placeholder={t("masterData.contactEmailPlaceholder")}
                   className="h-8 text-sm bg-white dark:bg-slate-900"
                 />
               </div>
             ))}
             {contacts.length === 0 && (
-              <p className="text-xs text-slate-400 text-center py-1">Belum ada kontak. Klik &quot;Tambah&quot; untuk menambahkan.</p>
+              <p className="text-xs text-slate-400 text-center py-1">{t("masterData.noContacts")}</p>
             )}
           </div>
 
@@ -382,7 +384,7 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onSave }: Pro
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
             >
-              Batal
+              {t("common.cancel")}
             </Button>
             <Button
               type="submit"
@@ -390,7 +392,7 @@ export function SupplierFormDialog({ open, onOpenChange, supplier, onSave }: Pro
               disabled={isSubmitting}
             >
               {isSubmitting && <Loader className="h-4 w-4 animate-spin" />}
-              {isEdit ? "Simpan Perubahan" : "Tambah Supplier"}
+              {isEdit ? t("common.saveChanges") : t("masterData.addSupplier")}
             </Button>
           </DialogFooter>
         </form>

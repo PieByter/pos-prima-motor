@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader, Wallet } from "lucide-react";
 import { formatRupiah } from "@/lib/data/items";
+import { useLocale } from "@/lib/locales";
 import {
   Select,
   SelectContent,
@@ -44,6 +45,7 @@ export function PaymentDialog({
   paidAmount,
   onPaymentDone,
 }: Props) {
+  const { t } = useLocale();
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -80,11 +82,11 @@ export function PaymentDialog({
   async function handleSubmit() {
     const value = Number(amount);
     if (!value || value <= 0) {
-      setError("Masukkan jumlah pembayaran yang valid.");
+      setError(t("transactions.invalidPaymentAmount"));
       return;
     }
     if (value > remaining) {
-      setError(`Jumlah melebihi sisa tagihan (${formatRupiah(remaining)}).`);
+      setError(t("transactions.paymentExceeds", { remaining: formatRupiah(remaining) }));
       return;
     }
 
@@ -102,14 +104,14 @@ export function PaymentDialog({
       });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error ?? "Gagal menyimpan pembayaran");
+        throw new Error(errData.error ?? t("transactions.paymentSaveFailed"));
       }
       setAmount("");
       setNotes("");
       onOpenChange(false);
       onPaymentDone();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menyimpan pembayaran");
+      setError(err instanceof Error ? err.message : t("transactions.paymentSaveFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -124,9 +126,9 @@ export function PaymentDialog({
               <Wallet className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
-              <DialogTitle className="text-lg">Terima Pembayaran</DialogTitle>
+              <DialogTitle className="text-lg">{t("transactions.receivePayment")}</DialogTitle>
               <DialogDescription className="mt-0.5 text-sm">
-                {invoiceNumber} · Sisa tagihan{" "}
+                {invoiceNumber} · {t("transactions.remainingBalance")}{" "}
                 <span className="font-semibold text-amber-600 dark:text-amber-400">
                   {formatRupiah(remaining)}
                 </span>
@@ -138,7 +140,7 @@ export function PaymentDialog({
         <div className="space-y-4 pt-2">
           <div className="space-y-1.5">
             <Label htmlFor="payment-amount" className="text-sm font-medium">
-              Jumlah Dibayar <span className="text-red-500">*</span>
+              {t("transactions.amountPaid")} <span className="text-red-500">*</span>
             </Label>
             <div className="flex gap-2">
               <Input
@@ -158,21 +160,21 @@ export function PaymentDialog({
                 onClick={handleQuickFill}
                 className="shrink-0"
               >
-                Lunas
+                {t("transactions.paidInFull")}
               </Button>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Total: {formatRupiah(totalAmount)} · Sudah dibayar: {formatRupiah(paidAmount)}
+              {t("transactions.paymentSummaryLine", { total: formatRupiah(totalAmount), paid: formatRupiah(paidAmount) })}
             </p>
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="payment-method" className="text-sm font-medium">
-              Metode Pembayaran
+              {t("transactions.paymentMethod")}
             </Label>
             <Select value={paymentMethodId} onValueChange={setPaymentMethodId}>
               <SelectTrigger>
-                <SelectValue placeholder="Pilih metode bayar..." />
+                <SelectValue placeholder={t("transactions.paymentMethodPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {paymentMethods.map((m) => (
@@ -186,11 +188,11 @@ export function PaymentDialog({
 
           <div className="space-y-1.5">
             <Label htmlFor="payment-notes" className="text-sm font-medium">
-              Catatan (opsional)
+              {t("transactions.notesOptional")}
             </Label>
             <Input
               id="payment-notes"
-              placeholder="Contoh: Bayar DP, angsuran ke-2..."
+              placeholder={t("transactions.paymentNotesPlaceholder")}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
             />
@@ -209,7 +211,7 @@ export function PaymentDialog({
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
             >
-              Batal
+              {t("common.cancel")}
             </Button>
             <Button
               type="button"
@@ -218,7 +220,7 @@ export function PaymentDialog({
               className="bg-emerald-500 hover:bg-emerald-600 text-white gap-2"
             >
               {isSubmitting && <Loader className="h-4 w-4 animate-spin" />}
-              Simpan Pembayaran
+              {t("transactions.savePayment")}
             </Button>
           </div>
         </div>

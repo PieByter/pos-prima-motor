@@ -10,9 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PrimaMotorLogo } from "@/components/prima-motor-logo";
 import { ToastContainer, useToasts } from "@/components/ui/toast";
+import { useLocale } from "@/lib/locales";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
+  const { t } = useLocale();
   const { toasts, showToast, removeToast } = useToasts();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -23,7 +25,7 @@ export default function ForgotPasswordPage() {
     const email = String(formData.get("email") ?? "").trim();
 
     if (!email) {
-      showToast("Silakan masukkan email Anda.", "error", 3000);
+      showToast(t("auth.emailRequired"), "error", 3000);
       return;
     }
 
@@ -43,7 +45,7 @@ export default function ForgotPasswordPage() {
               <PrimaMotorLogo />
             </div>
             <h2 className="text-lg font-medium text-gray-500 dark:text-gray-400">
-              Lupa Password
+              {t("auth.forgotPasswordTitle")}
             </h2>
           </div>
 
@@ -52,13 +54,13 @@ export default function ForgotPasswordPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="text-center mb-2">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Masukkan email Anda untuk melanjutkan ke halaman reset password.
+                  {t("auth.forgotHint")}
                 </p>
               </div>
 
               {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email">{t("auth.email")}</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                   <Input
@@ -82,11 +84,11 @@ export default function ForgotPasswordPage() {
                   {isLoading ? (
                     <span className="flex items-center gap-2">
                       <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Memproses...
+                      {t("auth.processing")}
                     </span>
                   ) : (
                     <span className="flex items-center justify-center gap-2">
-                      Lanjutkan
+                      {t("auth.continue")}
                       <ArrowRight className="h-4 w-4" />
                     </span>
                   )}
@@ -100,7 +102,7 @@ export default function ForgotPasswordPage() {
                   className="inline-flex items-center gap-2 text-sm font-medium text-amber-600 hover:text-amber-700 transition-colors"
                 >
                   <ArrowLeft className="h-4 w-4" />
-                  Kembali ke login
+                  {t("auth.backToLogin")}
                 </Link>
               </div>
             </form>

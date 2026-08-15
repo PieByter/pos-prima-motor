@@ -8,6 +8,7 @@ import { Loader, Phone, Wallet } from "lucide-react";
 import { formatRupiah } from "@/lib/data/items";
 import { DashboardCard } from "@/components/dashboard/ui/dashboard-card";
 import type { PayablesReport, PayableRow } from "@/lib/types/database";
+import { useLocale } from "@/lib/locales";
 
 function agingBadgeClass(days: number) {
   if (days <= 7) return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300";
@@ -17,20 +18,21 @@ function agingBadgeClass(days: number) {
 }
 
 function agingLabel(days: number) {
-  if (days <= 7) return "≤ 7 hari";
-  if (days <= 30) return "8–30 hari";
-  if (days <= 60) return "31–60 hari";
-  return "> 60 hari";
+  if (days <= 7) return "reports.agingBadge7";
+  if (days <= 30) return "reports.agingBadge8_30";
+  if (days <= 60) return "reports.agingBadge31_60";
+  return "reports.agingBadge60plus";
 }
 
-function statusBadge(status: string) {
+function statusBadge(status: string, t: (k: string) => string) {
   if (status === "unpaid") {
-    return <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-800">📝 Utang</Badge>;
+    return <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-800">{t("reports.statusDebt")}</Badge>;
   }
-  return <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-800">💰 Sebagian</Badge>;
+  return <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-800">{t("reports.statusPartialPay")}</Badge>;
 }
 
 export function PayablesTable() {
+  const { t, locale } = useLocale();
   const [data, setData] = useState<PayablesReport | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,22 +40,22 @@ export function PayablesTable() {
   const load = useCallback(async () => {
     try {
       const res = await fetch("/api/reports/payables", { cache: "no-store" });
-      if (!res.ok) throw new Error("Gagal memuat laporan hutang");
+      if (!res.ok) throw new Error(t("reports.payablesLoadFailed"));
       const json = (await res.json()) as PayablesReport;
       setError(null);
       setData(json);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat laporan");
+      setError(err instanceof Error ? err.message : t("reports.reportLoadGeneric"));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void load();
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, [load]);
 
   const rows: PayableRow[] = data?.rows ?? [];
@@ -63,31 +65,31 @@ export function PayablesTable() {
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <DashboardCard className="p-4">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Hutang</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t("reports.totalPayable")}</p>
           <p className="mt-1 text-xl font-bold text-red-600 dark:text-red-400">
             {formatRupiah(data?.total_outstanding ?? 0)}
           </p>
         </DashboardCard>
         <DashboardCard className="p-4">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Kreditur</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t("reports.creditors")}</p>
           <p className="mt-1 text-xl font-bold text-slate-800 dark:text-white">
-            {data?.total_suppliers ?? 0} supplier
+            {t("reports.supplierCount", { n: data?.total_suppliers ?? 0 })}
           </p>
         </DashboardCard>
         <DashboardCard className="p-4">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">≤ 7 hari</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t("reports.aging7")}</p>
           <p className="mt-1 text-lg font-bold text-emerald-600 dark:text-emerald-400">
             {formatRupiah(data?.aging_0_7 ?? 0)}
           </p>
         </DashboardCard>
         <DashboardCard className="p-4">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">8–30 hari</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t("reports.aging8_30")}</p>
           <p className="mt-1 text-lg font-bold text-amber-600 dark:text-amber-400">
             {formatRupiah(data?.aging_8_30 ?? 0)}
           </p>
         </DashboardCard>
         <DashboardCard className="p-4">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">&gt; 30 hari</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t("reports.aging30plus")}</p>
           <p className="mt-1 text-lg font-bold text-red-500">
             {formatRupiah((data?.aging_31_60 ?? 0) + (data?.aging_60_plus ?? 0))}
           </p>
@@ -100,14 +102,14 @@ export function PayablesTable() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400">
               <tr>
-                <th className="px-4 py-3 text-left font-medium">Invoice</th>
-                <th className="px-4 py-3 text-left font-medium">Supplier</th>
-                <th className="px-4 py-3 text-right font-medium">Total</th>
-                <th className="px-4 py-3 text-right font-medium">Dibayar</th>
-                <th className="px-4 py-3 text-right font-medium">Sisa</th>
-                <th className="px-4 py-3 text-center font-medium">Status</th>
-                <th className="px-4 py-3 text-center font-medium">Umur Hutang</th>
-                <th className="px-4 py-3 text-center font-medium">Aksi</th>
+                <th className="px-4 py-3 text-left font-medium">{t("transactions.invoice")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("masterData.supplier")}</th>
+                <th className="px-4 py-3 text-right font-medium">{t("common.total")}</th>
+                <th className="px-4 py-3 text-right font-medium">{t("reports.paid")}</th>
+                <th className="px-4 py-3 text-right font-medium">{t("reports.remaining")}</th>
+                <th className="px-4 py-3 text-center font-medium">{t("common.status")}</th>
+                <th className="px-4 py-3 text-center font-medium">{t("reports.agingDebt")}</th>
+                <th className="px-4 py-3 text-center font-medium">{t("common.actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -124,7 +126,7 @@ export function PayablesTable() {
               ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="text-center py-12 text-slate-400">
-                    🎉 Tidak ada hutang — semua pembelian lunas.
+                    {t("reports.noPayables")}
                   </td>
                 </tr>
               ) : (
@@ -138,7 +140,7 @@ export function PayablesTable() {
                         {r.invoice_number}
                       </Link>
                       <p className="text-xs text-slate-400">
-                        {new Date(r.purchase_date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                        {new Date(r.purchase_date).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" })}
                       </p>
                     </td>
                     <td className="px-4 py-3">
@@ -158,17 +160,17 @@ export function PayablesTable() {
                     <td className="px-4 py-3 text-right font-bold text-red-600 dark:text-red-400">
                       {formatRupiah(r.remaining_amount)}
                     </td>
-                    <td className="px-4 py-3 text-center">{statusBadge(r.payment_status)}</td>
+                    <td className="px-4 py-3 text-center">{statusBadge(r.payment_status, t)}</td>
                     <td className="px-4 py-3 text-center">
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${agingBadgeClass(r.aging_days)}`}>
-                        {agingLabel(r.aging_days)}
+                        {t(agingLabel(r.aging_days))}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <Link href={`/dashboard/transactions/purchases/${r.purchase_id}`}>
                         <Button variant="outline" size="sm" className="gap-1.5 h-8">
                           <Wallet className="h-3.5 w-3.5" />
-                          Bayar
+                          {t("reports.payNow")}
                         </Button>
                       </Link>
                     </td>

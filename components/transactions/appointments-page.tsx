@@ -24,18 +24,21 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2, Plus, Play, CheckCircle2, XCircle, User } from "lucide-react";
 import type { AppointmentWithDetails, AppointmentStatus } from "@/lib/services/appointments.service";
+import { useLocale } from "@/lib/locales";
 
+// Label pakai KEY locale — di-resolve via t() saat render
 const STATUS_META: Record<AppointmentStatus, { label: string; cls: string }> = {
-  waiting: { label: "Menunggu", cls: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400" },
-  in_progress: { label: "Dikerjakan", cls: "bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-400" },
-  done: { label: "Selesai", cls: "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400" },
-  cancelled: { label: "Batal", cls: "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400" },
+  waiting: { label: "mechanic.waiting", cls: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400" },
+  in_progress: { label: "mechanic.inProgress", cls: "bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-400" },
+  done: { label: "mechanic.done", cls: "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400" },
+  cancelled: { label: "appointments.cancelTitle", cls: "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400" },
 };
 
 type CustomerOption = { id: number; name: string; phone: string | null };
 
 export function AppointmentsPage() {
   const { showToast } = useToast();
+  const { t } = useLocale();
   const [items, setItems] = useState<AppointmentWithDetails[]>([]);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
@@ -62,20 +65,20 @@ export function AppointmentsPage() {
   }, [date]);
 
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void fetchData();
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, [fetchData]);
 
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void fetch("/api/customers?limit=500", { cache: "no-store" })
         .then((r) => r.json())
         .then((json) => setCustomers(json?.data ?? []))
         .catch(() => {});
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const waiting = items.filter((i) => i.status === "waiting").length;
@@ -84,7 +87,7 @@ export function AppointmentsPage() {
 
   async function handleSubmit() {
     if (!form.appointment_date) {
-      showToast("Tanggal wajib diisi", "error");
+      showToast(t("appointments.dateRequired"), "error");
       return;
     }
     setSaving(true);
@@ -99,14 +102,14 @@ export function AppointmentsPage() {
           notes: form.notes || null,
         }),
       });
-      if (!res.ok) throw new Error("Gagal");
-      showToast("Antrian ditambahkan", "success");
+      if (!res.ok) throw new Error("Failed");
+      showToast(t("appointments.queueAdded"), "success");
       setDialogOpen(false);
       setForm({ customer_id: "", appointment_date: new Date().toISOString().slice(0, 10), description: "", notes: "" });
       setDate(form.appointment_date);
       await fetchData();
     } catch {
-      showToast("Gagal menambah antrian", "error");
+      showToast(t("appointments.addQueueFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -119,33 +122,33 @@ export function AppointmentsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
-      if (!res.ok) throw new Error("Gagal");
-      showToast("Status diperbarui", "success");
+      if (!res.ok) throw new Error("Failed");
+      showToast(t("appointments.statusUpdated"), "success");
       await fetchData();
     } catch {
-      showToast("Gagal update status", "error");
+      showToast(t("appointments.statusUpdateFailed"), "error");
     }
   }
 
   return (
     <>
       <Navbar
-        title="Antrian Service"
-        subtitle="Booking & antrian kendaraan yang masuk bengkel."
+        title={t("nav.serviceQueue")}
+        subtitle={t("appointments.subtitle")}
       />
       <div className="space-y-4">
         {/* Statistik */}
         <div className="grid grid-cols-3 gap-3">
           <div className="rounded-xl border bg-white dark:bg-slate-800 p-4">
-            <p className="text-xs text-slate-500">Menunggu</p>
+            <p className="text-xs text-slate-500">{t("mechanic.waiting")}</p>
             <p className="text-lg font-bold text-amber-600">{waiting}</p>
           </div>
           <div className="rounded-xl border bg-white dark:bg-slate-800 p-4">
-            <p className="text-xs text-slate-500">Dikerjakan</p>
+            <p className="text-xs text-slate-500">{t("mechanic.inProgress")}</p>
             <p className="text-lg font-bold text-sky-600">{inProgress}</p>
           </div>
           <div className="rounded-xl border bg-white dark:bg-slate-800 p-4">
-            <p className="text-xs text-slate-500">Selesai</p>
+            <p className="text-xs text-slate-500">{t("mechanic.done")}</p>
             <p className="text-lg font-bold text-emerald-600">{done}</p>
           </div>
         </div>
@@ -155,11 +158,11 @@ export function AppointmentsPage() {
           <div className="flex items-center gap-2">
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-44" />
             <Button size="sm" variant="outline" onClick={() => setDate(new Date().toISOString().slice(0, 10))}>
-              Hari Ini
+              {t("time.today")}
             </Button>
           </div>
           <Button size="sm" className="gap-2 bg-sky-500 hover:bg-sky-600" onClick={() => setDialogOpen(true)}>
-            <Plus className="h-4 w-4" /> Tambah Antrian
+            <Plus className="h-4 w-4" /> {t("appointments.addQueue")}
           </Button>
         </div>
 
@@ -170,19 +173,19 @@ export function AppointmentsPage() {
               <Loader2 className="h-7 w-7 animate-spin text-sky-500" />
             </div>
           ) : items.length === 0 ? (
-            <p className="p-8 text-center text-sm text-slate-400">Tidak ada antrian pada tanggal ini.</p>
+            <p className="p-8 text-center text-sm text-slate-400">{t("appointments.noQueue")}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="border-b bg-slate-50 dark:bg-slate-900/50">
                   <tr className="text-left text-xs text-slate-500">
                     <th className="px-4 py-3">#</th>
-                    <th className="px-4 py-3">Customer</th>
-                    <th className="px-4 py-3">Kendaraan</th>
-                    <th className="px-4 py-3">Keterangan</th>
-                    <th className="px-4 py-3">Mekanik</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-center w-40">Aksi</th>
+                    <th className="px-4 py-3">{t("masterData.customer")}</th>
+                    <th className="px-4 py-3">{t("transactions.vehicleLabel")}</th>
+                    <th className="px-4 py-3">{t("appointments.description")}</th>
+                    <th className="px-4 py-3">{t("transactions.mechanic")}</th>
+                    <th className="px-4 py-3">{t("common.status")}</th>
+                    <th className="px-4 py-3 text-center w-40">{t("common.actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -190,7 +193,7 @@ export function AppointmentsPage() {
                     <tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
                       <td className="px-4 py-3 font-mono text-xs text-slate-400">{idx + 1}</td>
                       <td className="px-4 py-3">
-                        <p className="font-medium">{a.customer?.name ?? "Walk-in"}</p>
+                        <p className="font-medium">{a.customer?.name ?? t("dashboard.walkInCustomer")}</p>
                         {a.customer?.phone && <p className="text-xs text-slate-400">{a.customer.phone}</p>}
                       </td>
                       <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
@@ -205,23 +208,23 @@ export function AppointmentsPage() {
                       <td className="px-4 py-3 text-slate-500">{a.mechanic?.name ?? "—"}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_META[a.status].cls}`}>
-                          {STATUS_META[a.status].label}
+                          {STATUS_META[a.status] ? t(STATUS_META[a.status].label) : a.status}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-center gap-1">
                           {a.status === "waiting" && (
                             <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-sky-600" onClick={() => handleStatus(a.id, "in_progress")}>
-                              <Play className="h-3 w-3" /> Kerjakan
+                              <Play className="h-3 w-3" /> {t("mechanic.take")}
                             </Button>
                           )}
                           {a.status === "in_progress" && (
                             <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-emerald-600" onClick={() => handleStatus(a.id, "done")}>
-                              <CheckCircle2 className="h-3 w-3" /> Selesai
+                              <CheckCircle2 className="h-3 w-3" /> {t("mechanic.done")}
                             </Button>
                           )}
                           {(a.status === "waiting" || a.status === "in_progress") && (
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400" onClick={() => handleStatus(a.id, "cancelled")} title="Batalkan">
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400" onClick={() => handleStatus(a.id, "cancelled")} title={t("appointments.cancelTitle")}>
                               <XCircle className="h-3.5 w-3.5" />
                             </Button>
                           )}
@@ -240,18 +243,18 @@ export function AppointmentsPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Tambah Antrian Service</DialogTitle>
-            <DialogDescription>Catat kendaraan yang masuk / booking service.</DialogDescription>
+            <DialogTitle>{t("appointments.addQueueTitle")}</DialogTitle>
+            <DialogDescription>{t("appointments.addQueueDesc")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label>Customer</Label>
+              <Label>{t("masterData.customer")}</Label>
               <Select value={form.customer_id} onValueChange={(v) => setForm({ ...form, customer_id: v })}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih customer (atau walk-in)" />
+                  <SelectValue placeholder={t("appointments.selectCustomerPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__walkin">🚶 Walk-in (tanpa data)</SelectItem>
+                  <SelectItem value="__walkin">{t("appointments.walkinOption")}</SelectItem>
                   {customers.map((c) => (
                     <SelectItem key={c.id} value={String(c.id)}>
                       <span className="inline-flex items-center gap-1.5">
@@ -263,18 +266,18 @@ export function AppointmentsPage() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Tanggal <span className="text-red-500">*</span></Label>
+              <Label>{t("appointments.date")} <span className="text-red-500">*</span></Label>
               <Input type="date" value={form.appointment_date} onChange={(e) => setForm({ ...form, appointment_date: e.target.value })} />
             </div>
             <div className="space-y-1.5">
-              <Label>Keterangan</Label>
-              <Textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Contoh: servis rutin, ganti oli, tune-up..." />
+              <Label>{t("appointments.description")}</Label>
+              <Textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder={t("appointments.descriptionPlaceholder")} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Batal</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>{t("common.cancel")}</Button>
             <Button onClick={handleSubmit} disabled={saving} className="gap-2 bg-sky-500 hover:bg-sky-600">
-              {saving && <Loader2 className="h-4 w-4 animate-spin" />} Simpan
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />} {t("common.save")}
             </Button>
           </DialogFooter>
         </DialogContent>

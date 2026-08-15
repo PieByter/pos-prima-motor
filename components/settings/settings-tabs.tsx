@@ -8,6 +8,7 @@ import { BusinessSettingsSection } from "@/components/settings/business-settings
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { useUserRole } from "@/lib/hooks/use-user-role";
+import { useLocale } from "@/lib/locales";
 
 /**
  * Tabs pengaturan — tab "Kelola Pengguna" hanya tampil untuk admin.
@@ -15,6 +16,7 @@ import { useUserRole } from "@/lib/hooks/use-user-role";
  */
 export function SettingsTabs() {
   const { isAdmin, loading } = useUserRole();
+  const { t } = useLocale();
 
   return (
     <Tabs defaultValue="profile" className="space-y-6">
@@ -24,7 +26,7 @@ export function SettingsTabs() {
           className="rounded-none border-b-2 border-transparent data-[state=active]:border-sky-500 data-[state=active]:text-sky-500 data-[state=active]:shadow-none bg-transparent px-1 pb-4 pt-2 font-medium text-sm gap-2"
         >
           <User className="h-5 w-5" />
-          Profil Saya
+          {t("settings.profileTab")}
         </TabsTrigger>
         {isAdmin && (
           <TabsTrigger
@@ -32,7 +34,7 @@ export function SettingsTabs() {
             className="rounded-none border-b-2 border-transparent data-[state=active]:border-sky-500 data-[state=active]:text-sky-500 data-[state=active]:shadow-none bg-transparent px-1 pb-4 pt-2 font-medium text-sm gap-2"
           >
             <Users className="h-5 w-5" />
-            Kelola Pengguna
+            {t("settings.usersTab")}
           </TabsTrigger>
         )}
         {isAdmin && (
@@ -41,7 +43,7 @@ export function SettingsTabs() {
             className="rounded-none border-b-2 border-transparent data-[state=active]:border-sky-500 data-[state=active]:text-sky-500 data-[state=active]:shadow-none bg-transparent px-1 pb-4 pt-2 font-medium text-sm gap-2"
           >
             <Store className="h-5 w-5" />
-            Pengaturan Toko
+            {t("settings.storeSettings")}
           </TabsTrigger>
         )}
         <TabsTrigger
@@ -49,7 +51,7 @@ export function SettingsTabs() {
           className="rounded-none border-b-2 border-transparent data-[state=active]:border-sky-500 data-[state=active]:text-sky-500 data-[state=active]:shadow-none bg-transparent px-1 pb-4 pt-2 font-medium text-sm gap-2"
         >
           <Palette className="h-5 w-5" />
-          Tampilan
+          {t("settings.appearance")}
         </TabsTrigger>
       </TabsList>
 
@@ -60,7 +62,7 @@ export function SettingsTabs() {
       <TabsContent value="users" className="space-y-6">
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-slate-500">
-            <ShieldAlert className="h-4 w-4" /> Memuat...
+            <ShieldAlert className="h-4 w-4" /> {t("settings.loading")}
           </div>
         ) : isAdmin ? (
           <UsersTable />
@@ -68,7 +70,7 @@ export function SettingsTabs() {
           <div className="rounded-xl border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20 p-6 text-center">
             <ShieldAlert className="h-8 w-8 mx-auto mb-2 text-red-500" />
             <p className="text-sm font-medium text-red-700 dark:text-red-400">
-              Hanya admin yang dapat mengelola pengguna.
+              {t("settings.adminOnlyUsers")}
             </p>
           </div>
         )}
@@ -77,7 +79,7 @@ export function SettingsTabs() {
       <TabsContent value="business" className="space-y-6">
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-slate-500">
-            <ShieldAlert className="h-4 w-4" /> Memuat...
+            <ShieldAlert className="h-4 w-4" /> {t("settings.loading")}
           </div>
         ) : isAdmin ? (
           <BusinessSettingsSection />
@@ -85,7 +87,7 @@ export function SettingsTabs() {
           <div className="rounded-xl border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20 p-6 text-center">
             <ShieldAlert className="h-8 w-8 mx-auto mb-2 text-red-500" />
             <p className="text-sm font-medium text-red-700 dark:text-red-400">
-              Hanya admin yang dapat mengubah pengaturan toko.
+              {t("settings.adminOnlyStore")}
             </p>
           </div>
         )}
@@ -94,13 +96,13 @@ export function SettingsTabs() {
       <TabsContent value="appearance" className="space-y-6">
         <div className="rounded-xl border bg-white dark:bg-slate-800 p-6 space-y-4">
           <div>
-            <h3 className="font-semibold text-slate-900 dark:text-white">Tema</h3>
-            <p className="text-sm text-slate-500 mt-0.5">Pilih mode terang atau gelap.</p>
+            <h3 className="font-semibold text-slate-900 dark:text-white">{t("settings.theme")}</h3>
+            <p className="text-sm text-slate-500 mt-0.5">{t("settings.themeDesc")}</p>
           </div>
           <ThemeToggle />
           <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
-            <h3 className="font-semibold text-slate-900 dark:text-white">Bahasa</h3>
-            <p className="text-sm text-slate-500 mt-0.5">Pilih bahasa antarmuka.</p>
+            <h3 className="font-semibold text-slate-900 dark:text-white">{t("settings.language")}</h3>
+            <p className="text-sm text-slate-500 mt-0.5">{t("settings.languageDesc")}</p>
           </div>
           <LanguageSwitcher />
         </div>

@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Eye, EyeOff, Loader, ShieldCheck } from "lucide-react";
+import { useLocale } from "@/lib/locales";
 
 type UserFormData = {
   name: string;
@@ -56,6 +57,7 @@ function parseNumeric(val: string): number {
 }
 
 export function UserFormDialog({ open, onOpenChange, user, onSave }: Props) {
+  const { t } = useLocale();
   const isEdit = !!user;
   const [name, setName] = useState("");
   const [role, setRole] = useState<string>("mekanik");
@@ -71,7 +73,7 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: Props) {
 
   useEffect(() => {
     if (open) {
-      const t = window.setTimeout(() => {
+      const timer = window.setTimeout(() => {
         setName(user?.name ?? "");
         setRole(
           user?.role === "Admin"
@@ -86,7 +88,7 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: Props) {
         setCommissionPct(user?.service_commission_pct ? user.service_commission_pct.toString() : "0");
         setHireDate(user?.hire_date ?? "");
       }, 0);
-      return () => window.clearTimeout(t);
+      return () => window.clearTimeout(timer);
     }
   }, [open, user]);
 
@@ -122,12 +124,12 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: Props) {
             </div>
             <div>
               <DialogTitle className="text-lg">
-                {isEdit ? "Edit Pengguna" : "Tambah Pengguna"}
+                {isEdit ? t("settings.editUser") : t("settings.addUserTitle")}
               </DialogTitle>
               <DialogDescription className="mt-0.5 text-sm">
                 {isEdit
-                  ? "Perbarui informasi pengguna."
-                  : "Isi data pengguna baru di bawah ini."}
+                  ? t("settings.editUserDesc")
+                  : t("settings.addUserDesc")}
               </DialogDescription>
             </div>
           </div>
@@ -137,13 +139,13 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: Props) {
           {/* Nama */}
           <div className="space-y-1.5">
             <Label htmlFor="user-name" className="text-sm font-medium">
-              Nama Lengkap <span className="text-red-500">*</span>
+              {t("auth.fullName")} <span className="text-red-500">*</span>
             </Label>
             <Input
               id="user-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Contoh: Budi Santoso"
+              placeholder={t("auth.namePlaceholder")}
               required
               className="bg-slate-50 dark:bg-slate-800"
             />
@@ -152,25 +154,25 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: Props) {
           {/* Role */}
           <div className="space-y-1.5">
             <Label htmlFor="user-role" className="text-sm font-medium">
-              Role <span className="text-red-500">*</span>
+              {t("settings.roleLabel")} <span className="text-red-500">*</span>
             </Label>
             <Select value={role} onValueChange={setRole} required>
               <SelectTrigger
                 id="user-role"
                 className="bg-slate-50 dark:bg-slate-800"
               >
-                <SelectValue placeholder="Pilih role" />
+                <SelectValue placeholder={t("settings.selectRolePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="mekanik">Mekanik</SelectItem>
+                <SelectItem value="admin">{t("settings.admin")}</SelectItem>
+                <SelectItem value="mekanik">{t("settings.mekanik")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* Status */}
           <div className="space-y-1.5">
-            <Label className="text-sm font-medium">Status Akun</Label>
+            <Label className="text-sm font-medium">{t("settings.accountStatus")}</Label>
             <div className="flex items-center gap-3 pt-1">
               <button
                 type="button"
@@ -181,7 +183,7 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: Props) {
                     : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400"
                 }`}
               >
-                ✅ Aktif
+                {t("settings.activeMark")}
               </button>
               <button
                 type="button"
@@ -192,7 +194,7 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: Props) {
                     : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400"
                 }`}
               >
-                ❌ Nonaktif
+                {t("settings.inactiveMark")}
               </button>
             </div>
           </div>
@@ -201,7 +203,7 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: Props) {
           {isEdit && (
             <div className="space-y-1.5">
               <Label htmlFor="user-password" className="text-sm font-medium">
-                Reset Password <span className="text-xs text-slate-400">(opsional)</span>
+                {t("settings.resetPassword")} <span className="text-xs text-slate-400">{t("settings.optionalLabel")}</span>
               </Label>
               <div className="relative">
                 <Input
@@ -209,7 +211,7 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: Props) {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Kosongkan jika tidak diubah"
+                  placeholder={t("settings.leaveBlankPassword")}
                   minLength={6}
                   className="bg-slate-50 dark:bg-slate-800 pr-10"
                 />
@@ -217,12 +219,12 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: Props) {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                  aria-label={showPassword ? "Sembunyikan" : "Tampilkan"}
+                  aria-label={showPassword ? t("common.hide") : t("common.show")}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <p className="text-xs text-slate-400">Minimal 6 karakter. Isi hanya jika ingin mereset password.</p>
+              <p className="text-xs text-slate-400">{t("settings.passwordHint")}</p>
             </div>
           )}
 
@@ -230,11 +232,11 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: Props) {
           {showCompensation && (
             <div className="space-y-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                💰 Gaji &amp; Komisi
+                {t("settings.salaryCommissionTitle")}
               </p>
               <div className="space-y-1.5">
                 <Label htmlFor="user-salary" className="text-sm font-medium">
-                  Gaji Pokok / Minggu
+                  {t("settings.weeklySalaryLabel")}
                 </Label>
                 <Input
                   id="user-salary"
@@ -250,7 +252,7 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: Props) {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="user-commission" className="text-sm font-medium">
-                  Komisi Jasa (%)
+                  {t("settings.commissionServicePct")}
                 </Label>
                 <div className="relative">
                   <Input
@@ -266,11 +268,11 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: Props) {
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">%</span>
                 </div>
-                <p className="text-xs text-slate-400">Persentase dari total jasa service yang dikerjakan.</p>
+                <p className="text-xs text-slate-400">{t("settings.commissionHint")}</p>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="user-hire-date" className="text-sm font-medium">
-                  Tanggal Mulai Kerja
+                  {t("settings.hireDateLabel")}
                 </Label>
                 <Input
                   id="user-hire-date"
@@ -290,7 +292,7 @@ export function UserFormDialog({ open, onOpenChange, user, onSave }: Props) {
               onClick={() => onOpenChange(false)}
               disabled={isSaving}
             >
-              Batal
+              {t("common.cancel")}
             </Button>
             <Button
               type="submit"

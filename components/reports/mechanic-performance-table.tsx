@@ -8,6 +8,7 @@ import {
 import { Loader2, Users, TrendingUp, Wallet, Wrench } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/locales";
 
 /* ───── Types ───── */
 
@@ -68,6 +69,7 @@ function MechStat({
 /* ───── Component ───── */
 
 export function MechanicPerformanceTable({ startDate, endDate }: Props) {
+  const { t } = useLocale();
   const [data, setData] = useState<MechanicPerformanceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,7 +86,7 @@ export function MechanicPerformanceTable({ startDate, endDate }: Props) {
           setData([]);
           return;
         }
-        throw new Error("Gagal mengambil data kinerja mekanik.");
+        throw new Error(t("reports.mechanicReportLoadFailed"));
       }
 
       const json = await res.json();
@@ -92,17 +94,17 @@ export function MechanicPerformanceTable({ startDate, endDate }: Props) {
       setData((json ?? []) as MechanicPerformanceRow[]);
     } catch (err) {
       console.error(err);
-      setError("Tidak dapat memuat report kinerja mekanik.");
+      setError(t("reports.mechanicReportLoadError"));
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate]);
+  }, [startDate, endDate, t]);
 
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void loadMechanicReport();
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, [loadMechanicReport]);
 
   const totals = {
@@ -117,30 +119,30 @@ export function MechanicPerformanceTable({ startDate, endDate }: Props) {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MechStat
-          label="Total Mekanik"
+          label={t("reports.totalMechanics")}
           value={`${data.length}`}
-          sub="Mekanik aktif"
+          sub={t("reports.activeMechanics")}
           icon={Users}
           iconColor="text-violet-500"
         />
         <MechStat
-          label="Total Omset Mekanik"
+          label={t("reports.totalMechanicSales")}
           value={formatCurrency(totals.totalSales)}
-          sub={`${data.reduce((s, r) => s + r.total_transactions, 0)} transaksi`}
+          sub={t("reports.transactionsCount", { n: data.reduce((s, r) => s + r.total_transactions, 0) })}
           icon={TrendingUp}
           iconColor="text-emerald-500"
         />
         <MechStat
-          label="Total Jasa Service"
+          label={t("reports.totalServiceFees")}
           value={formatCurrency(totals.totalServiceFees)}
-          sub="Akumulasi biaya jasa"
+          sub={t("reports.accumulatedServiceFees")}
           icon={Wrench}
           iconColor="text-sky-500"
         />
         <MechStat
-          label="Total Gaji + Komisi"
+          label={t("reports.totalSalaryCommission")}
           value={formatCurrency(totals.totalEarnings)}
-          sub={`Komisi: ${formatCurrency(totals.totalCommission)}`}
+          sub={t("reports.commissionColon", { value: formatCurrency(totals.totalCommission) })}
           icon={Wallet}
           iconColor="text-amber-500"
         />
@@ -149,8 +151,8 @@ export function MechanicPerformanceTable({ startDate, endDate }: Props) {
       {/* Table */}
       <DashboardCard>
         <SectionHeader
-          label="Performa per mekanik"
-          title={`Kinerja Mekanik — ${startDate} s/d ${endDate}`}
+          label={t("reports.perMechanicLabel")}
+          title={t("reports.mechanicPerformanceTitle", { start: startDate, end: endDate })}
         />
         {error && (
           <p className="mb-4 text-sm text-red-500">{error}</p>
@@ -159,15 +161,15 @@ export function MechanicPerformanceTable({ startDate, endDate }: Props) {
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50/60 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 dark:bg-slate-900/30 dark:text-slate-500">
               <tr>
-                <th className="px-4 py-2.5">Mekanik</th>
-                <th className="px-4 py-2.5 text-right">Transaksi</th>
-                <th className="px-4 py-2.5 text-right">Omset</th>
-                <th className="px-4 py-2.5 text-right">Jasa</th>
-                <th className="px-4 py-2.5 text-right">Komisi %</th>
-                <th className="px-4 py-2.5 text-right">Komisi</th>
-                <th className="px-4 py-2.5 text-right">Gaji</th>
+                <th className="px-4 py-2.5">{t("reports.mechanic")}</th>
+                <th className="px-4 py-2.5 text-right">{t("reports.transactionsCol")}</th>
+                <th className="px-4 py-2.5 text-right">{t("reports.revenue")}</th>
+                <th className="px-4 py-2.5 text-right">{t("reports.serviceCol")}</th>
+                <th className="px-4 py-2.5 text-right">{t("reports.commissionPctCol")}</th>
+                <th className="px-4 py-2.5 text-right">{t("reports.commissionCol")}</th>
+                <th className="px-4 py-2.5 text-right">{t("reports.salaryCol")}</th>
                 <th className="px-4 py-2.5 text-right font-semibold text-slate-600 dark:text-slate-300">
-                  Total
+                  {t("common.total")}
                 </th>
               </tr>
             </thead>
@@ -177,14 +179,14 @@ export function MechanicPerformanceTable({ startDate, endDate }: Props) {
                   <td colSpan={8} className="px-4 py-12 text-center">
                     <span className="inline-flex items-center gap-2 text-slate-400">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Memuat data kinerja...
+                      {t("reports.loadingPerformance")}
                     </span>
                   </td>
                 </tr>
               ) : data.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-12 text-center text-slate-400">
-                    Belum ada data transaksi mekanik di periode ini.
+                    {t("reports.noMechanicData")}
                   </td>
                 </tr>
               ) : (
@@ -233,7 +235,7 @@ export function MechanicPerformanceTable({ startDate, endDate }: Props) {
                   {/* Totals Row */}
                   <tr className="border-t-2 border-slate-200 bg-slate-50/50 font-semibold dark:border-slate-700 dark:bg-slate-900/40">
                     <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
-                      TOTAL
+                      {t("common.total")}
                     </td>
                     <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-300">
                       {data.reduce((s, r) => s + r.total_transactions, 0)}
@@ -265,11 +267,11 @@ export function MechanicPerformanceTable({ startDate, endDate }: Props) {
       {/* Legend */}
       <div className="flex flex-wrap gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
         <span>
-          💰 <strong>Total</strong> = Gaji Mingguan + (Komisi % × Total Jasa)
+          {t("reports.legendTotal")}
         </span>
         <span className="hidden sm:inline">|</span>
         <span>
-          🛠️ <strong>Komisi</strong> = service_commission_pct × total_service_fees
+          {t("reports.legendCommission")}
         </span>
       </div>
     </div>

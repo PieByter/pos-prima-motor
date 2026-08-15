@@ -19,6 +19,7 @@ import { Loader, Users, Bike, Plus, Trash2, History } from "lucide-react";
 import type { Customer, Vehicle } from "@/lib/types/database";
 import { customerSchema, type CustomerFormData } from "@/lib/validations";
 import { VehicleHistoryDialog } from "./vehicle-history-dialog";
+import { useLocale } from "@/lib/locales";
 
 type Props = {
   open: boolean;
@@ -40,6 +41,7 @@ function CustomerFormContent({
   onCancel: () => void;
   onOpenHistory: (v: Vehicle) => void;
 }) {
+  const { t } = useLocale();
   const isEdit = !!customer;
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehicleForm, setVehicleForm] = useState(emptyVehicleForm);
@@ -91,7 +93,7 @@ function CustomerFormContent({
 
     const plate = vehicleForm.plate_number.trim();
     if (!plate) {
-      setVehicleError("Nomor plat wajib diisi.");
+      setVehicleError(t("masterData.plateRequired"));
       return;
     }
 
@@ -111,14 +113,14 @@ function CustomerFormContent({
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error ?? "Gagal menambah motor");
+        throw new Error(errData.error ?? t("masterData.addVehicleFailed"));
       }
 
       const created = (await res.json()) as Vehicle;
       setVehicles((prev) => [created, ...prev]);
       setVehicleForm(emptyVehicleForm);
     } catch (err) {
-      setVehicleError(err instanceof Error ? err.message : "Gagal menambah motor");
+      setVehicleError(err instanceof Error ? err.message : t("masterData.addVehicleFailed"));
     } finally {
       setSavingVehicles(false);
     }
@@ -128,10 +130,10 @@ function CustomerFormContent({
     setVehicleError(null);
     try {
       const res = await fetch(`/api/vehicles?id=${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Gagal menghapus motor");
+      if (!res.ok) throw new Error("Failed");
       setVehicles((prev) => prev.filter((v) => v.id !== id));
     } catch (err) {
-      setVehicleError(err instanceof Error ? err.message : "Gagal menghapus motor");
+      setVehicleError(err instanceof Error ? err.message : t("masterData.removeVehicleFailed"));
     }
   }
 
@@ -153,12 +155,12 @@ function CustomerFormContent({
           {/* Nama */}
           <div className="space-y-1.5">
             <Label htmlFor="customer-name" className="text-sm font-medium">
-              Nama Lengkap <span className="text-red-500">*</span>
+              {t("masterData.customerName")} <span className="text-red-500">*</span>
             </Label>
             <Input
               id="customer-name"
               {...register("name")}
-              placeholder="Contoh: Budi Santoso"
+              placeholder={t("masterData.customerNamePlaceholder")}
               className={`bg-slate-50 dark:bg-slate-800 ${errors.name ? "border-red-500" : ""}`}
             />
             {errors.name && (
@@ -169,13 +171,13 @@ function CustomerFormContent({
           {/* No. HP */}
           <div className="space-y-1.5">
             <Label htmlFor="customer-phone" className="text-sm font-medium">
-              No. HP
+              {t("masterData.phone")}
             </Label>
             <Input
               id="customer-phone"
               type="tel"
               {...register("phone")}
-              placeholder="Contoh: 0812-3456-7890"
+              placeholder={t("masterData.phonePlaceholder")}
               className={`bg-slate-50 dark:bg-slate-800 ${errors.phone ? "border-red-500" : ""}`}
             />
             {errors.phone && (
@@ -186,12 +188,12 @@ function CustomerFormContent({
           {/* Alamat */}
           <div className="space-y-1.5">
             <Label htmlFor="customer-address" className="text-sm font-medium">
-              Alamat
+              {t("masterData.address")}
             </Label>
             <Textarea
               id="customer-address"
               {...register("address")}
-              placeholder="Jl. Contoh No. 123, Kota..."
+              placeholder={t("masterData.addressPlaceholder")}
               rows={3}
               className={`bg-slate-50 dark:bg-slate-800 resize-none ${errors.address ? "border-red-500" : ""}`}
             />
@@ -203,27 +205,27 @@ function CustomerFormContent({
           {/* Tipe Customer */}
           <div className="space-y-1.5">
             <Label htmlFor="customer-type" className="text-sm font-medium">
-              Tipe Customer
+              {t("masterData.customerType")}
             </Label>
             <select
               id="customer-type"
               {...register("customer_type")}
               className="w-full h-10 rounded-md border border-input bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm"
             >
-              <option value="retail">Retail (perorangan)</option>
-              <option value="garage">Garage / Bengkel rekanan</option>
+              <option value="retail">{t("masterData.retailIndividual")}</option>
+              <option value="garage">{t("masterData.garagePartner")}</option>
             </select>
           </div>
 
           {/* NIK */}
           <div className="space-y-1.5">
             <Label htmlFor="customer-nik" className="text-sm font-medium">
-              NIK
+              {t("masterData.nik")}
             </Label>
             <Input
               id="customer-nik"
               {...register("nik")}
-              placeholder="Nomor Induk Kependudukan"
+              placeholder={t("masterData.nikPlaceholder")}
               className={`bg-slate-50 dark:bg-slate-800 ${errors.nik ? "border-red-500" : ""}`}
             />
             {errors.nik && (
@@ -235,13 +237,13 @@ function CustomerFormContent({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="customer-email" className="text-sm font-medium">
-                Email
+                {t("masterData.email")}
               </Label>
               <Input
                 id="customer-email"
                 type="email"
                 {...register("email")}
-                placeholder="email@contoh.com"
+                placeholder={t("masterData.emailPlaceholder")}
                 className={`bg-slate-50 dark:bg-slate-800 ${errors.email ? "border-red-500" : ""}`}
               />
               {errors.email && (
@@ -250,7 +252,7 @@ function CustomerFormContent({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="customer-birth" className="text-sm font-medium">
-                Tanggal Lahir
+                {t("masterData.birthDate")}
               </Label>
               <Input
                 id="customer-birth"
@@ -264,12 +266,12 @@ function CustomerFormContent({
           {/* Catatan */}
           <div className="space-y-1.5">
             <Label htmlFor="customer-notes" className="text-sm font-medium">
-              Catatan
+              {t("masterData.notes")}
             </Label>
             <Textarea
               id="customer-notes"
               {...register("notes")}
-              placeholder="Catatan tambahan (preferensi, riwayat khusus, dll.)"
+              placeholder={t("masterData.customerNotesPlaceholder")}
               rows={2}
               className="bg-slate-50 dark:bg-slate-800 resize-none"
             />
@@ -281,7 +283,7 @@ function CustomerFormContent({
               <div className="flex items-center gap-2">
                 <Bike className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                  Kendaraan / Motor ({vehicles.length})
+                  {t("masterData.vehiclesCount", { n: vehicles.length })}
                 </h4>
               </div>
 
@@ -308,8 +310,8 @@ function CustomerFormContent({
                           type="button"
                           onClick={() => onOpenHistory(v)}
                           className="rounded-md p-1.5 text-slate-400 hover:bg-sky-50 dark:hover:bg-sky-900/20 hover:text-sky-600 transition-colors"
-                          aria-label={`Riwayat ${v.plate_number}`}
-                          title="Riwayat service"
+                          aria-label={t("masterData.vehicleHistoryAria", { plate: v.plate_number })}
+                          title={t("masterData.serviceHistory")}
                         >
                           <History className="h-4 w-4" />
                         </button>
@@ -317,7 +319,7 @@ function CustomerFormContent({
                           type="button"
                           onClick={() => removeVehicle(v.id)}
                           className="rounded-md p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 transition-colors"
-                          aria-label={`Hapus ${v.plate_number}`}
+                          aria-label={t("masterData.deleteVehicleAria", { plate: v.plate_number })}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -331,11 +333,11 @@ function CustomerFormContent({
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
                   <Label htmlFor="vehicle-plate" className="text-xs font-medium">
-                    Plat Nomor <span className="text-red-500">*</span>
+                    {t("masterData.plateNumber")} <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="vehicle-plate"
-                    placeholder="B 1234 ABC"
+                    placeholder={t("masterData.platePlaceholder")}
                     value={vehicleForm.plate_number}
                     onChange={(e) => updateVehicleForm({ plate_number: e.target.value.toUpperCase() })}
                     className="bg-white dark:bg-slate-800"
@@ -343,11 +345,11 @@ function CustomerFormContent({
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="vehicle-brand" className="text-xs font-medium">
-                    Merk
+                    {t("masterData.brand")}
                   </Label>
                   <Input
                     id="vehicle-brand"
-                    placeholder="Honda / Yamaha..."
+                    placeholder={t("masterData.vehicleBrandPlaceholder")}
                     value={vehicleForm.brand}
                     onChange={(e) => updateVehicleForm({ brand: e.target.value })}
                     className="bg-white dark:bg-slate-800"
@@ -355,11 +357,11 @@ function CustomerFormContent({
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="vehicle-model" className="text-xs font-medium">
-                    Tipe
+                    {t("masterData.model")}
                   </Label>
                   <Input
                     id="vehicle-model"
-                    placeholder="Vario 125, NMAX..."
+                    placeholder={t("masterData.modelPlaceholder")}
                     value={vehicleForm.model}
                     onChange={(e) => updateVehicleForm({ model: e.target.value })}
                     className="bg-white dark:bg-slate-800"
@@ -367,14 +369,14 @@ function CustomerFormContent({
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="vehicle-year" className="text-xs font-medium">
-                    Tahun
+                    {t("masterData.year")}
                   </Label>
                   <Input
                     id="vehicle-year"
                     type="number"
                     min={1980}
                     max={2100}
-                    placeholder="2023"
+                    placeholder={t("masterData.yearPlaceholder")}
                     value={vehicleForm.year}
                     onChange={(e) => updateVehicleForm({ year: e.target.value })}
                     className="bg-white dark:bg-slate-800"
@@ -399,7 +401,7 @@ function CustomerFormContent({
                 ) : (
                   <Plus className="h-3.5 w-3.5" />
                 )}
-                Tambah Motor
+                {t("masterData.addVehicle")}
               </Button>
             </div>
           )}
@@ -411,7 +413,7 @@ function CustomerFormContent({
               onClick={onCancel}
               disabled={isSubmitting}
             >
-              Batal
+              {t("common.cancel")}
             </Button>
             <Button
               type="submit"
@@ -419,7 +421,7 @@ function CustomerFormContent({
               disabled={isSubmitting}
             >
               {isSubmitting && <Loader className="h-4 w-4 animate-spin" />}
-              {isEdit ? "Simpan Perubahan" : "Tambah Customer"}
+              {isEdit ? t("common.saveChanges") : t("masterData.addCustomer")}
             </Button>
           </DialogFooter>
         </form>
@@ -427,6 +429,7 @@ function CustomerFormContent({
 }
 
 export function CustomerFormDialog({ open, onOpenChange, customer, onSave }: Props) {
+  const { t } = useLocale();
   const isEdit = !!customer;
   const [historyVehicle, setHistoryVehicle] = useState<Vehicle | null>(null);
 
@@ -441,12 +444,12 @@ export function CustomerFormDialog({ open, onOpenChange, customer, onSave }: Pro
               </div>
               <div>
                 <DialogTitle className="text-lg">
-                  {isEdit ? "Edit Customer" : "Tambah Customer Baru"}
+                  {isEdit ? t("masterData.editCustomer") : t("masterData.addCustomerNew")}
                 </DialogTitle>
                 <DialogDescription className="mt-0.5 text-sm">
                   {isEdit
-                    ? "Perbarui informasi customer."
-                    : "Isi data customer baru di bawah ini."}
+                    ? t("masterData.editCustomerDescription")
+                    : t("masterData.addCustomerDescription")}
                 </DialogDescription>
               </div>
             </div>

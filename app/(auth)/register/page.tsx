@@ -10,9 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PrimaMotorLogo } from "@/components/prima-motor-logo";
 import { ToastContainer, useToasts } from "@/components/ui/toast";
+import { useLocale } from "@/lib/locales";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { t } = useLocale();
   const { toasts, showToast, removeToast } = useToasts();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -28,12 +30,12 @@ export default function RegisterPage() {
     const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
     if (password !== confirmPassword) {
-      showToast("Password dan konfirmasi password harus sama.", "error", 3000);
+      showToast(t("auth.passwordNotMatch"), "error", 3000);
       return;
     }
 
     if (password.length < 6) {
-      showToast("Password minimal 6 karakter.", "error", 3000);
+      showToast(t("auth.minPasswordLength"), "error", 3000);
       return;
     }
 
@@ -57,7 +59,7 @@ export default function RegisterPage() {
 
       if (!response.ok) {
         showToast(
-          result?.error || "Gagal mendaftar. Coba lagi.",
+          result?.error || t("auth.registerFailed"),
           "error",
           3000,
         );
@@ -65,7 +67,7 @@ export default function RegisterPage() {
       }
 
       showToast(
-        "Registrasi berhasil. Silakan login dengan akun baru Anda.",
+        t("auth.registerSuccess"),
         "success",
         3000,
       );
@@ -74,7 +76,7 @@ export default function RegisterPage() {
         router.push("/login");
       }, 1200);
     } catch {
-      showToast("Terjadi kesalahan jaringan. Coba lagi.", "error", 3000);
+      showToast(t("auth.networkError"), "error", 3000);
     } finally {
       setIsLoading(false);
     }
@@ -92,7 +94,7 @@ export default function RegisterPage() {
               <PrimaMotorLogo />
             </div>
             <h2 className="text-lg font-medium text-gray-500 dark:text-gray-400">
-              Create Your Account
+              {t("auth.registerTitle")}
             </h2>
           </div>
 
@@ -101,14 +103,14 @@ export default function RegisterPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Full Name */}
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="name">{t("auth.fullName")}</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                   <Input
                     id="name"
                     name="name"
                     type="text"
-                    placeholder="Your name"
+                    placeholder={t("auth.namePlaceholder")}
                     required
                     className="pl-10 py-2.5 bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus-visible:ring-amber-600"
                   />
@@ -117,7 +119,7 @@ export default function RegisterPage() {
 
               {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email">{t("auth.email")}</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                   <Input
@@ -133,7 +135,7 @@ export default function RegisterPage() {
 
               {/* Password */}
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t("auth.password")}</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                   <Input
@@ -148,7 +150,7 @@ export default function RegisterPage() {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -161,7 +163,7 @@ export default function RegisterPage() {
 
               {/* Confirm Password */}
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Label htmlFor="confirmPassword">{t("auth.confirmPassword")}</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                   <Input
@@ -176,7 +178,7 @@ export default function RegisterPage() {
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer"
-                    aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                    aria-label={showConfirmPassword ? t("auth.hidePassword") : t("auth.showPassword")}
                   >
                     {showConfirmPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -197,22 +199,22 @@ export default function RegisterPage() {
                   {isLoading ? (
                     <span className="flex items-center gap-2">
                       <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Creating account...
+                      {t("auth.creatingAccount")}
                     </span>
                   ) : (
-                    "Register"
+                    t("auth.register")
                   )}
                 </Button>
               </div>
 
               {/* Auth Navigation */}
               <div className="text-center text-sm text-gray-600 dark:text-gray-300">
-                Already have an account?{" "}
+                {t("auth.hasAccount")}{" "}
                 <Link
                   href="/login"
                   className="font-medium text-amber-600 hover:text-amber-700 underline decoration-dotted"
                 >
-                  Sign In
+                  {t("auth.login")}
                 </Link>
               </div>
             </form>
@@ -220,14 +222,14 @@ export default function RegisterPage() {
             {/* Help Text */}
             <div className="mt-8 text-center">
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Need help creating your account?
+                {t("auth.helpCreate")}
                 <br />
-                Contact{" "}
+                {t("auth.contact")}{" "}
                 <a
                   href="#"
                   className="font-medium text-amber-600 hover:text-amber-700 underline decoration-dotted"
                 >
-                  IT Support
+                  {t("auth.itSupport")}
                 </a>
               </p>
             </div>
@@ -243,7 +245,7 @@ export default function RegisterPage() {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
           </span>
-          System Operational • v1.0.0
+          {t("auth.systemOperational")} • v1.0.0
         </div>
       </div>
 

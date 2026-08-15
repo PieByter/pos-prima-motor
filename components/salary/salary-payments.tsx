@@ -33,11 +33,13 @@ import { Badge } from "@/components/ui/badge";
 import { Loader, Plus, Trash2, Wallet, ChevronLeft, ChevronRight } from "lucide-react";
 import type { SalaryPaymentWithMechanic, PaginatedResponse, Profile, PaymentMethod } from "@/lib/types/database";
 import { formatCurrency } from "@/lib/format";
+import { useLocale } from "@/lib/locales";
 
 const ITEMS_PER_PAGE = 10;
 
 export function SalaryPaymentsPage() {
   const { showToast } = useToast();
+  const { t, locale } = useLocale();
   const [payments, setPayments] = useState<SalaryPaymentWithMechanic[]>([]);
   const [mechanics, setMechanics] = useState<Profile[]>([]);
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
@@ -73,10 +75,10 @@ export function SalaryPaymentsPage() {
   }, [currentPage]);
 
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void fetchPayments();
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, [fetchPayments]);
 
   useEffect(() => {
@@ -95,7 +97,7 @@ export function SalaryPaymentsPage() {
 
   async function handleSubmit() {
     if (!form.mechanic_id || !form.payment_date || !form.amount || Number(form.amount) <= 0) {
-      showToast("Lengkapi mekanik, tanggal, dan nominal", "error");
+      showToast(t("salary.amountRequired"), "error");
       return;
     }
     setSaving(true);
@@ -115,29 +117,29 @@ export function SalaryPaymentsPage() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error ?? "Gagal");
+        throw new Error(err.error ?? t("salary.saveFailed"));
       }
-      showToast("Pembayaran gaji tercatat", "success");
+      showToast(t("salary.saved"), "success");
       setDialogOpen(false);
       setForm({ ...form, amount: "", notes: "", period_start: "", period_end: "" });
       await fetchPayments(1);
       setCurrentPage(1);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Gagal menyimpan", "error");
+      showToast(err instanceof Error ? err.message : t("salary.saveFailed"), "error");
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(id: number) {
-    if (!confirm("Hapus catatan gaji ini?")) return;
+    if (!confirm(t("salary.deleteConfirm"))) return;
     try {
       const res = await fetch(`/api/salary-payments/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Gagal");
-      showToast("Catatan dihapus", "success");
+      if (!res.ok) throw new Error("Failed");
+      showToast(t("salary.deleted"), "success");
       await fetchPayments();
     } catch {
-      showToast("Gagal menghapus", "error");
+      showToast(t("salary.deleteFailed"), "error");
     }
   }
 
@@ -163,12 +165,12 @@ export function SalaryPaymentsPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50 dark:bg-slate-800/60">
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Mekanik</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tanggal</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Periode</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">Nominal</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Metode</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center w-16">Aksi</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("salary.mechanicLabel")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("salary.date")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("salary.period")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">{t("salary.amount")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("salary.method")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center w-16">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -178,7 +180,7 @@ export function SalaryPaymentsPage() {
                 </TableCell></TableRow>
               ) : payments.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="py-16 text-center text-sm text-slate-400">
-                  Belum ada catatan gaji
+                  {t("salary.noData")}
                 </TableCell></TableRow>
               ) : (
                 payments.map((p) => (
@@ -187,7 +189,7 @@ export function SalaryPaymentsPage() {
                       <p className="text-sm font-semibold text-slate-900 dark:text-white">{p.mechanic?.name ?? "—"}</p>
                     </TableCell>
                     <TableCell className="px-5 text-sm text-slate-600 dark:text-slate-300">
-                      {new Date(p.payment_date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                      {new Date(p.payment_date).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" })}
                     </TableCell>
                     <TableCell className="px-5 text-xs text-slate-500 dark:text-slate-400">
                       {p.period_start && p.period_end
@@ -215,7 +217,7 @@ export function SalaryPaymentsPage() {
         </div>
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-5 py-3 border-t border-slate-200 dark:border-slate-800">
-            <p className="text-xs text-slate-500">Halaman {currentPage} dari {totalPages}</p>
+            <p className="text-xs text-slate-500">{t("inventory.pageInfo", { page: currentPage, total: totalPages })}</p>
             <div className="flex gap-1">
               <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => { setCurrentPage((p) => p - 1); }}>
                 <ChevronLeft className="h-4 w-4" />
@@ -232,14 +234,14 @@ export function SalaryPaymentsPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Bayar Gaji Mekanik</DialogTitle>
-            <DialogDescription>Catat pembayaran gaji mingguan.</DialogDescription>
+            <DialogTitle>{t("salary.payTitle")}</DialogTitle>
+            <DialogDescription>{t("salary.payDesc")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label>Mekanik <span className="text-red-500">*</span></Label>
+              <Label>{t("salary.mechanicLabel")} <span className="text-red-500">*</span></Label>
               <Select value={form.mechanic_id} onValueChange={(v) => setForm({ ...form, mechanic_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Pilih mekanik" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("salary.selectMechanic")} /></SelectTrigger>
                 <SelectContent>
                   {mechanics.map((m) => (
                     <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
@@ -249,28 +251,28 @@ export function SalaryPaymentsPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Tanggal Bayar <span className="text-red-500">*</span></Label>
+                <Label>{t("salary.paymentDate")} <span className="text-red-500">*</span></Label>
                 <Input type="date" value={form.payment_date} onChange={(e) => setForm({ ...form, payment_date: e.target.value })} />
               </div>
               <div className="space-y-1.5">
-                <Label>Nominal <span className="text-red-500">*</span></Label>
+                <Label>{t("salary.amount")} <span className="text-red-500">*</span></Label>
                 <Input type="number" min="0" placeholder="500000" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Periode Mulai</Label>
+                <Label>{t("salary.periodStart")}</Label>
                 <Input type="date" value={form.period_start} onChange={(e) => setForm({ ...form, period_start: e.target.value })} />
               </div>
               <div className="space-y-1.5">
-                <Label>Periode Selesai</Label>
+                <Label>{t("salary.periodEnd")}</Label>
                 <Input type="date" value={form.period_end} onChange={(e) => setForm({ ...form, period_end: e.target.value })} />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Metode Pembayaran</Label>
+              <Label>{t("salary.method")}</Label>
               <Select value={form.payment_method_id} onValueChange={(v) => setForm({ ...form, payment_method_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Pilih metode" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("salary.selectMethod")} /></SelectTrigger>
                 <SelectContent>
                   {methods.map((m) => (
                     <SelectItem key={m.id} value={String(m.id)}>{m.name}</SelectItem>
@@ -279,14 +281,14 @@ export function SalaryPaymentsPage() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Catatan</Label>
-              <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Opsional" />
+              <Label>{t("masterData.notes")}</Label>
+              <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder={t("salary.notesOptionalPlaceholder")} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Batal</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>{t("common.cancel")}</Button>
             <Button onClick={handleSubmit} disabled={saving} className="gap-2">
-              {saving && <Loader className="h-4 w-4 animate-spin" />} Simpan
+              {saving && <Loader className="h-4 w-4 animate-spin" />} {t("settings.save")}
             </Button>
           </DialogFooter>
         </DialogContent>

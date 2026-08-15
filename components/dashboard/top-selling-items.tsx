@@ -3,6 +3,7 @@
 import { Droplets } from "lucide-react";
 import { useFetch } from "@/lib/hooks/use-fetch";
 import { formatCurrency } from "@/lib/format";
+import { useLocale } from "@/lib/locales";
 import {
   DashboardCard,
   SectionHeader,
@@ -17,6 +18,7 @@ interface TopItemRaw {
 }
 
 export function TopSellingItems() {
+  const { t } = useLocale();
   const { data: rawItems, isLoading } = useFetch<TopItemRaw[]>(
     "/api/dashboard/top-items",
   );
@@ -29,13 +31,13 @@ export function TopSellingItems() {
 
   return (
     <DashboardCard className="flex flex-col">
-      <SectionHeader label="Performance" title="Top Selling Items" />
+      <SectionHeader label={t("dashboard.performance")} title={t("dashboard.topSelling")} />
 
       <div className="flex-1 space-y-2.5 px-4 py-4">
         {isLoading ? (
           <LoadingSpinner />
         ) : items.length === 0 ? (
-          <EmptyState message="Belum ada data penjualan teratas." />
+          <EmptyState message={t("dashboard.noTopSelling")} />
         ) : (
           items.map((item) => (
             <div
@@ -50,7 +52,7 @@ export function TopSellingItems() {
                   {item.name}
                 </h4>
                 <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                  Sparepart
+                  {t("common.sparepart")}
                 </p>
               </div>
               <span className="whitespace-nowrap text-sm font-bold text-slate-700 dark:text-slate-200">
@@ -62,7 +64,7 @@ export function TopSellingItems() {
       </div>
 
       <button className="w-full border-t border-slate-100 py-3 text-xs font-semibold text-sky-600 transition-colors hover:bg-sky-50/50 dark:border-slate-800/60 dark:text-sky-400 dark:hover:bg-sky-900/20">
-        View All Items
+        {t("dashboard.viewAllItems")}
       </button>
     </DashboardCard>
   );

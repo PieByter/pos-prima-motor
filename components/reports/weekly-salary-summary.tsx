@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Wallet, Wrench, TrendingUp, Users, Printer } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/locales";
 
 /* ───── Types ───── */
 
@@ -29,11 +30,11 @@ type Props = {
 
 /* ───── Helpers ───── */
 
-function formatDateRange(start: string, end: string) {
+function formatDateRange(start: string, end: string, locale: string) {
   const opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", year: "numeric" };
   const s = new Date(start);
   const e = new Date(end);
-  return `${s.toLocaleDateString("id-ID", opts)} — ${e.toLocaleDateString("id-ID", opts)}`;
+  return `${s.toLocaleDateString(locale, opts)} — ${e.toLocaleDateString(locale, opts)}`;
 }
 
 /* ───── Stat Mini ───── */
@@ -67,6 +68,7 @@ function MiniStat({
 /* ───── Component ───── */
 
 export function WeeklySalarySummary({ startDate, endDate }: Props) {
+  const { t, locale } = useLocale();
   const [data, setData] = useState<WeeklySalaryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +85,7 @@ export function WeeklySalarySummary({ startDate, endDate }: Props) {
           setData([]);
           return;
         }
-        throw new Error("Gagal mengambil ringkasan gaji.");
+        throw new Error(t("reports.weeklySalaryLoadFailed"));
       }
 
       const json = await res.json();
@@ -91,17 +93,17 @@ export function WeeklySalarySummary({ startDate, endDate }: Props) {
       setData((json ?? []) as WeeklySalaryRow[]);
     } catch (err) {
       console.error(err);
-      setError("Tidak dapat memuat ringkasan gaji.");
+      setError(t("reports.weeklySalaryLoadError"));
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate]);
+  }, [startDate, endDate, t]);
 
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void loadWeeklySalary();
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, [loadWeeklySalary]);
 
   const totals = {
@@ -116,25 +118,25 @@ export function WeeklySalarySummary({ startDate, endDate }: Props) {
       {/* Summary Bar */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MiniStat
-          label="Total Mekanik"
-          value={`${data.length} orang`}
+          label={t("reports.totalMechanics")}
+          value={t("reports.peopleCountLabel", { n: data.length })}
           icon={Users}
           color="bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400"
         />
         <MiniStat
-          label="Total Gaji Pokok"
+          label={t("reports.totalBaseSalary")}
           value={formatCurrency(totals.salary)}
           icon={Wallet}
           color="bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400"
         />
         <MiniStat
-          label="Total Komisi Jasa"
+          label={t("reports.totalCommissionService")}
           value={formatCurrency(totals.commission)}
           icon={TrendingUp}
           color="bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
         />
         <MiniStat
-          label="Total Dibayarkan"
+          label={t("reports.totalPaidOut")}
           value={formatCurrency(totals.earnings)}
           icon={Wrench}
           color="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
@@ -145,8 +147,8 @@ export function WeeklySalarySummary({ startDate, endDate }: Props) {
       <DashboardCard className="print:shadow-none print:border-0">
         <div className="flex items-center justify-between border-b px-5 py-3 no-print">
           <SectionHeader
-            label="Slip gaji mingguan"
-            title={`Ringkasan Gaji — ${formatDateRange(startDate, endDate)}`}
+            label={t("reports.weeklySalaryLabel")}
+            title={t("reports.weeklySalaryTitle", { range: formatDateRange(startDate, endDate, locale) })}
           />
           <Button
             variant="outline"
@@ -155,7 +157,7 @@ export function WeeklySalarySummary({ startDate, endDate }: Props) {
             onClick={() => window.print()}
           >
             <Printer className="h-4 w-4" />
-            Print
+            {t("common.print")}
           </Button>
         </div>
 
@@ -167,13 +169,13 @@ export function WeeklySalarySummary({ startDate, endDate }: Props) {
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50/60 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 dark:bg-slate-900/30 dark:text-slate-500 print:bg-gray-100">
               <tr>
-                <th className="px-5 py-3 font-semibold text-slate-500">Mekanik</th>
-                <th className="px-5 py-3 text-right font-semibold text-slate-500">Gaji Pokok</th>
-                <th className="px-5 py-3 text-right font-semibold text-slate-500">Total Jasa</th>
-                <th className="px-5 py-3 text-right font-semibold text-slate-500">Komisi %</th>
-                <th className="px-5 py-3 text-right font-semibold text-slate-500">Komisi</th>
+                <th className="px-5 py-3 font-semibold text-slate-500">{t("reports.mechanic")}</th>
+                <th className="px-5 py-3 text-right font-semibold text-slate-500">{t("reports.baseSalaryCol")}</th>
+                <th className="px-5 py-3 text-right font-semibold text-slate-500">{t("reports.totalServiceCol")}</th>
+                <th className="px-5 py-3 text-right font-semibold text-slate-500">{t("reports.commissionPctCol")}</th>
+                <th className="px-5 py-3 text-right font-semibold text-slate-500">{t("reports.commissionCol")}</th>
                 <th className="px-5 py-3 text-right font-semibold text-slate-600 dark:text-slate-300">
-                  Total
+                  {t("common.total")}
                 </th>
               </tr>
             </thead>
@@ -183,14 +185,14 @@ export function WeeklySalarySummary({ startDate, endDate }: Props) {
                   <td colSpan={6} className="px-5 py-12 text-center">
                     <span className="inline-flex items-center gap-2 text-slate-400">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Memuat ringkasan gaji...
+                      {t("reports.weeklySalaryLoading")}
                     </span>
                   </td>
                 </tr>
               ) : data.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-5 py-12 text-center text-slate-400">
-                    Tidak ada data mekanik aktif.
+                    {t("reports.weeklySalaryNoData")}
                   </td>
                 </tr>
               ) : (
@@ -233,7 +235,7 @@ export function WeeklySalarySummary({ startDate, endDate }: Props) {
                   {/* Totals Row */}
                   <tr className="border-t-2 border-slate-200 bg-amber-50/50 dark:border-slate-700 dark:bg-amber-900/10 print:bg-amber-50">
                     <td className="px-5 py-3 font-bold text-slate-700 dark:text-slate-300">
-                      TOTAL
+                      {t("common.total")}
                     </td>
                     <td className="px-5 py-3 text-right font-mono font-bold text-slate-800 dark:text-white">
                       {formatCurrency(totals.salary)}
@@ -259,11 +261,11 @@ export function WeeklySalarySummary({ startDate, endDate }: Props) {
 
         {/* Legend */}
         <div className="flex flex-wrap gap-3 border-t px-5 py-3 text-xs text-slate-400 dark:text-slate-500 print:hidden">
-          <span>💰 <strong>Total</strong> = Gaji Pokok + Komisi</span>
+          <span>{t("reports.legendSalaryTotal")}</span>
           <span>|</span>
-          <span>🛠️ <strong>Komisi</strong> = % × Total Jasa</span>
+          <span>{t("reports.legendCommission2")}</span>
           <span>|</span>
-          <span>📅 Periode: {formatDateRange(startDate, endDate)}</span>
+          <span>{t("reports.periodLabel", { range: formatDateRange(startDate, endDate, locale) })}</span>
         </div>
       </DashboardCard>
     </div>

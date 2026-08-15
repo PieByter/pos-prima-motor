@@ -3,6 +3,7 @@
 import { Wallet, TrendingUp, Wrench, Calendar } from "lucide-react";
 import { useFetch } from "@/lib/hooks/use-fetch";
 import { formatCurrency } from "@/lib/format";
+import { useLocale } from "@/lib/locales";
 
 interface MechanicDashboard {
     today: {
@@ -26,6 +27,7 @@ interface MechanicDashboard {
 }
 
 export function MechanicWeeklyEstimate() {
+    const { t, locale } = useLocale();
     const { data, isLoading } = useFetch<MechanicDashboard>("/api/dashboard/mechanic");
 
     if (isLoading) {
@@ -57,12 +59,12 @@ export function MechanicWeeklyEstimate() {
     };
 
     const formatWeekRange = (weekStart: string) => {
-        if (!weekStart) return "Minggu ini";
+        if (!weekStart) return t("mechanic.thisWeek");
         const start = new Date(weekStart);
         const end = new Date(start);
         end.setDate(end.getDate() + 6);
         const opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" };
-        return `${start.toLocaleDateString("id-ID", opts)} — ${end.toLocaleDateString("id-ID", opts)}`;
+        return `${start.toLocaleDateString(locale, opts)} — ${end.toLocaleDateString(locale, opts)}`;
     };
 
     return (
@@ -73,7 +75,7 @@ export function MechanicWeeklyEstimate() {
                 </div>
                 <div>
                     <p className="text-sm font-semibold text-slate-800 dark:text-white">
-                        Estimasi Pendapatan Mingguan
+                        {t("mechanic.estimatedWeeklyIncome")}
                     </p>
                     <p className="text-xs text-slate-400 dark:text-slate-500">
                         {formatWeekRange(d.week.weekStart)}
@@ -84,7 +86,7 @@ export function MechanicWeeklyEstimate() {
             <div className="mt-5 space-y-3">
                 <div className="flex items-center justify-between rounded-lg bg-white/60 px-3 py-2 dark:bg-slate-800/60">
                     <span className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                        <Calendar className="h-3.5 w-3.5" /> Gaji Pokok
+                        <Calendar className="h-3.5 w-3.5" /> {t("mechanic.baseSalary")}
                     </span>
                     <span className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300">
                         {formatCurrency(d.earnings.weeklySalary)}
@@ -92,7 +94,7 @@ export function MechanicWeeklyEstimate() {
                 </div>
                 <div className="flex items-center justify-between rounded-lg bg-white/60 px-3 py-2 dark:bg-slate-800/60">
                     <span className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                        <Wrench className="h-3.5 w-3.5" /> Total Jasa Minggu Ini
+                        <Wrench className="h-3.5 w-3.5" /> {t("mechanic.totalServiceFeesWeek")}
                     </span>
                     <span className="font-mono text-sm font-semibold text-sky-600 dark:text-sky-400">
                         {formatCurrency(d.week.serviceFees)}
@@ -100,7 +102,7 @@ export function MechanicWeeklyEstimate() {
                 </div>
                 <div className="flex items-center justify-between rounded-lg bg-white/60 px-3 py-2 dark:bg-slate-800/60">
                     <span className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                        <TrendingUp className="h-3.5 w-3.5" /> Komisi ({d.earnings.commissionPct}%)
+                        <TrendingUp className="h-3.5 w-3.5" /> {t("mechanic.commissionPct", { pct: d.earnings.commissionPct })}
                     </span>
                     <span className="font-mono text-sm font-semibold text-amber-600 dark:text-amber-400">
                         {formatCurrency(d.earnings.weekCommission)}
@@ -110,14 +112,14 @@ export function MechanicWeeklyEstimate() {
                 <div className="border-t border-amber-200 pt-3 dark:border-amber-800">
                     <div className="flex items-center justify-between">
                         <span className="text-sm font-bold text-slate-800 dark:text-white">
-                            Estimasi Total
+                            {t("mechanic.estimatedTotal")}
                         </span>
                         <span className="font-mono text-lg font-extrabold text-amber-700 dark:text-amber-300">
                             {formatCurrency(d.earnings.estimatedWeekEarnings)}
                         </span>
                     </div>
                     <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">
-                        *Estimasi berdasarkan data transaksi minggu ini. Komisi dihitung dari total jasa × persentase.
+                        {t("mechanic.estimateNote")}
                     </p>
                 </div>
             </div>

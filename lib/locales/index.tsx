@@ -24,6 +24,13 @@ export type LocaleDict = {
     receipt: Record<string, string>;
     scanner: Record<string, string>;
     errors: Record<string, string>;
+    mechanic: Record<string, string>;
+    purchaseOrders: Record<string, string>;
+    appointments: Record<string, string>;
+    salary: Record<string, string>;
+    stockAdjustments: Record<string, string>;
+    warrantyClaims: Record<string, string>;
+    vehicleDocuments: Record<string, string>;
     time: Record<string, string>;
     months: Record<string, string>;
     weekdays: Record<string, string>;

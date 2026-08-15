@@ -8,9 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/lib/toast-provider";
 import { Loader2, Store, Percent, PackageOpen, MessageCircle } from "lucide-react";
 import type { BusinessSettings } from "@/lib/services/business-settings.service";
+import { useLocale } from "@/lib/locales";
 
 export function BusinessSettingsSection() {
   const { showToast } = useToast();
+  const { t, locale } = useLocale();
   const [settings, setSettings] = useState<BusinessSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -52,7 +54,7 @@ export function BusinessSettingsSection() {
 
   async function handleSave() {
     if (!form.shop_name.trim()) {
-      showToast("Nama toko wajib diisi", "error");
+      showToast(t("settings.shopNameRequired"), "error");
       return;
     }
     setSaving(true);
@@ -70,11 +72,11 @@ export function BusinessSettingsSection() {
           receipt_footer: form.receipt_footer.trim() || null,
         }),
       });
-      if (!res.ok) throw new Error("Gagal");
-      showToast("Pengaturan bisnis disimpan", "success");
+      if (!res.ok) throw new Error("Failed");
+      showToast(t("settings.settingsSaved"), "success");
       setSettings((prev) => prev ? { ...prev, ...JSON.parse(JSON.stringify(form)) } : prev);
     } catch {
-      showToast("Gagal menyimpan pengaturan", "error");
+      showToast(t("settings.settingsSaveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -96,30 +98,30 @@ export function BusinessSettingsSection() {
             <Store className="h-4 w-4 text-sky-600 dark:text-sky-400" />
           </div>
           <div>
-            <h3 className="font-semibold text-slate-900 dark:text-white">Info Toko</h3>
-            <p className="text-xs text-slate-500">Nama & kontak yang tampil di struk.</p>
+            <h3 className="font-semibold text-slate-900 dark:text-white">{t("settings.shopInfo")}</h3>
+            <p className="text-xs text-slate-500">{t("settings.shopInfoHint")}</p>
           </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>Nama Toko <span className="text-red-500">*</span></Label>
+            <Label>{t("settings.shopName")} <span className="text-red-500">*</span></Label>
             <Input value={form.shop_name} onChange={(e) => setForm({ ...form, shop_name: e.target.value })} />
           </div>
           <div className="space-y-1.5">
-            <Label>No. Telepon Toko</Label>
-            <Input value={form.shop_phone} onChange={(e) => setForm({ ...form, shop_phone: e.target.value })} placeholder="021-1234567" />
+            <Label>{t("settings.shopPhone")}</Label>
+            <Input value={form.shop_phone} onChange={(e) => setForm({ ...form, shop_phone: e.target.value })} placeholder={t("settings.shopPhonePlaceholder")} />
           </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>Alamat</Label>
+            <Label>{t("settings.shopAddress")}</Label>
             <Input value={form.shop_address} onChange={(e) => setForm({ ...form, shop_address: e.target.value })} />
           </div>
           <div className="space-y-1.5">
             <Label className="inline-flex items-center gap-1.5">
-              <MessageCircle className="h-3.5 w-3.5" /> Nomor WhatsApp Toko
+              <MessageCircle className="h-3.5 w-3.5" /> {t("settings.whatsappNumber")}
             </Label>
             <Input value={form.whatsapp_number} onChange={(e) => setForm({ ...form, whatsapp_number: e.target.value })} placeholder="0812-3456-7890" />
           </div>
@@ -128,7 +130,7 @@ export function BusinessSettingsSection() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label className="inline-flex items-center gap-1.5">
-              <Percent className="h-3.5 w-3.5" /> Pajak PPN (%)
+              <Percent className="h-3.5 w-3.5" /> {t("settings.taxPercentLabel")}
             </Label>
             <Input
               type="number"
@@ -138,11 +140,11 @@ export function BusinessSettingsSection() {
               value={form.tax_percent}
               onChange={(e) => setForm({ ...form, tax_percent: e.target.value })}
             />
-            <p className="text-xs text-slate-400">Dipakai form transaksi (default 11%).</p>
+            <p className="text-xs text-slate-400">{t("settings.taxHint")}</p>
           </div>
           <div className="space-y-1.5">
             <Label className="inline-flex items-center gap-1.5">
-              <PackageOpen className="h-3.5 w-3.5" /> Ambang Stok Menipis
+              <PackageOpen className="h-3.5 w-3.5" /> {t("settings.lowStockThreshold")}
             </Label>
             <Input
               type="number"
@@ -150,29 +152,29 @@ export function BusinessSettingsSection() {
               value={form.low_stock_threshold}
               onChange={(e) => setForm({ ...form, low_stock_threshold: e.target.value })}
             />
-            <p className="text-xs text-slate-400">Peringatan stok menipis (default 5).</p>
+            <p className="text-xs text-slate-400">{t("settings.lowStockHint")}</p>
           </div>
         </div>
 
         <div className="space-y-1.5">
-          <Label>Catatan Kaki Struk</Label>
+          <Label>{t("settings.receiptFooter")}</Label>
           <Textarea
             rows={2}
             value={form.receipt_footer}
             onChange={(e) => setForm({ ...form, receipt_footer: e.target.value })}
-            placeholder="Contoh: Garansi 3 bulan untuk sparepart. Terima kasih!"
+            placeholder={t("settings.receiptFooterPlaceholder")}
           />
         </div>
 
         <div className="flex justify-end">
           <Button onClick={handleSave} disabled={saving} className="gap-2 bg-sky-500 hover:bg-sky-600">
-            {saving && <Loader2 className="h-4 w-4 animate-spin" />} Simpan Pengaturan
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />} {t("settings.saveSettings")}
           </Button>
         </div>
       </div>
 
       <p className="text-xs text-slate-400">
-        Terakhir diupdate: {settings?.updated_at ? new Date(settings.updated_at).toLocaleString("id-ID") : "—"}
+        {t("settings.lastUpdated", { date: settings?.updated_at ? new Date(settings.updated_at).toLocaleString(locale) : "—" })}
       </p>
     </div>
   );

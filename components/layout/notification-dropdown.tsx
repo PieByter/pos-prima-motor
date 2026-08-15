@@ -5,6 +5,7 @@ import { Bell, CheckCheck, Loader2, AlertCircle, Info, CheckCircle, AlertTriangl
 import Link from "next/link";
 import type { NotificationType } from "@/lib/types/notifications";
 import { useRealtimeNotifications } from "@/hooks/use-realtime-notifications";
+import { useLocale } from "@/lib/locales";
 
 const TYPE_ICONS: Record<NotificationType, typeof Info> = {
   info: Info,
@@ -23,6 +24,7 @@ const TYPE_COLORS: Record<NotificationType, string> = {
 export function NotificationDropdown() {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { t } = useLocale();
 
   const {
     notifications,
@@ -67,12 +69,12 @@ export function NotificationDropdown() {
   function timeAgo(dateStr: string) {
     const diff = now - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
-    if (mins < 1) return "Baru saja";
-    if (mins < 60) return `${mins}m lalu`;
+    if (mins < 1) return t("time.justNow");
+    if (mins < 60) return t("time.minutesAgo", { n: mins });
     const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}j lalu`;
+    if (hrs < 24) return t("time.hoursAgo", { n: hrs });
     const days = Math.floor(hrs / 24);
-    return `${days}h lalu`;
+    return t("time.daysAgo", { n: days });
   }
 
   return (
@@ -80,7 +82,7 @@ export function NotificationDropdown() {
       <button
         onClick={() => setOpen(!open)}
         className="relative p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-        aria-label="Notifikasi"
+        aria-label={t("notifications.title")}
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
@@ -95,7 +97,7 @@ export function NotificationDropdown() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
             <h3 className="font-semibold text-slate-900 dark:text-white text-sm">
-              Notifikasi
+              {t("notifications.title")}
             </h3>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
@@ -104,7 +106,7 @@ export function NotificationDropdown() {
                   className="text-xs text-sky-600 hover:text-sky-700 font-medium flex items-center gap-1 cursor-pointer"
                 >
                   <CheckCheck className="h-3.5 w-3.5" />
-                  Baca Semua
+                  {t("notifications.readAll")}
                 </button>
               )}
             </div>
@@ -119,7 +121,7 @@ export function NotificationDropdown() {
             ) : notifications.length === 0 ? (
               <div className="flex flex-col items-center py-8 text-slate-400">
                 <Bell className="h-8 w-8 mb-2 opacity-50" />
-                <p className="text-sm">Tidak ada notifikasi</p>
+                <p className="text-sm">{t("notifications.noNotifications")}</p>
               </div>
             ) : (
               notifications.map((n) => {
@@ -149,7 +151,7 @@ export function NotificationDropdown() {
                         <button
                           onClick={(e) => handleMarkOneRead(n.id, e)}
                           className="shrink-0 p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
-                          title="Tandai sudah dibaca"
+                          title={t("notifications.markAsRead")}
                         >
                           <X className="h-3.5 w-3.5" />
                         </button>
@@ -175,7 +177,7 @@ export function NotificationDropdown() {
             onClick={() => setOpen(false)}
             className="block text-center text-sm font-medium text-sky-600 hover:text-sky-700 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50"
           >
-            Lihat Semua Notifikasi
+            {t("notifications.seeAll")}
           </Link>
         </div>
       )}

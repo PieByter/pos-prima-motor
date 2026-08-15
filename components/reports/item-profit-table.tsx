@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Loader, TrendingUp, TrendingDown } from "lucide-react";
 import { formatRupiah } from "@/lib/data/items";
+import { useLocale } from "@/lib/locales";
 
 export type ItemProfitRow = {
   item_id: number;
@@ -17,6 +18,7 @@ export type ItemProfitRow = {
 };
 
 export function ItemProfitTable({ startDate, endDate }: { startDate: string; endDate: string }) {
+  const { t } = useLocale();
   const [rows, setRows] = useState<ItemProfitRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,24 +33,24 @@ export function ItemProfitTable({ startDate, endDate }: { startDate: string; end
           setRows([]);
           return;
         }
-        throw new Error("Gagal mengambil laporan");
+        throw new Error(t("reports.reportLoadFailed"));
       }
       setError(null);
       const json = (await res.json()) as ItemProfitRow[];
       setRows(Array.isArray(json) ? json : []);
     } catch (err) {
       console.error(err);
-      setError("Tidak dapat memuat laporan laba per item.");
+      setError(t("reports.reportLoadError"));
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate]);
+  }, [startDate, endDate, t]);
 
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void load();
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, [load]);
 
   const sorted = [...rows].sort((a, b) => {
@@ -66,17 +68,17 @@ export function ItemProfitTable({ startDate, endDate }: { startDate: string; end
       {/* Ringkasan */}
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-xl border bg-white dark:bg-slate-800 p-4">
-          <p className="text-xs text-slate-500">Total Laba</p>
+          <p className="text-xs text-slate-500">{t("reports.totalProfit")}</p>
           <p className={`text-lg font-bold ${totalProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600"}`}>
             {formatRupiah(totalProfit)}
           </p>
         </div>
         <div className="rounded-xl border bg-white dark:bg-slate-800 p-4">
-          <p className="text-xs text-slate-500">Total Pendapatan</p>
+          <p className="text-xs text-slate-500">{t("reports.totalRevenue")}</p>
           <p className="text-lg font-bold text-slate-900 dark:text-white">{formatRupiah(totalRevenue)}</p>
         </div>
         <div className="rounded-xl border bg-white dark:bg-slate-800 p-4">
-          <p className="text-xs text-slate-500">Margin Rata-rata</p>
+          <p className="text-xs text-slate-500">{t("reports.avgMargin")}</p>
           <p className={`text-lg font-bold ${overallMargin >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600"}`}>
             {overallMargin}%
           </p>
@@ -85,24 +87,24 @@ export function ItemProfitTable({ startDate, endDate }: { startDate: string; end
 
       {/* Filter sort */}
       <div className="flex items-center gap-2">
-        <span className="text-xs font-medium text-slate-500">Urutkan:</span>
+        <span className="text-xs font-medium text-slate-500">{t("reports.sortBy")}</span>
         <button
           onClick={() => setSort("profit")}
           className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${sort === "profit" ? "bg-sky-500 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
         >
-          Laba Terbesar
+          {t("reports.sortHighestProfit")}
         </button>
         <button
           onClick={() => setSort("margin")}
           className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${sort === "margin" ? "bg-sky-500 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
         >
-          Margin Tertinggi
+          {t("reports.sortHighestMargin")}
         </button>
         <button
           onClick={() => setSort("qty")}
           className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${sort === "qty" ? "bg-sky-500 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
         >
-          Terlaris
+          {t("reports.sortBestSeller")}
         </button>
       </div>
 
@@ -115,18 +117,18 @@ export function ItemProfitTable({ startDate, endDate }: { startDate: string; end
         ) : error ? (
           <p className="p-8 text-center text-sm text-red-500">{error}</p>
         ) : sorted.length === 0 ? (
-          <p className="p-8 text-center text-sm text-slate-400">Belum ada penjualan pada periode ini.</p>
+          <p className="p-8 text-center text-sm text-slate-400">{t("reports.noSalesPeriod")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-b bg-slate-50 dark:bg-slate-900/50">
                 <tr className="text-left text-xs text-slate-500">
-                  <th className="px-4 py-3">Item</th>
-                  <th className="px-4 py-3 text-center">Terjual</th>
-                  <th className="px-4 py-3 text-right">Pendapatan</th>
-                  <th className="px-4 py-3 text-right">HPP</th>
-                  <th className="px-4 py-3 text-right">Laba</th>
-                  <th className="px-4 py-3 text-center">Margin</th>
+                  <th className="px-4 py-3">{t("masterData.item")}</th>
+                  <th className="px-4 py-3 text-center">{t("reports.sold")}</th>
+                  <th className="px-4 py-3 text-right">{t("reports.revenue")}</th>
+                  <th className="px-4 py-3 text-right">{t("reports.hpp")}</th>
+                  <th className="px-4 py-3 text-right">{t("reports.profit")}</th>
+                  <th className="px-4 py-3 text-center">{t("reports.margin")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y">

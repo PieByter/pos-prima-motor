@@ -34,6 +34,7 @@ import { type TransactionType } from "@/lib/data/transactions";
 import { formatRupiah } from "@/lib/data/items";
 import type { Vehicle } from "@/lib/types/database";
 import { CameraBarcodeScanner } from "@/components/transactions/camera-barcode-scanner";
+import { useLocale } from "@/lib/locales";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -146,6 +147,7 @@ export function TransactionForm({
   numericId,
 }: TransactionFormProps) {
   const router = useRouter();
+  const { t } = useLocale();
   const isEdit = !!initialData;
   const isSale = type === "sale";
   const trxId = transactionId ?? generateTrxId();
@@ -367,13 +369,13 @@ export function TransactionForm({
       // Search item by SKU via API
       const res = await fetch(`/api/items?search=${encodeURIComponent(sku.trim())}&limit=1`);
       if (!res.ok) {
-        setBarcodeMsg(`Tidak ditemukan: ${sku}`);
+        setBarcodeMsg(t("transactions.barcodeNotFound", { sku }));
         return;
       }
       const json = await res.json();
       const items = json?.data ?? [];
       if (items.length === 0) {
-        setBarcodeMsg(`SKU tidak dikenal: ${sku}`);
+        setBarcodeMsg(t("transactions.barcodeUnknown", { sku }));
         return;
       }
       const item = items[0];
@@ -397,12 +399,12 @@ export function TransactionForm({
         }
         return [...prev, newLine];
       });
-      setBarcodeMsg(`✅ ${item.name} ditambahkan`);
+      setBarcodeMsg(t("transactions.barcodeAdded", { name: item.name }));
       setTimeout(() => setBarcodeMsg(null), 2000);
     } catch {
-      setBarcodeMsg("Gagal mencari item");
+      setBarcodeMsg(t("transactions.barcodeSearchFailed"));
     }
-  }, [isSale]);
+  }, [isSale, t]);
 
   /* ---- handlers ---- */
   const backHref = isSale
@@ -455,7 +457,7 @@ export function TransactionForm({
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error ?? "Gagal menyimpan penjualan");
+          throw new Error(errData.error ?? t("transactions.saveSaleFailed"));
         }
 
         router.push(backHref);
@@ -494,14 +496,14 @@ export function TransactionForm({
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error ?? "Gagal menyimpan pembelian");
+          throw new Error(errData.error ?? t("transactions.savePurchaseFailed"));
         }
 
         router.push(backHref);
         router.refresh();
       }
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Gagal menyimpan transaksi");
+      setFormError(err instanceof Error ? err.message : t("transactions.saveTrxFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -517,17 +519,17 @@ export function TransactionForm({
         <div className="flex flex-row items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
-              {isEdit ? "Edit Transaksi" : "Buat Transaksi Baru"}
+              {isEdit ? t("transactions.editTransaction") : t("transactions.newTransactionTitle")}
             </h1>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               {isSale
-                ? "Catat penjualan sparepart & jasa service."
-                : "Catat pembelian barang dari supplier."}
+                ? t("transactions.createSaleSubtitle")
+                : t("transactions.createPurchaseSubtitle")}
             </p>
           </div>
           <span className="inline-flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-sm text-slate-500 dark:text-slate-400 shadow-sm">
             <Hash className="h-4 w-4" />
-            {isEdit ? trxId : "Auto-generate"}
+            {isEdit ? trxId : t("transactions.autoGenerate")}
           </span>
         </div>
 
@@ -539,19 +541,19 @@ export function TransactionForm({
               {/* Customer / Supplier */}
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                  {isSale ? "Customer" : "Supplier"}
+                  {isSale ? t("transactions.customerLabel") : t("transactions.supplierLabel")}
                 </label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 z-10 pointer-events-none" />
                   {isSale ? (
                     <Select value={customerId} onValueChange={handleCustomerChange}>
                       <SelectTrigger className="pl-9">
-                        <SelectValue placeholder="Cari customer..." />
+                        <SelectValue placeholder={t("transactions.searchCustomerPlaceholder")} />
                       </SelectTrigger>
                       <SelectContent>
                         {customerOptions.length === 0 && (
                           <SelectItem value="-1" disabled>
-                            Tidak ada customer
+                            {t("transactions.noCustomerOption")}
                           </SelectItem>
                         )}
                         {customerOptions.map((c) => (
@@ -571,12 +573,12 @@ export function TransactionForm({
                       setCustomerId(val);
                     }}>
                       <SelectTrigger className="pl-9">
-                        <SelectValue placeholder="Cari supplier..." />
+                        <SelectValue placeholder={t("transactions.searchSupplierPlaceholder")} />
                       </SelectTrigger>
                       <SelectContent>
                         {supplierOptions.length === 0 && (
                           <SelectItem value="-1" disabled>
-                            Tidak ada supplier
+                            {t("transactions.noSupplierOption")}
                           </SelectItem>
                         )}
                         {supplierOptions.map((s) => (
@@ -599,13 +601,13 @@ export function TransactionForm({
               {isSale ? (
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    Mekanik Ditugaskan
+                    {t("transactions.mechanic")}
                   </label>
                   <div className="relative">
                     <Wrench className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 z-10 pointer-events-none" />
                     <Select value={mechanicId} onValueChange={setMechanicId}>
                       <SelectTrigger className="pl-9">
-                        <SelectValue placeholder="Pilih mekanik..." />
+                        <SelectValue placeholder={t("transactions.selectMechanicPlaceholder")} />
                       </SelectTrigger>
                       <SelectContent>
                         {mechanicOptions.map((m) => (
@@ -624,7 +626,7 @@ export function TransactionForm({
               {/* Date */}
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Tanggal Transaksi
+                  {t("transactions.transactionDate")}
                 </label>
                 <div className="relative">
                   <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
@@ -644,29 +646,29 @@ export function TransactionForm({
                 {/* Jenis Transaksi */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    Jenis Transaksi
+                    {t("transactions.saleType")}
                   </label>
                   <Select value={saleType} onValueChange={(v) => setSaleType(v as typeof saleType)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Pilih jenis transaksi..." />
+                      <SelectValue placeholder={t("transactions.selectSaleTypePlaceholder")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="purchase">🛒 Beli Barang (Sparepart)</SelectItem>
-                      <SelectItem value="service">🔧 Service Saja</SelectItem>
-                      <SelectItem value="hybrid">⚙️ Hybrid (Beli + Service)</SelectItem>
+                      <SelectItem value="purchase">{t("transactions.saleTypeGoods")}</SelectItem>
+                      <SelectItem value="service">{t("transactions.saleTypeService")}</SelectItem>
+                      <SelectItem value="hybrid">{t("transactions.saleTypeHybrid")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-slate-400">
-                    {saleType === "purchase" && "Transaksi hanya penjualan barang/sparepart."}
-                    {saleType === "service" && "Transaksi hanya jasa service tanpa penjualan barang."}
-                    {saleType === "hybrid" && "Transaksi gabungan: beli sparepart + jasa service."}
+                    {saleType === "purchase" && t("transactions.saleTypeGoodsHint")}
+                    {saleType === "service" && t("transactions.saleTypeServiceHint")}
+                    {saleType === "hybrid" && t("transactions.saleTypeHybridHint")}
                   </p>
                 </div>
 
                 {/* Kendaraan */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    Kendaraan / Plat Motor
+                    {t("transactions.vehiclePlate")}
                   </label>
                   <Select
                     value={vehicleId}
@@ -677,9 +679,9 @@ export function TransactionForm({
                       <SelectValue placeholder={
                         customerId
                           ? vehicleOptions.length > 0
-                            ? "Pilih motor customer..."
-                            : "Customer belum punya motor terdaftar"
-                          : "Pilih customer dulu..."
+                            ? t("transactions.selectVehiclePlaceholder")
+                            : t("transactions.noVehicleRegistered")
+                          : t("transactions.selectCustomerFirst")
                       } />
                     </SelectTrigger>
                     <SelectContent>
@@ -694,7 +696,7 @@ export function TransactionForm({
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-slate-400">
-                    Pilih motor yang diservice / dibelikan sparepart (opsional).
+                    {t("transactions.vehicleHint")}
                   </p>
                 </div>
               </div>
@@ -708,7 +710,7 @@ export function TransactionForm({
               <div className="relative flex-1 max-w-sm">
                 <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                 <Input
-                  placeholder="Scan barcode / ketik SKU..."
+                  placeholder={t("transactions.scanBarcode")}
                   value={barcodeInput}
                   onChange={(e) => setBarcodeInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -727,7 +729,7 @@ export function TransactionForm({
                 size="icon"
                 onClick={() => setScannerOpen(true)}
                 className="shrink-0 h-10 w-10"
-                title="Scan pakai kamera"
+                title={t("transactions.scanCameraTitle")}
               >
                 <ScanLine className="h-4 w-4 text-sky-500" />
               </Button>
@@ -753,24 +755,24 @@ export function TransactionForm({
                 <thead className="bg-slate-50 dark:bg-slate-900/50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-[30%]">
-                      Item / Service
+                      {t("transactions.item")}
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-20">
-                      Qty
+                      {t("transactions.qty")}
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-32">
-                      Harga (Rp)
+                      {t("transactions.price")}
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-24">
-                      Diskon (%)
+                      {t("transactions.discount")}
                     </th>
                     {isSale && (
                       <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-32">
-                        Jasa (Rp)
+                        {t("transactions.serviceFee")}
                       </th>
                     )}
                     <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-32">
-                      Subtotal
+                      {t("transactions.subtotal")}
                     </th>
                     <th className="px-4 py-3 w-12" />
                   </tr>
@@ -790,7 +792,7 @@ export function TransactionForm({
                             onValueChange={(val) => selectItem(line.key, val)}
                           >
                             <SelectTrigger className="pl-9 text-left">
-                              <SelectValue placeholder="Cari item..." />
+                              <SelectValue placeholder={t("transactions.searchItem")} />
                             </SelectTrigger>
                             <SelectContent>
                               {itemOptions.map((item) => (
@@ -906,7 +908,7 @@ export function TransactionForm({
               className="gap-2 border-dashed text-slate-600 dark:text-slate-300"
             >
               <Plus className="h-4 w-4 text-sky-500" />
-              Tambah Baris Item
+              {t("transactions.addRowItem")}
             </Button>
 
             {/* Notes + Payment + Totals */}
@@ -914,10 +916,10 @@ export function TransactionForm({
               {/* Notes */}
               <div className="w-full sm:w-1/2 space-y-1.5">
                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Catatan Transaksi
+                  {t("transactions.transactionNotes")}
                 </label>
                 <Textarea
-                  placeholder="Instruksi khusus atau detail garansi..."
+                  placeholder={t("transactions.notesPlaceholderForm")}
                   rows={3}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
@@ -930,19 +932,19 @@ export function TransactionForm({
                 <>
                   <div className="space-y-1.5">
                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                      Status Pembayaran
+                      {t("transactions.paymentStatus")}
                     </label>
                     <Select
                       value={paymentStatus}
                       onValueChange={(v) => handlePaymentStatusChange(v as typeof paymentStatus)}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Pilih status..." />
+                        <SelectValue placeholder={t("transactions.selectStatusPlaceholder")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="paid">✅ Lunas</SelectItem>
-                        <SelectItem value="partial">💰 Sebagian (DP)</SelectItem>
-                        <SelectItem value="unpaid">📝 {isSale ? "Utang (Belum Bayar)" : "Hutang ke Supplier"}</SelectItem>
+                        <SelectItem value="paid">{t("transactions.statusPaid")}</SelectItem>
+                        <SelectItem value="partial">{t("transactions.statusPartial")}</SelectItem>
+                        <SelectItem value="unpaid">📝 {isSale ? t("transactions.statusUnpaidSale") : t("transactions.statusUnpaidPurchase")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -952,7 +954,7 @@ export function TransactionForm({
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                          Jumlah Dibayar
+                          {t("transactions.amountPaid")}
                         </label>
                         <Input
                           type="number"
@@ -966,7 +968,7 @@ export function TransactionForm({
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                          Sisa Tagihan
+                          {t("transactions.remainingBalance")}
                         </label>
                         <div className="flex h-10 w-full items-center justify-end rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 px-3 text-sm font-semibold text-amber-600 dark:text-amber-400">
                           {formatRupiah(remainingAmount)}
@@ -979,11 +981,11 @@ export function TransactionForm({
                 {/* Payment Method */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    Metode Pembayaran
+                    {t("transactions.paymentMethod")}
                   </label>
                   <Select value={paymentMethodId} onValueChange={setPaymentMethodId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Pilih metode bayar..." />
+                      <SelectValue placeholder={t("transactions.paymentMethodPlaceholder")} />
                     </SelectTrigger>
                     <SelectContent>
                       {paymentMethods.map((pm) => (
@@ -1003,7 +1005,7 @@ export function TransactionForm({
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                        Jumlah Dibayar
+                        {t("transactions.cashAmount")}
                       </label>
                       <Input
                         type="number"
@@ -1016,7 +1018,7 @@ export function TransactionForm({
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                        Kembalian
+                        {t("transactions.changeAmount")}
                       </label>
                       <div className="flex h-10 w-full items-center justify-end rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 px-3 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
                         {formatRupiah(totals.changeAmount)}
@@ -1028,30 +1030,30 @@ export function TransactionForm({
                 {/* Summary */}
                 <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 p-4 space-y-2">
                   <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
-                    <span>Subtotal (Items):</span>
+                    <span>{t("transactions.subtotalItems")}</span>
                     <span>{formatRupiah(totals.itemsSubtotal)}</span>
                   </div>
                   {isSale && (
                     <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
-                      <span>Biaya Jasa:</span>
+                      <span>{t("transactions.serviceFeesTotal")}</span>
                       <span>{formatRupiah(totals.serviceFees)}</span>
                     </div>
                   )}
                   {totals.totalDiscount > 0 && (
                     <div className="flex justify-between text-sm text-red-600 dark:text-red-400">
-                      <span>Total Diskon:</span>
+                      <span>{t("transactions.totalDiscountLine")}</span>
                       <span>- {formatRupiah(totals.totalDiscount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400 pb-2 border-b border-slate-200 dark:border-slate-700">
                     <span>
-                      Pajak ({Math.round(totals.taxRate * 100)}%):
+                      {t("transactions.taxLine", { pct: Math.round(totals.taxRate * 100) })}
                     </span>
                     <span>{formatRupiah(totals.tax)}</span>
                   </div>
                   <div className="flex justify-between items-center pt-1">
                     <span className="text-base font-bold text-slate-900 dark:text-white">
-                      TOTAL
+                      {t("transactions.grandTotal")}
                     </span>
                     <span className="text-2xl font-bold text-sky-500">
                       {formatRupiah(totals.grandTotal)}
@@ -1075,7 +1077,7 @@ export function TransactionForm({
                 variant="outline"
                 onClick={() => router.push(backHref)}
               >
-                Batal
+                {t("common.cancel")}
               </Button>
               <Button
                 type="button"
@@ -1086,14 +1088,14 @@ export function TransactionForm({
                 {isSubmitting ? (
                   <span className="inline-flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Menyimpan...
+                    {t("transactions.saving")}
                   </span>
                 ) : isEdit ? (
-                  isSale ? "Simpan Penjualan" : "Simpan Pembelian"
+                  isSale ? t("transactions.saveSale") : t("transactions.savePurchase")
                 ) : isSale ? (
-                  "Buat Penjualan"
+                  t("transactions.createSaleSubmit")
                 ) : (
-                  "Buat Pembelian"
+                  t("transactions.createPurchaseSubmit")
                 )}
               </Button>
             </div>
@@ -1104,7 +1106,7 @@ export function TransactionForm({
         <div className="fixed bottom-4 right-4 rounded-lg border bg-white px-3 py-2 text-sm text-slate-600 shadow-sm dark:bg-slate-800 dark:text-slate-300">
           <span className="inline-flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Loading items & mechanics...
+            {t("transactions.loadingOptions")}
           </span>
         </div>
       )}

@@ -28,11 +28,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import type { Customer, PaginatedResponse } from "@/lib/types/database";
 import { CustomerFormDialog } from "@/components/customers/customer-form-dialog";
+import { useLocale } from "@/lib/locales";
 
 const ITEMS_PER_PAGE = 10;
 
 export function CustomersTable() {
   const { showToast } = useToast();
+  const { t } = useLocale();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -99,19 +101,19 @@ export function CustomersTable() {
         setTotalPages(result.totalPages ?? 1);
       } catch (err) {
         console.error(err);
-        setError("Gagal memuat data customer. Coba lagi.");
+        setError(t("masterData.customerLoadFailed"));
       } finally {
         setIsLoading(false);
       }
     },
-    [search, currentPage]
+    [search, currentPage, t]
   );
 
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void fetchCustomers();
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, [fetchCustomers]);
 
   function handleAdd() {
@@ -125,18 +127,18 @@ export function CustomersTable() {
   }
 
   async function handleDelete(id: number) {
-    if (!confirm("Yakin ingin menghapus customer ini?")) return;
+    if (!confirm(t("masterData.customerDeleteConfirm"))) return;
     try {
       const res = await fetch(`/api/customers/${id}`, { method: "DELETE" });
       if (!res.ok) {
-        throw new Error(await readApiErrorMessage(res, "Gagal menghapus"));
+        throw new Error(await readApiErrorMessage(res, t("common.failedToDelete")));
       }
-      showToast("Customer berhasil dihapus", "success");
+      showToast(t("common.successfullyDeleted"), "success");
       setCurrentPage(1);
       await fetchCustomers(1);
     } catch (err) {
       console.error(err);
-      const msg = err instanceof Error ? err.message : "Gagal menghapus customer.";
+      const msg = err instanceof Error ? err.message : t("masterData.customerDeleteFailed");
       setError(msg);
       showToast(msg, "error");
     }
@@ -144,20 +146,20 @@ export function CustomersTable() {
 
   async function handleBulkDelete() {
     if (selectedIds.size === 0) return;
-    if (!confirm(`Hapus ${selectedIds.size} customer terpilih?`)) return;
+    if (!confirm(t("masterData.customerBulkDeleteConfirm", { count: selectedIds.size }))) return;
     try {
       const res = await fetch("/api/customers", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: [...selectedIds] }),
       });
-      if (!res.ok) throw new Error("Gagal");
-      showToast(`${selectedIds.size} customer dihapus`, "success");
+      if (!res.ok) throw new Error("Failed");
+      showToast(t("masterData.customerBulkDeleted", { count: selectedIds.size }), "success");
       setSelectedIds(new Set());
       setCurrentPage(1);
       await fetchCustomers(1);
     } catch {
-      showToast("Gagal menghapus", "error");
+      showToast(t("common.failedToDelete"), "error");
     }
   }
 
@@ -170,9 +172,9 @@ export function CustomersTable() {
           body: JSON.stringify(data),
         });
         if (!res.ok) {
-          throw new Error(await readApiErrorMessage(res, "Gagal update"));
+          throw new Error(await readApiErrorMessage(res, "Failed"));
         }
-        showToast("Customer berhasil diperbarui", "success");
+        showToast(t("common.successfullyUpdated"), "success");
       } else {
         const res = await fetch("/api/customers", {
           method: "POST",
@@ -180,9 +182,9 @@ export function CustomersTable() {
           body: JSON.stringify(data),
         });
         if (!res.ok) {
-          throw new Error(await readApiErrorMessage(res, "Gagal tambah"));
+          throw new Error(await readApiErrorMessage(res, "Failed"));
         }
-        showToast("Customer berhasil ditambahkan", "success");
+        showToast(t("common.successfullySaved"), "success");
       }
       setDialogOpen(false);
       setEditingCustomer(null);
@@ -190,7 +192,7 @@ export function CustomersTable() {
       await fetchCustomers(1);
     } catch (err) {
       console.error(err);
-      const msg = err instanceof Error ? err.message : "Gagal menyimpan customer.";
+      const msg = err instanceof Error ? err.message : t("masterData.customerDeleteFailed");
       setError(msg);
       showToast(msg, "error");
     }
@@ -206,10 +208,10 @@ export function CustomersTable() {
           </div>
           <div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-              Data Customer
+              {t("masterData.customerList")}
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              {isLoading ? "Memuat..." : `${total} customer terdaftar`}
+              {isLoading ? t("common.loading") : t("masterData.customerRegistered", { count: total })}
             </p>
           </div>
         </div>
@@ -218,19 +220,19 @@ export function CustomersTable() {
           className="bg-emerald-500 hover:bg-emerald-600 text-white gap-2 self-start sm:self-auto shadow-sm shadow-emerald-500/30"
         >
           <Plus className="h-4 w-4" />
-          Tambah Customer
+          {t("masterData.addCustomer")}
         </Button>
       </div>
 
       {/* Bulk Actions */}
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800">
-          <span className="text-sm text-red-700 dark:text-red-400">{selectedIds.size} dipilih</span>
+          <span className="text-sm text-red-700 dark:text-red-400">{t("masterData.selectedCount", { count: selectedIds.size })}</span>
           <Button size="sm" variant="destructive" className="h-8 gap-1" onClick={handleBulkDelete}>
-            <Trash2 className="h-3.5 w-3.5" /> Hapus Terpilih
+            <Trash2 className="h-3.5 w-3.5" /> {t("masterData.deleteSelected")}
           </Button>
           <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setSelectedIds(new Set())}>
-            Batal
+            {t("common.cancel")}
           </Button>
         </div>
       )}
@@ -240,7 +242,7 @@ export function CustomersTable() {
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
-            placeholder="Cari nama atau nomor HP..."
+            placeholder={t("masterData.searchCustomer")}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -271,34 +273,34 @@ export function CustomersTable() {
                   }} />
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5">
-                  Nama Customer
+                  {t("masterData.customerNameCol")}
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5">
-                  Tipe
+                  {t("masterData.type")}
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5">
                   <div className="flex items-center gap-1.5">
                     <Phone className="h-3 w-3" />
-                    No. HP
+                    {t("masterData.phone")}
                   </div>
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5">
-                  Email
+                  {t("masterData.email")}
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5">
                   <div className="flex items-center gap-1.5">
                     <MapPin className="h-3 w-3" />
-                    Alamat
+                    {t("masterData.address")}
                   </div>
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5">
                   <div className="flex items-center gap-1.5">
                     <Calendar className="h-3 w-3" />
-                    Bergabung
+                    {t("masterData.joined")}
                   </div>
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5 text-center w-24">
-                  Aksi
+                  {t("common.actions")}
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -309,7 +311,7 @@ export function CustomersTable() {
                     <div className="flex flex-col items-center gap-3">
                       <Loader className="h-7 w-7 animate-spin text-emerald-500" />
                       <span className="text-sm text-slate-500 dark:text-slate-400">
-                        Memuat data customer...
+                        {t("common.loading")}
                       </span>
                     </div>
                   </TableCell>
@@ -323,10 +325,10 @@ export function CustomersTable() {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                          {search ? "Tidak ada customer ditemukan" : "Belum ada data customer"}
+                          {search ? t("masterData.customerNotFound") : t("masterData.noCustomerData")}
                         </p>
                         <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                          {search ? "Coba kata kunci lain" : "Klik tombol tambah untuk mulai"}
+                          {search ? t("common.tryDifferentKeyword") : t("masterData.clickAddToStart")}
                         </p>
                       </div>
                     </div>

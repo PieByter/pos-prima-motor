@@ -5,12 +5,14 @@ import { formatRupiah } from "@/lib/data/items";
 import type { InvoiceDetail } from "@/lib/data/invoice-details";
 import { Button } from "@/components/ui/button";
 import { Printer, Eye } from "lucide-react";
+import { useLocale } from "@/lib/locales";
 
 interface ReceiptProps {
   invoice: InvoiceDetail;
 }
 
 export function Receipt({ invoice }: ReceiptProps) {
+  const { t, locale } = useLocale();
   const isSale = invoice.transactionType === "sale";
   const [showPreview, setShowPreview] = useState(false);
 
@@ -31,7 +33,7 @@ export function Receipt({ invoice }: ReceiptProps) {
           onClick={handlePrint}
         >
           <Printer className="h-4 w-4" />
-          Cetak Struk
+          {t("receipt.print")}
         </Button>
         <Button
           variant="outline"
@@ -39,7 +41,7 @@ export function Receipt({ invoice }: ReceiptProps) {
           onClick={() => setShowPreview(!showPreview)}
         >
           <Eye className="h-4 w-4" />
-          {showPreview ? "Sembunyikan" : "Pratinjau"}
+          {showPreview ? t("common.hide") : t("common.preview")}
         </Button>
       </div>
 
@@ -54,9 +56,9 @@ export function Receipt({ invoice }: ReceiptProps) {
       <div className="receipt-container hidden print:block" style={{ display: "none" }}>
         <ReceiptContent invoice={invoice} isSale={isSale} />
         <div style={{ textAlign: "center", marginTop: "12px", fontSize: "10px", paddingTop: "8px", borderTop: "1px dashed #000" }}>
-          <p>Terima kasih atas kunjungan Anda!</p>
-          <p>Barang yang sudah dibeli tidak dapat dikembalikan</p>
-          <p style={{ marginTop: "4px" }}>{new Date().toLocaleString("id-ID")}</p>
+          <p>{t("receipt.thanks")}</p>
+          <p>{t("receipt.noReturn")}</p>
+          <p style={{ marginTop: "4px" }}>{new Date().toLocaleString(locale)}</p>
         </div>
       </div>
     </>
@@ -71,13 +73,14 @@ function ReceiptContent({
   invoice: InvoiceDetail;
   isSale: boolean;
 }) {
+  const { t } = useLocale();
   return (
     <div style={{ fontFamily: "'Courier New', Courier, monospace", fontSize: "12px", color: "#000" }}>
       {/* Store Header */}
       <div style={{ textAlign: "center", marginBottom: "10px" }}>
-        <h1 style={{ fontSize: "16px", fontWeight: "bold", margin: 0 }}>PRIMA MOTOR</h1>
+        <h1 style={{ fontSize: "16px", fontWeight: "bold", margin: 0 }}>{t("receipt.storeName")}</h1>
         <p style={{ fontSize: "10px", color: "#555", margin: "2px 0" }}>
-          Toko Sparepart &amp; Service Motor
+          {t("receipt.storeDesc")}
         </p>
         <p style={{ fontSize: "10px", color: "#555", margin: 0 }}>
           {invoice.createdAt}
@@ -88,16 +91,16 @@ function ReceiptContent({
 
       {/* Invoice Info */}
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", marginBottom: "3px" }}>
-        <span>No. Invoice</span>
+        <span>{t("transactions.invoiceNumber")}</span>
         <span style={{ fontWeight: "bold" }}>{invoice.invoiceNumber}</span>
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", marginBottom: "3px" }}>
-        <span>{isSale ? "Customer" : "Supplier"}</span>
+        <span>{isSale ? t("transactions.customerLabel") : t("transactions.supplierLabel")}</span>
         <span>{invoice.entityName}</span>
       </div>
       {isSale && invoice.mechanicName !== "-" && (
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", marginBottom: "3px" }}>
-          <span>Mekanik</span>
+          <span>{t("transactions.mechanic")}</span>
           <span>{invoice.mechanicName}</span>
         </div>
       )}
@@ -109,13 +112,13 @@ function ReceiptContent({
         <thead>
           <tr>
             <th style={{ fontSize: "10px", textAlign: "left", borderBottom: "1px solid #000", padding: "4px 0", width: "50%" }}>
-              Item
+              {t("transactions.item")}
             </th>
             <th style={{ fontSize: "10px", textAlign: "center", borderBottom: "1px solid #000", padding: "4px 0", width: "15%" }}>
-              Qty
+              {t("transactions.qty")}
             </th>
             <th style={{ fontSize: "10px", textAlign: "right", borderBottom: "1px solid #000", padding: "4px 0", width: "35%" }}>
-              Harga
+              {t("transactions.price")}
             </th>
           </tr>
         </thead>
@@ -141,18 +144,18 @@ function ReceiptContent({
       {/* Totals */}
       <div style={{ marginTop: "6px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", padding: "2px 0" }}>
-          <span>Subtotal</span>
+          <span>{t("receipt.subtotal")}</span>
           <span>{formatRupiah(invoice.subtotal)}</span>
         </div>
         {invoice.totalDiscount > 0 && (
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", padding: "2px 0" }}>
-            <span>Diskon</span>
+            <span>{t("receipt.discount")}</span>
             <span>-{formatRupiah(invoice.totalDiscount)}</span>
           </div>
         )}
         {invoice.taxAmount > 0 && (
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", padding: "2px 0" }}>
-            <span>Pajak ({invoice.taxPercent}%)</span>
+            <span>{t("receipt.tax")} ({invoice.taxPercent}%)</span>
             <span>{formatRupiah(invoice.taxAmount)}</span>
           </div>
         )}
@@ -167,7 +170,7 @@ function ReceiptContent({
             marginTop: "4px",
           }}
         >
-          <span>TOTAL</span>
+          <span>{t("receipt.total")}</span>
           <span>{formatRupiah(invoice.grandTotal)}</span>
         </div>
       </div>
@@ -175,18 +178,18 @@ function ReceiptContent({
       {/* Payment Info */}
       <div style={{ marginTop: "6px", paddingTop: "4px", borderTop: "1px dashed #000" }}>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", marginBottom: "3px" }}>
-          <span>Pembayaran</span>
+          <span>{t("receipt.payment")}</span>
           <span>{invoice.paymentMethod}</span>
         </div>
         {invoice.cashAmount != null && (
           <>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", marginBottom: "3px" }}>
-              <span>Tunai</span>
+              <span>{t("receipt.cash")}</span>
               <span>{formatRupiah(invoice.cashAmount)}</span>
             </div>
             {invoice.changeAmount != null && invoice.changeAmount > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", marginBottom: "3px" }}>
-                <span>Kembali</span>
+                <span>{t("receipt.change")}</span>
                 <span>{formatRupiah(invoice.changeAmount)}</span>
               </div>
             )}

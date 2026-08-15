@@ -32,6 +32,7 @@ import {
   Gauge,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/locales";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { LucideIcon } from "lucide-react";
 
@@ -39,62 +40,63 @@ type NavLink = { label: string; href: string; icon: LucideIcon; color?: string }
 type NavGroup = { group: string; items: NavLink[] };
 type NavItem = NavLink | NavGroup;
 
+// label/group berisi KEY locale (diresolve via t() saat render)
 const sidebarNav: NavItem[] = [
   {
-    label: "Dashboard",
+    label: "nav.dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
   },
   {
-    label: "Dashboard Mekanik",
+    label: "nav.dashboardMechanic",
     href: "/dashboard/mechanic",
     icon: Gauge,
   },
   {
-    group: "Data Master",
+    group: "nav.masterData",
     items: [
-      { label: "Data Produk", href: "/dashboard/master-data", icon: Database },
-      { label: "Kategori & Brand", href: "/dashboard/master-data/categories", icon: Tags },
-      { label: "Data Customer", href: "/dashboard/customers", icon: Users },
-      { label: "Reminder Pajak", href: "/dashboard/customers/vehicle-documents", icon: CalendarClock },
-      { label: "Data Supplier", href: "/dashboard/suppliers", icon: Building2 },
+      { label: "nav.products", href: "/dashboard/master-data", icon: Database },
+      { label: "nav.categoriesBrands", href: "/dashboard/master-data/categories", icon: Tags },
+      { label: "nav.customers", href: "/dashboard/customers", icon: Users },
+      { label: "nav.taxReminder", href: "/dashboard/customers/vehicle-documents", icon: CalendarClock },
+      { label: "nav.suppliers", href: "/dashboard/suppliers", icon: Building2 },
     ],
   },
   {
-    group: "Transaksi",
+    group: "nav.transactions",
     items: [
-      { label: "Penjualan", href: "/dashboard/transactions/sales", icon: ShoppingCart },
-      { label: "Pembelian", href: "/dashboard/transactions/purchases", icon: ClipboardList },
-      { label: "Antrian Service", href: "/dashboard/transactions/appointments", icon: ListOrdered },
-      { label: "Purchase Order", href: "/dashboard/transactions/purchase-orders", icon: FileText },
-      { label: "Inventory", href: "/dashboard/inventory", icon: Package },
-      { label: "Adjust Stok", href: "/dashboard/inventory/adjust", icon: PlusCircle },
-      { label: "Riwayat Adjust", href: "/dashboard/inventory/adjustments", icon: History },
-      { label: "Riwayat Harga", href: "/dashboard/inventory/price-history", icon: TrendingUp },
-      { label: "Stok Opname", href: "/dashboard/inventory/opname", icon: ClipboardCheck },
+      { label: "nav.sales", href: "/dashboard/transactions/sales", icon: ShoppingCart },
+      { label: "nav.purchases", href: "/dashboard/transactions/purchases", icon: ClipboardList },
+      { label: "nav.serviceQueue", href: "/dashboard/transactions/appointments", icon: ListOrdered },
+      { label: "nav.purchaseOrders", href: "/dashboard/transactions/purchase-orders", icon: FileText },
+      { label: "nav.inventory", href: "/dashboard/inventory", icon: Package },
+      { label: "nav.adjustStock", href: "/dashboard/inventory/adjust", icon: PlusCircle },
+      { label: "nav.adjustHistory", href: "/dashboard/inventory/adjustments", icon: History },
+      { label: "nav.priceHistory", href: "/dashboard/inventory/price-history", icon: TrendingUp },
+      { label: "nav.stockOpname", href: "/dashboard/inventory/opname", icon: ClipboardCheck },
     ],
   },
   {
-    group: "Keuangan",
+    group: "nav.finance",
     items: [
-      { label: "Pengeluaran", href: "/dashboard/expenses", icon: Receipt },
-      { label: "Gaji Mekanik", href: "/dashboard/salary-payments", icon: BadgeDollarSign },
-      { label: "Piutang", href: "/dashboard/reports/receivables", icon: Wallet },
-      { label: "Hutang", href: "/dashboard/reports/payables", icon: Building2 },
-      { label: "Diskon", href: "/dashboard/discounts", icon: Tag },
-      { label: "Retur Penjualan", href: "/dashboard/returns/sales", icon: RotateCcw },
-      { label: "Retur Pembelian", href: "/dashboard/returns/purchases", icon: RotateCcw },
+      { label: "nav.expenses", href: "/dashboard/expenses", icon: Receipt },
+      { label: "nav.salaryPayments", href: "/dashboard/salary-payments", icon: BadgeDollarSign },
+      { label: "nav.receivables", href: "/dashboard/reports/receivables", icon: Wallet },
+      { label: "nav.payables", href: "/dashboard/reports/payables", icon: Building2 },
+      { label: "nav.discounts", href: "/dashboard/discounts", icon: Tag },
+      { label: "nav.salesReturns", href: "/dashboard/returns/sales", icon: RotateCcw },
+      { label: "nav.purchasesReturns", href: "/dashboard/returns/purchases", icon: RotateCcw },
     ],
   },
   {
-    group: "Laporan & Pengaturan",
+    group: "nav.reportsAndSettings",
     items: [
-      { label: "Laporan", href: "/dashboard/reports", icon: BarChart3 },
-      { label: "Garansi", href: "/dashboard/warranty", icon: ShieldCheck },
-      { label: "Klaim Garansi", href: "/dashboard/warranty/claims", icon: ShieldCheck },
-      { label: "Activity Log", href: "/dashboard/activity-log", icon: History },
-      { label: "Notifikasi", href: "/dashboard/notifications", icon: Bell },
-      { label: "Pengaturan", href: "/dashboard/settings", icon: Settings },
+      { label: "nav.reports", href: "/dashboard/reports", icon: BarChart3 },
+      { label: "nav.warranty", href: "/dashboard/warranty", icon: ShieldCheck },
+      { label: "nav.warrantyClaims", href: "/dashboard/warranty/claims", icon: ShieldCheck },
+      { label: "nav.activityLog", href: "/dashboard/activity-log", icon: History },
+      { label: "nav.notifications", href: "/dashboard/notifications", icon: Bell },
+      { label: "nav.settings", href: "/dashboard/settings", icon: Settings },
     ],
   },
 ];
@@ -102,6 +104,7 @@ const sidebarNav: NavItem[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useLocale();
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
@@ -154,7 +157,7 @@ export function Sidebar() {
                     active ? "text-sky-500" : "group-hover:text-sky-500"
                   )}
                 />
-                <span className="text-sm">{item.label}</span>
+                <span className="text-sm">{t(item.label)}</span>
               </Link>
             );
           }
@@ -162,7 +165,7 @@ export function Sidebar() {
           return (
             <div key={idx} className="pt-4 pb-1">
               <p className="px-3 pb-1.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                {item.group}
+                {t(item.group)}
               </p>
               {item.items.map((subItem) => {
                 const SubIcon = subItem.icon;
@@ -184,7 +187,7 @@ export function Sidebar() {
                         active ? "text-sky-500" : "group-hover:text-sky-500"
                       )}
                     />
-                    <span className="text-sm">{subItem.label}</span>
+                    <span className="text-sm">{t(subItem.label)}</span>
                   </Link>
                 );
               })}
@@ -211,9 +214,9 @@ export function Sidebar() {
           </div>
           <button
             className="text-slate-400 hover:text-red-500 cursor-pointer shrink-0 p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-            title="Keluar"
+            title={t("nav.logout")}
             onClick={handleLogout}
-            aria-label="Keluar"
+            aria-label={t("nav.logout")}
           >
             <LogOut className="h-4 w-4" />
           </button>

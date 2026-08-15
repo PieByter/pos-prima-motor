@@ -14,18 +14,21 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Loader, ChevronLeft, ChevronRight } from "lucide-react";
 import type { StockAdjustmentWithItem, PaginatedResponse } from "@/lib/types/database";
+import { useLocale } from "@/lib/locales";
 
 const ITEMS_PER_PAGE = 10;
 
+// Label pakai KEY locale — di-resolve via t() saat render
 const reasonLabels: Record<string, string> = {
-  damaged: "Barang Rusak",
-  lost: "Barang Hilang",
-  count_fix: "Stok Opname",
-  stock_in: "Stok Masuk",
-  other: "Lainnya",
+  damaged: "stockAdjustments.reasonDamaged",
+  lost: "stockAdjustments.reasonLost",
+  count_fix: "stockAdjustments.reasonCountFix",
+  stock_in: "stockAdjustments.reasonStockIn",
+  other: "stockAdjustments.reasonOther",
 };
 
 export function StockAdjustmentsHistoryPage() {
+  const { t, locale } = useLocale();
   const [adjustments, setAdjustments] = useState<StockAdjustmentWithItem[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
@@ -45,29 +48,29 @@ export function StockAdjustmentsHistoryPage() {
   }, [currentPage]);
 
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void fetchAdjustments();
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, [fetchAdjustments]);
 
   return (
     <>
       <Navbar
-        title="Riwayat Penyesuaian Stok"
-        subtitle="Semua catatan stok opname, barang rusak, hilang, dan stok masuk manual."
+        title={t("stockAdjustments.title")}
+        subtitle={t("stockAdjustments.subtitle")}
       />
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50 dark:bg-slate-800/60">
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tanggal</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Item</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tipe</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">Jumlah</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Alasan</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Keterangan</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("stockAdjustments.date")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("masterData.item")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("stockAdjustments.type")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">{t("stockAdjustments.qty")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("stockAdjustments.reason")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("stockAdjustments.notes")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -77,13 +80,13 @@ export function StockAdjustmentsHistoryPage() {
                 </TableCell></TableRow>
               ) : adjustments.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="py-16 text-center text-sm text-slate-400">
-                  Belum ada penyesuaian stok
+                  {t("stockAdjustments.noData")}
                 </TableCell></TableRow>
               ) : (
                 adjustments.map((a) => (
                   <TableRow key={a.id} className="border-slate-100 dark:border-slate-800">
                     <TableCell className="px-5 text-sm text-slate-500">
-                      {new Date(a.adjustment_date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                      {new Date(a.adjustment_date).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" })}
                     </TableCell>
                     <TableCell className="px-5">
                       <p className="text-sm font-semibold text-slate-900 dark:text-white">{a.item?.name ?? "—"}</p>
@@ -98,7 +101,7 @@ export function StockAdjustmentsHistoryPage() {
                             : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800"
                         }`}
                       >
-                        {a.type === "IN" ? "Masuk" : "Keluar"}
+                        {a.type === "IN" ? t("stockAdjustments.typeIn") : t("stockAdjustments.typeOut")}
                       </Badge>
                     </TableCell>
                     <TableCell className="px-5 text-right">
@@ -107,7 +110,7 @@ export function StockAdjustmentsHistoryPage() {
                       </span>
                     </TableCell>
                     <TableCell className="px-5 text-sm text-slate-600 dark:text-slate-300">
-                      {reasonLabels[a.reason] ?? a.reason}
+                      {reasonLabels[a.reason] ? t(reasonLabels[a.reason]) : a.reason}
                     </TableCell>
                     <TableCell className="px-5 text-sm text-slate-400 max-w-48 truncate">
                       {a.notes ?? "—"}
@@ -120,7 +123,7 @@ export function StockAdjustmentsHistoryPage() {
         </div>
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-5 py-3 border-t border-slate-200 dark:border-slate-800">
-            <p className="text-xs text-slate-500">Halaman {currentPage} dari {totalPages}</p>
+            <p className="text-xs text-slate-500">{t("inventory.pageInfo", { page: currentPage, total: totalPages })}</p>
             <div className="flex gap-1">
               <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => setCurrentPage((p) => p - 1)}>
                 <ChevronLeft className="h-4 w-4" />

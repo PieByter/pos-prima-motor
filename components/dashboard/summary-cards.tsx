@@ -12,6 +12,7 @@ import {
 import { useFetch } from "@/lib/hooks/use-fetch";
 import { formatCurrency, formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/locales";
 
 interface SummaryData {
   totalSales: number;
@@ -52,6 +53,7 @@ const colorMap = {
 } as const;
 
 export function SummaryCards({ dateRange }: { dateRange?: { start: string; end: string } }) {
+  const { t } = useLocale();
   const url = dateRange
     ? `/api/dashboard/summary?start=${dateRange.start}&end=${dateRange.end}`
     : "/api/dashboard/summary";
@@ -60,7 +62,7 @@ export function SummaryCards({ dateRange }: { dateRange?: { start: string; end: 
   const stats = [
     {
       key: "totalSales" as const,
-      label: "Total Sales",
+      label: t("dashboard.totalSales"),
       format: formatCurrency,
       value: data?.totalSales ?? 0,
       growth: data?.salesGrowth ?? null,
@@ -69,7 +71,7 @@ export function SummaryCards({ dateRange }: { dateRange?: { start: string; end: 
     },
     {
       key: "totalPurchases" as const,
-      label: "Total Purchases",
+      label: t("dashboard.totalPurchases"),
       format: formatCurrency,
       value: data?.totalPurchases ?? 0,
       growth: data?.purchasesGrowth ?? null,
@@ -78,7 +80,7 @@ export function SummaryCards({ dateRange }: { dateRange?: { start: string; end: 
     },
     {
       key: "totalItems" as const,
-      label: "Inventory Items",
+      label: t("dashboard.totalItems"),
       format: (v: number) => formatNumber(v),
       value: data?.totalItems ?? 0,
       growth: null,
@@ -87,7 +89,7 @@ export function SummaryCards({ dateRange }: { dateRange?: { start: string; end: 
     },
     {
       key: "totalCustomers" as const,
-      label: "Active Customers",
+      label: t("dashboard.totalCustomers"),
       format: (v: number) => formatNumber(v),
       value: data?.totalCustomers ?? 0,
       growth: null,
@@ -96,7 +98,7 @@ export function SummaryCards({ dateRange }: { dateRange?: { start: string; end: 
     },
     {
       key: "totalExpenses" as const,
-      label: "Expenses",
+      label: t("dashboard.totalExpenses"),
       format: formatCurrency,
       value: data?.totalExpenses ?? 0,
       growth: null,
@@ -167,7 +169,7 @@ export function SummaryCards({ dateRange }: { dateRange?: { start: string; end: 
                   </>
                 )}
                 <span className="text-slate-400 dark:text-slate-500">
-                  vs last month
+                  {t("dashboard.vsLastMonth")}
                 </span>
               </div>
             )}

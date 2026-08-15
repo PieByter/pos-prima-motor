@@ -16,6 +16,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/lib/toast-provider";
 import { Plus, Pencil, Trash2, Loader2, CreditCard, Wallet, Banknote, Smartphone } from "lucide-react";
+import { useLocale } from "@/lib/locales";
 
 type PaymentMethod = {
   id: number;
@@ -24,16 +25,19 @@ type PaymentMethod = {
   is_active: boolean;
 };
 
-const ICON_OPTIONS = [
-  { value: "", label: "Tanpa icon", icon: null },
-  { value: "credit-card", label: "Kartu Kredit", icon: CreditCard },
-  { value: "wallet", label: "E-Wallet", icon: Wallet },
-  { value: "cash", label: "Tunai", icon: Banknote },
-  { value: "smartphone", label: "QRIS / Mobile", icon: Smartphone },
-];
+function iconLabel(t: (k: string) => string) {
+  return [
+    { value: "", label: t("settings.noIcon"), icon: null },
+    { value: "credit-card", label: t("settings.iconCreditCard"), icon: CreditCard },
+    { value: "wallet", label: t("settings.iconWallet"), icon: Wallet },
+    { value: "cash", label: t("settings.iconCash"), icon: Banknote },
+    { value: "smartphone", label: t("settings.iconQris"), icon: Smartphone },
+  ];
+}
 
 export function PaymentMethodsManager() {
   const { showToast } = useToast();
+  const { t } = useLocale();
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -54,10 +58,10 @@ export function PaymentMethodsManager() {
   }, []);
 
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void fetchMethods();
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, [fetchMethods]);
 
   const resetForm = () => {
@@ -80,7 +84,7 @@ export function PaymentMethodsManager() {
 
   const handleSave = async () => {
     if (!form.name.trim()) {
-      showToast("Nama metode bayar wajib diisi", "error");
+      showToast(t("settings.paymentNameRequired"), "error");
       return;
     }
     setSaving(true);
@@ -101,12 +105,12 @@ export function PaymentMethodsManager() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
           });
-      if (!res.ok) throw new Error("Gagal");
-      showToast(editingId ? "Metode bayar diperbarui" : "Metode bayar ditambahkan", "success");
+      if (!res.ok) throw new Error("Failed");
+      showToast(editingId ? t("settings.paymentUpdated") : t("settings.paymentAdded"), "success");
       resetForm();
       await fetchMethods();
     } catch {
-      showToast("Gagal menyimpan metode bayar", "error");
+      showToast(t("settings.paymentSaveFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -119,37 +123,37 @@ export function PaymentMethodsManager() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ is_active: !m.is_active }),
       });
-      if (!res.ok) throw new Error("Gagal");
-      showToast(m.is_active ? "Metode dinonaktifkan" : "Metode diaktifkan", "success");
+      if (!res.ok) throw new Error("Failed");
+      showToast(m.is_active ? t("settings.paymentDeactivated") : t("settings.paymentActivated"), "success");
       await fetchMethods();
     } catch {
-      showToast("Gagal update status", "error");
+      showToast(t("settings.paymentStatusUpdateFailed"), "error");
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Hapus metode bayar ini? Transaksi lama tetap aman.")) return;
+    if (!confirm(t("settings.paymentDeleteConfirm"))) return;
     try {
       const res = await fetch(`/api/payment-methods/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Gagal");
-      showToast("Metode bayar dihapus", "success");
+      if (!res.ok) throw new Error("Failed");
+      showToast(t("settings.paymentDeleted"), "success");
       await fetchMethods();
     } catch {
-      showToast("Gagal menghapus (mungkin masih dipakai transaksi)", "error");
+      showToast(t("settings.paymentDeleteFailed"), "error");
     }
   };
 
   return (
     <>
       <Navbar
-        title="Metode Pembayaran"
-        subtitle="Kelola metode bayar: tunai, transfer, QRIS, e-wallet, dll."
+        title={t("transactions.paymentMethod")}
+        subtitle={t("settings.paymentMethodsSubtitle")}
       />
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <p className="text-sm text-slate-500">{methods.length} metode terdaftar</p>
+          <p className="text-sm text-slate-500">{t("settings.paymentCount", { n: methods.length })}</p>
           <Button size="sm" className="gap-2 bg-sky-500 hover:bg-sky-600" onClick={openAdd}>
-            <Plus className="h-4 w-4" /> Tambah Metode
+            <Plus className="h-4 w-4" /> {t("settings.addMethod")}
           </Button>
         </div>
 
@@ -161,21 +165,22 @@ export function PaymentMethodsManager() {
             </div>
           ) : methods.length === 0 ? (
             <p className="p-6 text-center text-sm text-slate-400">
-              Belum ada metode pembayaran. Tambahkan di atas.
+              {t("settings.noPaymentMethods")}
             </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="border-b bg-slate-50 dark:bg-slate-900/50">
                   <tr className="text-left text-xs text-slate-500">
-                    <th className="px-4 py-3">Metode</th>
-                    <th className="px-4 py-3">Icon</th>
-                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">{t("settings.paymentMethodName")}</th>
+                    <th className="px-4 py-3">{t("settings.icon")}</th>
+                    <th className="px-4 py-3">{t("common.status")}</th>
                     <th className="px-4 py-3 w-24"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {methods.map((m) => {
+                    const ICON_OPTIONS = iconLabel(t);
                     const iconOpt = ICON_OPTIONS.find((o) => o.value === m.icon);
                     return (
                       <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
@@ -190,15 +195,15 @@ export function PaymentMethodsManager() {
                                 : "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400"
                             }`}
                           >
-                            {m.is_active ? "Aktif" : "Nonaktif"}
+                            {m.is_active ? t("settings.active") : t("settings.inactive")}
                           </button>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(m)} title="Edit">
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(m)} title={t("common.edit")}>
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-600" onClick={() => handleDelete(m.id)} title="Hapus">
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-600" onClick={() => handleDelete(m.id)} title={t("common.delete")}>
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
@@ -217,24 +222,24 @@ export function PaymentMethodsManager() {
       <Dialog open={dialogOpen} onOpenChange={(o) => { if (!o) resetForm(); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingId ? "Edit Metode Bayar" : "Tambah Metode Bayar"}</DialogTitle>
+            <DialogTitle>{editingId ? t("settings.editMethod") : t("settings.addMethodTitle")}</DialogTitle>
             <DialogDescription>
-              Contoh: Tunai, Transfer BCA, QRIS, GoPay, dll.
+              {t("settings.paymentMethodExamples")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label>Nama Metode <span className="text-red-500">*</span></Label>
+              <Label>{t("settings.paymentMethodName")} <span className="text-red-500">*</span></Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Contoh: Tunai / Transfer / QRIS"
+                placeholder={t("settings.paymentNamePlaceholder")}
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Icon</Label>
+              <Label>{t("settings.icon")}</Label>
               <div className="grid grid-cols-4 gap-2">
-                {ICON_OPTIONS.map((opt) => {
+                {iconLabel(t).map((opt) => {
                   const selected = form.icon === opt.value;
                   return (
                     <button
@@ -261,13 +266,13 @@ export function PaymentMethodsManager() {
                 onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
                 className="h-4 w-4 accent-sky-500"
               />
-              <Label className="text-sm">Aktif (muncul di form transaksi)</Label>
+              <Label className="text-sm">{t("settings.activeCheckbox")}</Label>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={resetForm} disabled={saving}>Batal</Button>
+            <Button variant="outline" onClick={resetForm} disabled={saving}>{t("common.cancel")}</Button>
             <Button onClick={handleSave} disabled={saving} className="gap-2 bg-sky-500 hover:bg-sky-600">
-              {saving && <Loader2 className="h-4 w-4 animate-spin" />} Simpan
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />} {t("settings.save")}
             </Button>
           </DialogFooter>
         </DialogContent>

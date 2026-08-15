@@ -10,9 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PrimaMotorLogo } from "@/components/prima-motor-logo";
 import { ToastContainer, useToasts } from "@/components/ui/toast";
+import { useLocale } from "@/lib/locales";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = useLocale();
   const { toasts, showToast, removeToast } = useToasts();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -38,16 +40,16 @@ export default function LoginPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        showToast(result?.error || "Gagal login. Coba lagi.", "error", 3000);
+        showToast(result?.error || t("auth.loginFailed"), "error", 3000);
         return;
       }
 
-      showToast("Login berhasil. Mengarahkan...", "success", 2000);
+      showToast(t("auth.loginSuccess"), "success", 2000);
       setTimeout(() => {
         router.push("/dashboard");
       }, 1000);
     } catch {
-      showToast("Terjadi kesalahan jaringan. Coba lagi.", "error", 3000);
+      showToast(t("auth.networkError"), "error", 3000);
     } finally {
       setIsLoading(false);
     }
@@ -64,7 +66,7 @@ export default function LoginPage() {
               <PrimaMotorLogo />
             </div>
             <h2 className="text-lg font-medium text-gray-500 dark:text-gray-400">
-              Point of Sale System
+              {t("app.tagline")}
             </h2>
           </div>
 
@@ -73,7 +75,7 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email">{t("auth.email")}</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                   <Input
@@ -90,12 +92,12 @@ export default function LoginPage() {
               {/* Password */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">{t("auth.password")}</Label>
                   <Link
                     href="/forgot-password"
                     className="text-xs font-medium text-amber-600 hover:text-amber-700 transition-colors"
                   >
-                    Forgot password?
+                    {t("auth.forgotPassword")}
                   </Link>
                 </div>
                 <div className="relative">
@@ -112,7 +114,7 @@ export default function LoginPage() {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -133,22 +135,22 @@ export default function LoginPage() {
                   {isLoading ? (
                     <span className="flex items-center gap-2">
                       <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Signing in...
+                      {t("auth.signingIn")}
                     </span>
                   ) : (
-                    "Sign In"
+                    t("auth.login")
                   )}
                 </Button>
               </div>
 
               {/* Auth Navigation */}
               <div className="text-center text-sm text-gray-600 dark:text-gray-300">
-                Don&apos;t have an account?{" "}
+                {t("auth.noAccount")}{" "}
                 <Link
                   href="/register"
                   className="font-medium text-amber-600 hover:text-amber-700 underline decoration-dotted"
                 >
-                  Register
+                  {t("auth.register")}
                 </Link>
               </div>
             </form>
@@ -156,14 +158,14 @@ export default function LoginPage() {
             {/* Help Text */}
             <div className="mt-8 text-center">
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Having trouble logging in?
+                {t("auth.helpTrouble")}
                 <br />
-                Contact{" "}
+                {t("auth.contact")}{" "}
                 <a
                   href="#"
                   className="font-medium text-amber-600 hover:text-amber-700 underline decoration-dotted"
                 >
-                  IT Support
+                  {t("auth.itSupport")}
                 </a>
               </p>
             </div>
@@ -179,7 +181,7 @@ export default function LoginPage() {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
           </span>
-          System Operational • v1.0.0
+          {t("auth.systemOperational")} • v1.0.0
         </div>
       </div>
 

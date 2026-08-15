@@ -35,6 +35,7 @@ import {
 import { formatRupiah, getStockStatus, type Item } from "@/lib/data/items";
 import { Loader } from "lucide-react";
 import { useToast } from "@/lib/toast-provider";
+import { useLocale } from "@/lib/locales";
 import { ItemFormDialog } from "./item-form-dialog";
 
 const ITEMS_PER_PAGE = 10;
@@ -83,6 +84,7 @@ function mapApiItem(row: ApiItem): Item {
 
 export function ItemsTable() {
   const { showToast } = useToast();
+  const { t } = useLocale();
   const [items, setItems] = useState<Item[]>([]);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -93,13 +95,13 @@ export function ItemsTable() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void fetch("/api/categories", { cache: "no-store" })
         .then((r) => (r.ok ? r.json() : []))
         .then((list) => setCategoryOptions(Array.isArray(list) ? list : []))
         .catch(() => {});
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -169,15 +171,15 @@ export function ItemsTable() {
   }
 
   async function handleDeleteItem(id: number) {
-    if (!confirm("Yakin ingin menghapus item ini?")) return;
+    if (!confirm(t("common.confirmDelete"))) return;
     try {
       const response = await fetch(`/api/items/${id}`, { method: "DELETE" });
       if (!response.ok) throw new Error("Failed to delete item");
-      showToast("Item berhasil dihapus", "success");
+      showToast(t("common.successfullyDeleted"), "success");
       setItems((prev) => prev.filter((i) => i.id !== id));
     } catch (error) {
       console.error("Error deleting item:", error);
-      showToast("Gagal menghapus item", "error");
+      showToast(t("common.failedToDelete"), "error");
     }
   }
 
@@ -201,7 +203,7 @@ export function ItemsTable() {
 
   const handleBulkDelete = useCallback(async () => {
     if (selectedIds.size === 0) return;
-    if (!confirm(`Hapus ${selectedIds.size} item terpilih?`)) return;
+    if (!confirm(t("common.confirmBulkDelete", { count: selectedIds.size }))) return;
     try {
       const results = await Promise.allSettled(
         [...selectedIds].map((id) =>
@@ -210,9 +212,9 @@ export function ItemsTable() {
       );
       const failed = results.filter((r) => r.status === "rejected").length;
       if (failed === 0) {
-        showToast(`${selectedIds.size} item berhasil dihapus`, "success");
+        showToast(t("common.bulkDeleted", { count: selectedIds.size }), "success");
       } else {
-        showToast(`${selectedIds.size - failed} item dihapus, ${failed} gagal`, "error");
+        showToast(t("common.bulkDeletedPartial", { ok: selectedIds.size - failed, failed }), "error");
       }
       setSelectedIds(new Set());
       setCurrentPage(1);
@@ -223,9 +225,9 @@ export function ItemsTable() {
         setItems(rows.map(mapApiItem));
       }
     } catch {
-      showToast("Gagal menghapus item", "error");
+      showToast(t("common.failedToDelete"), "error");
     }
-  }, [selectedIds, showToast]);
+  }, [selectedIds, showToast, t]);
 
   const handleBulkExport = useCallback(() => {
     if (selectedIds.size === 0) {
@@ -265,7 +267,7 @@ export function ItemsTable() {
           body: JSON.stringify(payload),
         });
         if (!response.ok) throw new Error("Failed to update item");
-        showToast("Item berhasil diperbarui", "success");
+        showToast(t("common.successfullyUpdated"), "success");
       } else {
         const response = await fetch("/api/items", {
           method: "POST",
@@ -273,7 +275,7 @@ export function ItemsTable() {
           body: JSON.stringify(payload),
         });
         if (!response.ok) throw new Error("Failed to create item");
-        showToast("Item berhasil ditambahkan", "success");
+        showToast(t("common.successfullySaved"), "success");
       }
 
       setDialogOpen(false);
@@ -304,10 +306,10 @@ export function ItemsTable() {
           </div>
           <div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-              Daftar Barang
+              {t("masterData.itemList")}
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              {isLoading ? "Memuat..." : `${filteredItems.length} item ditemukan`}
+              {isLoading ? t("common.loading") : `${filteredItems.length} ${t("masterData.itemFound")}`}
             </p>
           </div>
         </div>
@@ -316,7 +318,7 @@ export function ItemsTable() {
           className="bg-sky-500 hover:bg-sky-600 text-white gap-2 self-start sm:self-auto shadow-sm shadow-sky-500/30"
         >
           <Plus className="h-4 w-4" />
-          Tambah Item
+          {t("masterData.addItem")}
         </Button>
       </div>
 
@@ -327,7 +329,7 @@ export function ItemsTable() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
-              placeholder="Cari nama atau SKU..."
+              placeholder={t("masterData.searchItem")}
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -346,10 +348,10 @@ export function ItemsTable() {
             }}
           >
             <SelectTrigger className="w-full sm:w-44 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
-              <SelectValue placeholder="Semua Kategori" />
+              <SelectValue placeholder={t("masterData.allCategories")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Semua Kategori</SelectItem>
+              <SelectItem value="all">{t("masterData.allCategories")}</SelectItem>
               {categoryOptions.map((cat) => (
                 <SelectItem key={cat.id} value={String(cat.id)}>
                   {cat.name}
@@ -367,13 +369,13 @@ export function ItemsTable() {
             }}
           >
             <SelectTrigger className="w-full sm:w-40 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
-              <SelectValue placeholder="Semua Status" />
+              <SelectValue placeholder={t("masterData.allStatuses")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Semua Status</SelectItem>
-              <SelectItem value="safe">Stok Aman</SelectItem>
-              <SelectItem value="warning">Stok Rendah</SelectItem>
-              <SelectItem value="critical">Kritis</SelectItem>
+              <SelectItem value="all">{t("masterData.allStatuses")}</SelectItem>
+              <SelectItem value="safe">{t("dashboard.stockAmple")}</SelectItem>
+              <SelectItem value="warning">{t("dashboard.stockLow")}</SelectItem>
+              <SelectItem value="critical">{t("dashboard.stockCritical")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -383,7 +385,7 @@ export function ItemsTable() {
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-3 rounded-xl border border-sky-200 bg-sky-50 dark:border-sky-800 dark:bg-sky-900/20 px-4 py-2.5">
           <span className="text-sm font-medium text-sky-700 dark:text-sky-300">
-            {selectedIds.size} item terpilih
+            {t("masterData.itemsSelected", { count: selectedIds.size })}
           </span>
           <div className="flex items-center gap-2 ml-auto">
             <Button
@@ -393,7 +395,7 @@ export function ItemsTable() {
               onClick={handleBulkExport}
             >
               <Download className="h-3.5 w-3.5" />
-              Export
+              {t("common.export")}
             </Button>
             <Button
               variant="destructive"
@@ -402,7 +404,7 @@ export function ItemsTable() {
               onClick={handleBulkDelete}
             >
               <Trash className="h-3.5 w-3.5" />
-              Hapus Semua
+              {t("masterData.deleteAll")}
             </Button>
             <Button
               variant="ghost"
@@ -410,7 +412,7 @@ export function ItemsTable() {
               className="text-xs h-8"
               onClick={() => setSelectedIds(new Set())}
             >
-              Batal
+              {t("common.cancel")}
             </Button>
           </div>
         </div>
@@ -431,37 +433,37 @@ export function ItemsTable() {
                   />
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 w-14">
-                  Foto
+                  {t("masterData.photo")}
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Nama Barang
+                  {t("masterData.itemName")}
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  SKU
+                  {t("masterData.sku")}
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Kategori
+                  {t("masterData.category")}
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Supplier
+                  {t("masterData.supplier")}
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">
-                  Harga Beli
+                  {t("masterData.purchasePrice")}
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">
-                  Harga Jual
+                  {t("masterData.sellingPrice")}
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">
-                  Jasa
+                  {t("masterData.serviceFee")}
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center">
-                  Garansi
+                  {t("masterData.warranty")}
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center">
-                  Stok
+                  {t("masterData.stock")}
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center w-24">
-                  Aksi
+                  {t("common.actions")}
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -472,7 +474,7 @@ export function ItemsTable() {
                     <div className="flex flex-col items-center gap-3">
                       <Loader className="h-7 w-7 animate-spin text-sky-500" />
                       <span className="text-sm text-slate-500 dark:text-slate-400">
-                        Memuat data...
+                        {t("common.loading")}
                       </span>
                     </div>
                   </TableCell>
@@ -485,7 +487,7 @@ export function ItemsTable() {
                         <Package2 className="h-6 w-6 text-slate-400" />
                       </div>
                       <span className="text-sm text-slate-500 dark:text-slate-400">
-                        Tidak ada item ditemukan
+                        {t("masterData.noItems")}
                       </span>
                     </div>
                   </TableCell>
@@ -579,7 +581,7 @@ export function ItemsTable() {
                             ))}
                             {item.suppliers.length > 2 && (
                               <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 px-2 py-0.5 text-[11px] font-medium">
-                                +{item.suppliers.length - 2} supplier
+                                {t("masterData.extraSuppliers", { n: item.suppliers.length - 2 })}
                               </span>
                             )}
                           </div>
@@ -610,7 +612,7 @@ export function ItemsTable() {
                             variant="secondary"
                             className="text-[11px] font-medium bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-900/20 dark:text-violet-400 dark:border-violet-800"
                           >
-                            {item.warrantyMonths} bln
+                            {t("masterData.monthsShort", { n: item.warrantyMonths })}
                           </Badge>
                         ) : (
                           <span className="text-xs text-slate-400 dark:text-slate-500">—</span>
@@ -660,7 +662,7 @@ export function ItemsTable() {
         {filteredItems.length > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Menampilkan{" "}
+              {t("common.showing")}{" "}
               <span className="font-semibold text-slate-900 dark:text-white">
                 {startIndex}
               </span>{" "}
@@ -668,11 +670,11 @@ export function ItemsTable() {
               <span className="font-semibold text-slate-900 dark:text-white">
                 {endIndex}
               </span>{" "}
-              dari{" "}
+              {t("common.from")}{" "}
               <span className="font-semibold text-slate-900 dark:text-white">
                 {filteredItems.length}
               </span>{" "}
-              item
+              {t("masterData.itemsWord")}
             </p>
             <div className="flex items-center gap-1">
               <Button

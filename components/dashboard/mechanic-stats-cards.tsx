@@ -3,6 +3,7 @@
 import { ShoppingCart, DollarSign, Wrench, TrendingUp } from "lucide-react";
 import { useFetch } from "@/lib/hooks/use-fetch";
 import { formatCurrency } from "@/lib/format";
+import { useLocale } from "@/lib/locales";
 
 interface MechanicDashboard {
     today: {
@@ -26,6 +27,7 @@ interface MechanicDashboard {
 }
 
 export function MechanicStatsCards() {
+    const { t } = useLocale();
     const { data, isLoading } = useFetch<MechanicDashboard>("/api/dashboard/mechanic");
 
     if (isLoading) {
@@ -51,30 +53,30 @@ export function MechanicStatsCards() {
 
     const cards = [
         {
-            label: "Transaksi Hari Ini",
+            label: t("mechanic.todayTransactions"),
             value: `${d.today.transactionCount}`,
-            sub: "Jumlah transaksi selesai",
+            sub: t("mechanic.completedTransactions"),
             icon: ShoppingCart,
             iconBg: "bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400",
         },
         {
-            label: "Omset Hari Ini",
+            label: t("mechanic.todayRevenue"),
             value: formatCurrency(d.today.totalSales),
-            sub: `Jasa: ${formatCurrency(d.today.serviceFees)}`,
+            sub: t("mechanic.serviceFees", { value: formatCurrency(d.today.serviceFees) }),
             icon: DollarSign,
             iconBg: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400",
         },
         {
-            label: "Transaksi Minggu Ini",
+            label: t("mechanic.weekTransactions"),
             value: `${d.week.transactionCount}`,
-            sub: `Omset: ${formatCurrency(d.week.totalSales)}`,
+            sub: t("mechanic.revenue", { value: formatCurrency(d.week.totalSales) }),
             icon: TrendingUp,
             iconBg: "bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400",
         },
         {
-            label: "Estimasi Gaji Minggu Ini",
+            label: t("mechanic.estimatedWeekEarnings"),
             value: formatCurrency(d.earnings.estimatedWeekEarnings),
-            sub: `Jasa: ${formatCurrency(d.week.serviceFees)} × ${d.earnings.commissionPct}%`,
+            sub: t("mechanic.serviceFeesPct", { value: formatCurrency(d.week.serviceFees), pct: d.earnings.commissionPct }),
             icon: Wrench,
             iconBg: "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400",
         },

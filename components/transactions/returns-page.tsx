@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/lib/toast-provider";
 import { Loader2, Plus, CheckCircle2, XCircle } from "lucide-react";
+import { useLocale } from "@/lib/locales";
 
 type ReturnItem = {
   id: number;
@@ -57,14 +58,16 @@ const STATUS_STYLES: Record<string, string> = {
   rejected: "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400",
 };
 
+// Label pakai KEY locale — di-resolve via t() saat render
 const STATUS_LABELS: Record<string, string> = {
-  pending: "Pending",
-  processed: "Diproses",
-  rejected: "Ditolak",
+  pending: "transactions.returnPending",
+  processed: "transactions.returnProcessed",
+  rejected: "transactions.returnRejected",
 };
 
 export function ReturnsPage({ type }: { type: "sales" | "purchases" }) {
   const { showToast } = useToast();
+  const { t } = useLocale();
   const [items, setItems] = useState<ReturnItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -92,15 +95,15 @@ export function ReturnsPage({ type }: { type: "sales" | "purchases" }) {
   }, [apiPath]);
 
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void fetchData();
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, [fetchData]);
 
   // Load transaksi untuk dropdown (hanya completed)
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void fetch(`${trxPath}?status=completed&limit=100`, { cache: "no-store" })
         .then((r) => r.json())
         .then((json) => {
@@ -116,7 +119,7 @@ export function ReturnsPage({ type }: { type: "sales" | "purchases" }) {
         })
         .catch(() => {});
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, [trxPath]);
 
   // Saat transaksi dipilih → load detail items
@@ -128,7 +131,7 @@ export function ReturnsPage({ type }: { type: "sales" | "purchases" }) {
     setItemsLoading(true);
     try {
       const res = await fetch(`${trxPath}/${value}`, { cache: "no-store" });
-      if (!res.ok) throw new Error("Gagal memuat detail");
+      if (!res.ok) throw new Error(t("transactions.loadTrxFailed"));
       const trx = await res.json();
       const rows = (trx.details ?? []) as {
         item_id: number;
@@ -158,7 +161,7 @@ export function ReturnsPage({ type }: { type: "sales" | "purchases" }) {
       for (const d of mapped) next[d.item_id] = 1;
       setQtyMap(next);
     } catch {
-      showToast("Gagal memuat detail transaksi", "error");
+      showToast(t("transactions.loadDetailFailed"), "error");
     } finally {
       setItemsLoading(false);
     }
@@ -182,11 +185,11 @@ export function ReturnsPage({ type }: { type: "sales" | "purchases" }) {
 
   const handleSubmit = async () => {
     if (!selectedTrxId || details.length === 0) {
-      showToast("Pilih transaksi terlebih dahulu", "error");
+      showToast(t("transactions.selectTrxFirst"), "error");
       return;
     }
     if (!reason.trim()) {
-      showToast("Alasan retur wajib diisi", "error");
+      showToast(t("transactions.reasonRequired"), "error");
       return;
     }
     setSaving(true);
@@ -210,13 +213,13 @@ export function ReturnsPage({ type }: { type: "sales" | "purchases" }) {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error ?? "Gagal membuat retur");
+        throw new Error(err.error ?? t("transactions.createReturnFailed"));
       }
-      showToast("Retur berhasil dibuat", "success");
+      showToast(t("transactions.returnCreated"), "success");
       setDialogOpen(false);
       await fetchData();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Gagal membuat retur", "error");
+      showToast(err instanceof Error ? err.message : t("transactions.createReturnFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -229,11 +232,11 @@ export function ReturnsPage({ type }: { type: "sales" | "purchases" }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
-      if (!res.ok) throw new Error("Gagal update status");
-      showToast(status === "processed" ? "Retur diproses" : "Retur ditolak", "success");
+      if (!res.ok) throw new Error("Failed");
+      showToast(status === "processed" ? t("transactions.returnProcessedMsg") : t("transactions.returnRejectedMsg"), "success");
       await fetchData();
     } catch {
-      showToast("Gagal update status", "error");
+      showToast(t("transactions.statusUpdateFailed"), "error");
     }
   };
 
@@ -241,9 +244,9 @@ export function ReturnsPage({ type }: { type: "sales" | "purchases" }) {
     <div className="space-y-4">
       {/* Header + tombol */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500">{items.length} retur</p>
+        <p className="text-sm text-slate-500">{t("transactions.returnCount", { n: items.length })}</p>
         <Button size="sm" className="gap-2 bg-sky-500 hover:bg-sky-600" onClick={openDialog}>
-          <Plus className="h-4 w-4" /> Buat Retur
+          <Plus className="h-4 w-4" /> {t("transactions.createReturn")}
         </Button>
       </div>
 
@@ -256,19 +259,19 @@ export function ReturnsPage({ type }: { type: "sales" | "purchases" }) {
           </div>
         ) : items.length === 0 ? (
           <p className="p-6 text-center text-sm text-slate-400">
-            Belum ada retur {isSale ? "penjualan" : "pembelian"}.
+            {isSale ? t("transactions.noReturnsSales") : t("transactions.noReturnsPurchases")}
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-b bg-slate-50 dark:bg-slate-900/50">
                 <tr className="text-left text-xs text-slate-500">
-                  <th className="px-4 py-3">Invoice</th>
-                  <th className="px-4 py-3">Tanggal</th>
-                  <th className="px-4 py-3">Alasan</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3 text-right">Refund</th>
-                  <th className="px-4 py-3 text-center w-32">Aksi</th>
+                  <th className="px-4 py-3">{t("transactions.invoice")}</th>
+                  <th className="px-4 py-3">{t("transactions.date")}</th>
+                  <th className="px-4 py-3">{t("transactions.reason")}</th>
+                  <th className="px-4 py-3">{t("common.status")}</th>
+                  <th className="px-4 py-3 text-right">{t("transactions.refund")}</th>
+                  <th className="px-4 py-3 text-center w-32">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -281,7 +284,7 @@ export function ReturnsPage({ type }: { type: "sales" | "purchases" }) {
                     <td className="px-4 py-3 max-w-48 truncate">{item.reason}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[item.status] || ""}`}>
-                        {STATUS_LABELS[item.status] || item.status}
+                        {STATUS_LABELS[item.status] ? t(STATUS_LABELS[item.status]) : item.status}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right font-medium">{formatCurrency(Number(item.total_refund))}</td>
@@ -289,10 +292,10 @@ export function ReturnsPage({ type }: { type: "sales" | "purchases" }) {
                       {item.status === "pending" ? (
                         <div className="flex justify-center gap-1">
                           <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-green-600" onClick={() => handleStatus(item.id, "processed")}>
-                            <CheckCircle2 className="h-3.5 w-3.5" /> Proses
+                            <CheckCircle2 className="h-3.5 w-3.5" /> {t("transactions.processReturn")}
                           </Button>
                           <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-red-500" onClick={() => handleStatus(item.id, "rejected")}>
-                            <XCircle className="h-3.5 w-3.5" /> Tolak
+                            <XCircle className="h-3.5 w-3.5" /> {t("transactions.rejectReturn")}
                           </Button>
                         </div>
                       ) : (
@@ -311,17 +314,17 @@ export function ReturnsPage({ type }: { type: "sales" | "purchases" }) {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Buat Retur {isSale ? "Penjualan" : "Pembelian"}</DialogTitle>
+            <DialogTitle>{isSale ? t("transactions.createReturnTitleSale") : t("transactions.createReturnTitlePurchase")}</DialogTitle>
             <DialogDescription>
-              Pilih transaksi dan barang yang diretur.
+              {t("transactions.createReturnDesc")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label>Transaksi <span className="text-red-500">*</span></Label>
+              <Label>{t("transactions.transactionLabel")} <span className="text-red-500">*</span></Label>
               <Select value={selectedTrxId} onValueChange={handleTrxChange}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih invoice..." />
+                  <SelectValue placeholder={t("transactions.selectInvoice")} />
                 </SelectTrigger>
                 <SelectContent>
                   {transactions.map((t) => (
@@ -342,14 +345,14 @@ export function ReturnsPage({ type }: { type: "sales" | "purchases" }) {
 
             {!itemsLoading && details.length > 0 && (
               <div className="space-y-2">
-                <Label>Items <span className="text-red-500">*</span></Label>
+                <Label>{t("transactions.returnItemsLabel")} <span className="text-red-500">*</span></Label>
                 <div className="rounded-lg border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-800">
                   {details.map((d) => (
                     <div key={d.item_id} className="flex items-center gap-3 px-3 py-2">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{d.name}</p>
                         <p className="text-xs text-slate-400">
-                          {formatCurrency(d.refund_unit)}/pcs · stok dibeli {d.quantity}
+                          {t("transactions.refundPerUnit", { price: formatCurrency(d.refund_unit), qty: d.quantity })}
                         </p>
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -373,24 +376,24 @@ export function ReturnsPage({ type }: { type: "sales" | "purchases" }) {
             )}
 
             <div className="space-y-1.5">
-              <Label>Alasan Retur <span className="text-red-500">*</span></Label>
+              <Label>{t("transactions.returnReasonLabel")} <span className="text-red-500">*</span></Label>
               <Textarea
                 rows={2}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder={isSale ? "Contoh: barang rusak, ukuran salah..." : "Contoh: barang cacat dari supplier..."}
+                placeholder={isSale ? t("transactions.returnReasonPlaceholderSale") : t("transactions.returnReasonPlaceholderPurchase")}
               />
             </div>
 
             <div className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-900/50 px-3 py-2">
-              <span className="text-sm text-slate-500">Total Refund</span>
+              <span className="text-sm text-slate-500">{t("transactions.totalRefundLabel")}</span>
               <span className="text-base font-bold text-red-600">{formatCurrency(totalRefund)}</span>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Batal</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>{t("common.cancel")}</Button>
             <Button onClick={handleSubmit} disabled={saving} className="gap-2 bg-sky-500 hover:bg-sky-600">
-              {saving && <Loader2 className="h-4 w-4 animate-spin" />} Simpan Retur
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />} {t("transactions.saveReturn")}
             </Button>
           </DialogFooter>
         </DialogContent>

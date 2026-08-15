@@ -34,62 +34,64 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/locales";
 
 type NavLink = { label: string; href: string; icon: LucideIcon };
 type NavGroup = { group: string; items: NavLink[] };
 type NavItem = NavLink | NavGroup;
 
+// label/group berisi KEY locale (diresolve via t() saat render)
 const sidebarNav: NavItem[] = [
   {
-    label: "Dashboard",
+    label: "nav.dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
   },
   {
-    label: "Dashboard Mekanik",
+    label: "nav.dashboardMechanic",
     href: "/dashboard/mechanic",
     icon: Gauge,
   },
   {
-    group: "Data Master",
+    group: "nav.masterData",
     items: [
-      { label: "Produk / Sparepart", href: "/dashboard/master-data", icon: Database },
-      { label: "Kategori & Brand", href: "/dashboard/master-data/categories", icon: Tags },
-      { label: "Data Customer", href: "/dashboard/customers", icon: Users },
-      { label: "Reminder Pajak", href: "/dashboard/customers/vehicle-documents", icon: CalendarClock },
-      { label: "Data Supplier", href: "/dashboard/suppliers", icon: Building2 },
+      { label: "nav.products", href: "/dashboard/master-data", icon: Database },
+      { label: "nav.categoriesBrands", href: "/dashboard/master-data/categories", icon: Tags },
+      { label: "nav.customers", href: "/dashboard/customers", icon: Users },
+      { label: "nav.taxReminder", href: "/dashboard/customers/vehicle-documents", icon: CalendarClock },
+      { label: "nav.suppliers", href: "/dashboard/suppliers", icon: Building2 },
     ],
   },
   {
-    group: "Transaksi",
+    group: "nav.transactions",
     items: [
-      { label: "Penjualan", href: "/dashboard/transactions/sales", icon: ShoppingCart },
-      { label: "Pembelian", href: "/dashboard/transactions/purchases", icon: ClipboardList },
-      { label: "Antrian Service", href: "/dashboard/transactions/appointments", icon: ListOrdered },
-      { label: "Purchase Order", href: "/dashboard/transactions/purchase-orders", icon: FileText },
-      { label: "Inventory", href: "/dashboard/inventory", icon: Package },
-      { label: "Adjust Stok", href: "/dashboard/inventory/adjust", icon: PlusCircle },
-      { label: "Riwayat Adjust", href: "/dashboard/inventory/adjustments", icon: History },
+      { label: "nav.sales", href: "/dashboard/transactions/sales", icon: ShoppingCart },
+      { label: "nav.purchases", href: "/dashboard/transactions/purchases", icon: ClipboardList },
+      { label: "nav.serviceQueue", href: "/dashboard/transactions/appointments", icon: ListOrdered },
+      { label: "nav.purchaseOrders", href: "/dashboard/transactions/purchase-orders", icon: FileText },
+      { label: "nav.inventory", href: "/dashboard/inventory", icon: Package },
+      { label: "nav.adjustStock", href: "/dashboard/inventory/adjust", icon: PlusCircle },
+      { label: "nav.adjustHistory", href: "/dashboard/inventory/adjustments", icon: History },
     ],
   },
   {
-    group: "Keuangan",
+    group: "nav.finance",
     items: [
-      { label: "Pengeluaran", href: "/dashboard/expenses", icon: Receipt },
-      { label: "Gaji Mekanik", href: "/dashboard/salary-payments", icon: BadgeDollarSign },
-      { label: "Diskon", href: "/dashboard/discounts", icon: Tag },
-      { label: "Retur Penjualan", href: "/dashboard/returns/sales", icon: RotateCcw },
-      { label: "Retur Pembelian", href: "/dashboard/returns/purchases", icon: RotateCcw },
+      { label: "nav.expenses", href: "/dashboard/expenses", icon: Receipt },
+      { label: "nav.salaryPayments", href: "/dashboard/salary-payments", icon: BadgeDollarSign },
+      { label: "nav.discounts", href: "/dashboard/discounts", icon: Tag },
+      { label: "nav.salesReturns", href: "/dashboard/returns/sales", icon: RotateCcw },
+      { label: "nav.purchasesReturns", href: "/dashboard/returns/purchases", icon: RotateCcw },
     ],
   },
   {
-    group: "Laporan & Pengaturan",
+    group: "nav.reportsAndSettings",
     items: [
-      { label: "Laporan", href: "/dashboard/reports", icon: BarChart3 },
-      { label: "Garansi", href: "/dashboard/warranty", icon: ShieldCheck },
-      { label: "Klaim Garansi", href: "/dashboard/warranty/claims", icon: ShieldCheck },
-      { label: "Notifikasi", href: "/dashboard/notifications", icon: Bell },
-      { label: "Pengaturan", href: "/dashboard/settings", icon: Settings },
+      { label: "nav.reports", href: "/dashboard/reports", icon: BarChart3 },
+      { label: "nav.warranty", href: "/dashboard/warranty", icon: ShieldCheck },
+      { label: "nav.warrantyClaims", href: "/dashboard/warranty/claims", icon: ShieldCheck },
+      { label: "nav.notifications", href: "/dashboard/notifications", icon: Bell },
+      { label: "nav.settings", href: "/dashboard/settings", icon: Settings },
     ],
   },
 ];
@@ -102,6 +104,7 @@ interface MobileSidebarProps {
 export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useLocale();
   const [userName, setUserName] = useState("Administrator");
   const [userEmail, setUserEmail] = useState("admin@primamotor.com");
 
@@ -229,7 +232,7 @@ export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
                         active ? "text-sky-500" : "text-slate-400 group-hover:text-sky-500"
                       )}
                     />
-                    <span>{item.label}</span>
+                    <span>{t(item.label)}</span>
                   </div>
                   {active && <ChevronRight className="h-3.5 w-3.5 text-sky-400 shrink-0" />}
                 </Link>
@@ -239,7 +242,7 @@ export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
             return (
               <div key={idx} className="mt-4 mb-1">
                 <p className="px-3 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                  {item.group}
+                  {t(item.group)}
                 </p>
                 {item.items.map((subItem) => {
                   const SubIcon = subItem.icon;
@@ -262,7 +265,7 @@ export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
                             active ? "text-sky-500" : "text-slate-400 group-hover:text-sky-500"
                           )}
                         />
-                        <span>{subItem.label}</span>
+                        <span>{t(subItem.label)}</span>
                       </div>
                       {active && <ChevronRight className="h-3.5 w-3.5 text-sky-400 shrink-0" />}
                     </Link>

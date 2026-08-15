@@ -10,10 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PrimaMotorLogo } from "@/components/prima-motor-logo";
 import { ToastContainer, useToasts } from "@/components/ui/toast";
+import { useLocale } from "@/lib/locales";
 
 function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useLocale();
   const { toasts, showToast, removeToast } = useToasts();
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -30,17 +32,17 @@ function ResetPasswordForm() {
     const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
     if (!email) {
-      showToast("Email tidak ditemukan. Silakan mulai dari halaman lupa password.", "error", 3000);
+      showToast(t("auth.emailNotFoundToast"), "error", 3000);
       return;
     }
 
     if (newPassword.length < 6) {
-      showToast("Password minimal 6 karakter.", "error", 3000);
+      showToast(t("auth.minPasswordLength"), "error", 3000);
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      showToast("Password dan konfirmasi password harus sama.", "error", 3000);
+      showToast(t("auth.passwordNotMatch"), "error", 3000);
       return;
     }
 
@@ -58,7 +60,7 @@ function ResetPasswordForm() {
       const result = await response.json();
 
       if (!response.ok) {
-        showToast(result?.error || "Gagal mereset password. Coba lagi.", "error", 3000);
+        showToast(result?.error || t("auth.resetFailed"), "error", 3000);
         return;
       }
 
@@ -67,7 +69,7 @@ function ResetPasswordForm() {
         router.push("/login");
       }, 2000);
     } catch {
-      showToast("Terjadi kesalahan jaringan. Coba lagi.", "error", 3000);
+      showToast(t("auth.networkError"), "error", 3000);
     } finally {
       setIsLoading(false);
     }
@@ -81,10 +83,10 @@ function ResetPasswordForm() {
         </div>
         <div className="space-y-2">
           <p className="text-gray-700 dark:text-gray-300 font-medium">
-            Email tidak ditemukan
+            {t("auth.emailNotFound")}
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Silakan mulai dari halaman lupa password terlebih dahulu.
+            {t("auth.startFromForgot")}
           </p>
         </div>
         <Link
@@ -92,7 +94,7 @@ function ResetPasswordForm() {
           className="inline-flex items-center gap-2 text-sm font-medium text-amber-600 hover:text-amber-700 transition-colors mt-2"
         >
           <ArrowLeft className="h-4 w-4" />
-          Kembali ke Lupa Password
+          {t("auth.backToForgot")}
         </Link>
       </div>
     );
@@ -108,10 +110,10 @@ function ResetPasswordForm() {
           </div>
           <div className="space-y-2">
             <p className="text-gray-700 dark:text-gray-300">
-              Password berhasil direset!
+              {t("auth.resetSuccess")}
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Mengarahkan ke halaman login...
+              {t("auth.redirectingToLogin")}
             </p>
           </div>
         </div>
@@ -119,13 +121,13 @@ function ResetPasswordForm() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="text-center mb-2">
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Buat password baru untuk akun <strong>{email}</strong>
+              {t("auth.newPasswordFor")} <strong>{email}</strong>
             </p>
           </div>
 
           {/* Email (readonly) */}
           <div className="space-y-2">
-            <Label htmlFor="email_display">Email Address</Label>
+            <Label htmlFor="email_display">{t("auth.email")}</Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               <Input
@@ -139,14 +141,14 @@ function ResetPasswordForm() {
 
           {/* New Password */}
           <div className="space-y-2">
-            <Label htmlFor="newPassword">Password Baru</Label>
+            <Label htmlFor="newPassword">{t("auth.newPassword")}</Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               <Input
                 id="newPassword"
                 name="newPassword"
                 type={showPassword ? "text" : "password"}
-                placeholder="Minimal 6 karakter"
+                placeholder={t("auth.min6Chars")}
                 required
                 minLength={6}
                 className="pl-10 pr-10 py-2.5 bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus-visible:ring-amber-600"
@@ -155,7 +157,7 @@ function ResetPasswordForm() {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer"
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
               >
                 {showPassword ? (
                   <EyeOff className="h-4 w-4" />
@@ -168,7 +170,7 @@ function ResetPasswordForm() {
 
           {/* Confirm Password */}
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Konfirmasi Password Baru</Label>
+            <Label htmlFor="confirmPassword">{t("auth.confirmNewPassword")}</Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               <Input
@@ -184,7 +186,7 @@ function ResetPasswordForm() {
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer"
-                aria-label={showConfirmPassword ? "Hide confirm" : "Show confirm"}
+                aria-label={showConfirmPassword ? t("auth.hidePassword") : t("auth.showPassword")}
               >
                 {showConfirmPassword ? (
                   <EyeOff className="h-4 w-4" />
@@ -202,13 +204,13 @@ function ResetPasswordForm() {
               disabled={isLoading}
               className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg shadow-sm transition-colors active:scale-[0.98] cursor-pointer"
             >
-              {isLoading ? (
+                  {isLoading ? (
                 <span className="flex items-center gap-2">
                   <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Mereset...
+                  {t("auth.resetting")}
                 </span>
               ) : (
-                "Reset Password"
+                t("auth.resetPassword")
               )}
             </Button>
           </div>
@@ -220,7 +222,7 @@ function ResetPasswordForm() {
               className="inline-flex items-center gap-2 text-sm font-medium text-amber-600 hover:text-amber-700 transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
-              Kembali ke login
+              {t("auth.backToLogin")}
             </Link>
           </div>
         </form>

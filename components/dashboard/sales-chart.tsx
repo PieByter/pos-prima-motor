@@ -19,6 +19,7 @@ import {
 } from "./ui/dashboard-card";
 import { formatCompactCurrency } from "@/lib/format";
 import { TrendingUp, SwitchCamera } from "lucide-react";
+import { useLocale } from "@/lib/locales";
 
 type ChartDataPoint = { day: string; sales: number; prevSales?: number };
 
@@ -41,6 +42,7 @@ function getPeriodDates(period: string, compare: boolean) {
 }
 
 export function SalesChart({ dateRange }: { dateRange?: { start: string; end: string } }) {
+  const { t, locale } = useLocale();
   const [data, setData] = useState<ChartDataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [period, setPeriod] = useState<string | null>(null);
@@ -86,7 +88,7 @@ export function SalesChart({ dateRange }: { dateRange?: { start: string; end: st
       const currentData = await currentRes.json();
       const mappedCurrent = (currentData ?? []).map(
         (row: { date: string; amount: number }) => ({
-          day: new Date(row.date).toLocaleDateString("id-ID", { weekday: "short" }),
+          day: new Date(row.date).toLocaleDateString(locale, { weekday: "short" }),
           sales: Number(row.amount ?? 0),
         }),
       );
@@ -105,7 +107,7 @@ export function SalesChart({ dateRange }: { dateRange?: { start: string; end: st
         // Map previous data to same day indices
         const mappedPrev = (prevData ?? []).map(
           (row: { date: string; amount: number }, i: number) => ({
-            day: mappedCurrent[i]?.day ?? new Date(row.date).toLocaleDateString("id-ID", { weekday: "short" }),
+            day: mappedCurrent[i]?.day ?? new Date(row.date).toLocaleDateString(locale, { weekday: "short" }),
             prevSales: Number(row.amount ?? 0),
           }),
         );
@@ -126,20 +128,20 @@ export function SalesChart({ dateRange }: { dateRange?: { start: string; end: st
     } finally {
       setIsLoading(false);
     }
-  }, [period, chartStart, chartEnd, compareMode]);
+  }, [period, chartStart, chartEnd, compareMode, locale]);
 
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void fetchChartData();
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, [fetchChartData]);
 
   const totalSales = data.reduce((sum, d) => sum + d.sales, 0);
 
   return (
     <DashboardCard>
-      <SectionHeader label="Revenue trend" title="Sales Trends">
+      <SectionHeader label={t("dashboard.revenueTrend")} title={t("dashboard.salesTrend")}>
         <div className="flex items-center gap-2">
           {/* Growth badge */}
           {growth !== null && compareMode && (
@@ -162,10 +164,10 @@ export function SalesChart({ dateRange }: { dateRange?: { start: string; end: st
                   ? "bg-sky-500 text-white border-sky-500"
                   : "bg-white text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
               }`}
-              title="Bandingkan dengan periode sebelumnya"
+              title={t("dashboard.compareTooltip")}
             >
               <SwitchCamera className="h-3.5 w-3.5 inline mr-1" />
-              {compareMode ? "Banding" : "Compare"}
+              {t("dashboard.compare")}
             </button>
           )}
 
@@ -175,16 +177,16 @@ export function SalesChart({ dateRange }: { dateRange?: { start: string; end: st
               onChange={(e) => setPeriod(e.target.value)}
               className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 shadow-sm focus:border-sky-400 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
             >
-              <option value="7days">Last 7 Days</option>
-              <option value="month">Last Month</option>
-              <option value="year">Last Year</option>
+              <option value="7days">{t("time.last7Days")}</option>
+              <option value="month">{t("time.lastMonth")}</option>
+              <option value="year">{t("time.lastYear")}</option>
             </select>
           )}
 
           {/* Total */}
           {!isLoading && data.length > 0 && (
             <span className="hidden md:inline text-xs text-slate-400 font-medium">
-              Total: {formatCompactCurrency(totalSales)}
+              {t("common.total")}: {formatCompactCurrency(totalSales)}
             </span>
           )}
         </div>
@@ -194,7 +196,7 @@ export function SalesChart({ dateRange }: { dateRange?: { start: string; end: st
         {isLoading ? (
           <LoadingSpinner />
         ) : data.length === 0 ? (
-          <EmptyState message="No sales data for the selected period." />
+          <EmptyState message={t("dashboard.noSalesData")} />
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>
@@ -227,8 +229,8 @@ export function SalesChart({ dateRange }: { dateRange?: { start: string; end: st
               />
               <Tooltip
                 formatter={(value, name) => [
-                  `Rp ${Number(value).toLocaleString("id-ID")}`,
-                  name === "sales" ? "Periode Ini" : "Periode Sebelumnya",
+                  `Rp ${Number(value).toLocaleString(locale)}`,
+                  name === "sales" ? t("dashboard.thisPeriod") : t("dashboard.prevPeriod"),
                 ]}
                 contentStyle={{
                   backgroundColor: "#0F172A",
@@ -264,7 +266,7 @@ export function SalesChart({ dateRange }: { dateRange?: { start: string; end: st
               {compareMode && (
                 <Legend
                   formatter={(value: string) =>
-                    value === "sales" ? "Periode Ini" : "Periode Sebelumnya"
+                    value === "sales" ? t("dashboard.thisPeriod") : t("dashboard.prevPeriod")
                   }
                   wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }}
                 />

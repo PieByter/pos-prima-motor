@@ -28,11 +28,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import type { Supplier, SupplierWithContacts, PaginatedResponse } from "@/lib/types/database";
 import { SupplierFormDialog } from "@/components/suppliers/supplier-form-dialog";
+import { useLocale } from "@/lib/locales";
 
 const ITEMS_PER_PAGE = 10;
 
 export function SuppliersTable() {
   const { showToast } = useToast();
+  const { t } = useLocale();
   const [suppliers, setSuppliers] = useState<SupplierWithContacts[]>([]);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -81,19 +83,19 @@ export function SuppliersTable() {
         setTotalPages(result.totalPages ?? 1);
       } catch (err) {
         console.error(err);
-        setError("Gagal memuat data supplier. Coba lagi.");
+        setError(t("masterData.supplierLoadFailed"));
       } finally {
         setIsLoading(false);
       }
     },
-    [search, currentPage]
+    [search, currentPage, t]
   );
 
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void fetchSuppliers();
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, [fetchSuppliers]);
 
   function handleAdd() {
@@ -107,36 +109,36 @@ export function SuppliersTable() {
   }
 
   async function handleDelete(id: number) {
-    if (!confirm("Yakin ingin menghapus supplier ini?")) return;
+    if (!confirm(t("masterData.supplierDeleteConfirm"))) return;
     try {
       const res = await fetch(`/api/suppliers/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Gagal menghapus");
-      showToast("Supplier berhasil dihapus", "success");
+      if (!res.ok) throw new Error("Failed");
+      showToast(t("common.successfullyDeleted"), "success");
       setCurrentPage(1);
       await fetchSuppliers(1);
     } catch (err) {
       console.error(err);
-      showToast("Gagal menghapus supplier", "error");
+      showToast(t("masterData.supplierDeleteFailed"), "error");
     }
   }
 
   async function handleBulkDelete() {
     if (selectedIds.size === 0) return;
-    if (!confirm(`Yakin ingin menghapus ${selectedIds.size} supplier terpilih?`)) return;
+    if (!confirm(t("masterData.supplierBulkDeleteConfirm", { count: selectedIds.size }))) return;
     try {
       const res = await fetch("/api/suppliers", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: [...selectedIds] }),
       });
-      if (!res.ok) throw new Error("Gagal menghapus");
+      if (!res.ok) throw new Error("Failed");
       const { deleted } = await res.json();
-      showToast(`${deleted} supplier berhasil dihapus`, "success");
+      showToast(t("masterData.supplierBulkDeleted", { deleted }), "success");
       setSelectedIds(new Set());
       setCurrentPage(1);
       await fetchSuppliers(1);
     } catch {
-      showToast("Gagal menghapus supplier", "error");
+      showToast(t("masterData.supplierDeleteFailed"), "error");
     }
   }
 
@@ -148,16 +150,16 @@ export function SuppliersTable() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
         });
-        if (!res.ok) throw new Error("Gagal update");
-        showToast("Supplier berhasil diperbarui", "success");
+        if (!res.ok) throw new Error("Failed");
+        showToast(t("common.successfullyUpdated"), "success");
       } else {
         const res = await fetch("/api/suppliers", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
         });
-        if (!res.ok) throw new Error("Gagal tambah");
-        showToast("Supplier berhasil ditambahkan", "success");
+        if (!res.ok) throw new Error("Failed");
+        showToast(t("common.successfullySaved"), "success");
       }
       setDialogOpen(false);
       setEditingSupplier(null);
@@ -165,7 +167,7 @@ export function SuppliersTable() {
       await fetchSuppliers(1);
     } catch (err) {
       console.error(err);
-      showToast("Gagal menyimpan supplier", "error");
+      showToast(t("masterData.supplierSaveFailed"), "error");
     }
   }
 
@@ -179,10 +181,10 @@ export function SuppliersTable() {
           </div>
           <div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-              Data Supplier
+              {t("masterData.supplierList")}
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              {isLoading ? "Memuat..." : `${total} supplier terdaftar`}
+              {isLoading ? t("common.loading") : t("masterData.supplierRegistered", { count: total })}
             </p>
           </div>
         </div>
@@ -191,19 +193,19 @@ export function SuppliersTable() {
           className="bg-violet-500 hover:bg-violet-600 text-white gap-2 self-start sm:self-auto shadow-sm shadow-violet-500/30"
         >
           <Plus className="h-4 w-4" />
-          Tambah Supplier
+          {t("masterData.addSupplier")}
         </Button>
       </div>
 
       {/* Bulk Actions */}
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800">
-          <span className="text-sm text-red-700 dark:text-red-400">{selectedIds.size} dipilih</span>
+          <span className="text-sm text-red-700 dark:text-red-400">{t("masterData.selectedCount", { count: selectedIds.size })}</span>
           <Button size="sm" variant="destructive" className="h-8 gap-1" onClick={handleBulkDelete}>
-            <Trash2 className="h-3.5 w-3.5" /> Hapus Terpilih
+            <Trash2 className="h-3.5 w-3.5" /> {t("masterData.deleteSelected")}
           </Button>
           <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setSelectedIds(new Set())}>
-            Batal
+            {t("common.cancel")}
           </Button>
         </div>
       )}
@@ -213,7 +215,7 @@ export function SuppliersTable() {
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
-            placeholder="Cari nama atau nomor HP..."
+            placeholder={t("masterData.searchSupplier")}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -244,31 +246,31 @@ export function SuppliersTable() {
                   }} />
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5">
-                  Nama Supplier
+                  {t("masterData.supplierNameCol")}
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5">
                   <div className="flex items-center gap-1.5">
                     <Phone className="h-3 w-3" />
-                    No. Telepon
+                    {t("masterData.supplierPhone")}
                   </div>
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5">
-                  Email
+                  {t("masterData.email")}
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5">
                   <div className="flex items-center gap-1.5">
                     <MapPin className="h-3 w-3" />
-                    Alamat
+                    {t("masterData.address")}
                   </div>
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5">
                   <div className="flex items-center gap-1.5">
                     <Calendar className="h-3 w-3" />
-                    Terdaftar
+                    {t("masterData.registered")}
                   </div>
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5 text-center w-24">
-                  Aksi
+                  {t("common.actions")}
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -279,7 +281,7 @@ export function SuppliersTable() {
                     <div className="flex flex-col items-center gap-3">
                       <Loader className="h-7 w-7 animate-spin text-violet-500" />
                       <span className="text-sm text-slate-500 dark:text-slate-400">
-                        Memuat data supplier...
+                        {t("common.loading")}
                       </span>
                     </div>
                   </TableCell>
@@ -293,10 +295,10 @@ export function SuppliersTable() {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                          {search ? "Tidak ada supplier ditemukan" : "Belum ada data supplier"}
+                          {search ? t("masterData.supplierNotFound") : t("masterData.noSupplierData")}
                         </p>
                         <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                          {search ? "Coba kata kunci lain" : "Klik tombol tambah untuk mulai"}
+                          {search ? t("common.tryDifferentKeyword") : t("masterData.clickAddToStart")}
                         </p>
                       </div>
                     </div>

@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Trash2, CalendarClock } from "lucide-react";
 import type { VehicleDocumentWithVehicle } from "@/lib/services/vehicle-documents.service";
 import { useUserRole } from "@/lib/hooks/use-user-role";
+import { useLocale } from "@/lib/locales";
 
 type VehicleOption = {
   id: number;
@@ -38,6 +39,7 @@ type VehicleOption = {
 export function VehicleDocumentsPage() {
   const { showToast } = useToast();
   const { isAdmin } = useUserRole();
+  const { t } = useLocale();
   const [docs, setDocs] = useState<VehicleDocumentWithVehicle[]>([]);
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -63,20 +65,20 @@ export function VehicleDocumentsPage() {
   }, []);
 
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void fetchData();
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, [fetchData]);
 
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void fetch("/api/vehicles?limit=500", { cache: "no-store" })
         .then((r) => (r.ok ? r.json() : []))
         .then((list) => setVehicles(Array.isArray(list) ? list : []))
         .catch(() => {});
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const daysUntil = (due: string) => {
@@ -91,7 +93,7 @@ export function VehicleDocumentsPage() {
 
   async function handleSubmit() {
     if (!form.vehicle_id || !form.due_date) {
-      showToast("Pilih kendaraan dan tanggal jatuh tempo", "error");
+      showToast(t("vehicleDocuments.requireVehicleDue"), "error");
       return;
     }
     setSaving(true);
@@ -106,59 +108,59 @@ export function VehicleDocumentsPage() {
           notes: form.notes || null,
         }),
       });
-      if (!res.ok) throw new Error("Gagal");
-      showToast("Reminder pajak/STNK ditambahkan", "success");
+      if (!res.ok) throw new Error("Failed");
+      showToast(t("vehicleDocuments.added"), "success");
       setDialogOpen(false);
       setForm({ vehicle_id: "", doc_type: "pajak", due_date: new Date().toISOString().slice(0, 10), notes: "" });
       await fetchData();
     } catch {
-      showToast("Gagal menambah", "error");
+      showToast(t("vehicleDocuments.addFailed"), "error");
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(id: number) {
-    if (!confirm("Hapus reminder ini?")) return;
+    if (!confirm(t("vehicleDocuments.deleteConfirm"))) return;
     try {
       const res = await fetch(`/api/vehicle-documents/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Gagal");
-      showToast("Reminder dihapus", "success");
+      if (!res.ok) throw new Error("Failed");
+      showToast(t("vehicleDocuments.deleted"), "success");
       await fetchData();
     } catch {
-      showToast("Gagal menghapus", "error");
+      showToast(t("vehicleDocuments.deleteFailed"), "error");
     }
   }
 
   return (
     <>
       <Navbar
-        title="Reminder Pajak & STNK"
-        subtitle="Pengingat jatuh tempo pajak/STNK kendaraan pelanggan."
+        title={t("vehicleDocuments.title")}
+        subtitle={t("vehicleDocuments.subtitle")}
       />
       <div className="space-y-4">
         {/* Statistik */}
         <div className="grid grid-cols-3 gap-3">
           <div className="rounded-xl border bg-white dark:bg-slate-800 p-4">
-            <p className="text-xs text-slate-500">Habis ≤ 30 hari</p>
+            <p className="text-xs text-slate-500">{t("vehicleDocuments.expiring30")}</p>
             <p className="text-lg font-bold text-amber-600">{expiringSoon}</p>
           </div>
           <div className="rounded-xl border bg-white dark:bg-slate-800 p-4">
-            <p className="text-xs text-slate-500">Sudah Lewat</p>
+            <p className="text-xs text-slate-500">{t("vehicleDocuments.overdue")}</p>
             <p className="text-lg font-bold text-red-600">{expired}</p>
           </div>
           <div className="rounded-xl border bg-white dark:bg-slate-800 p-4">
-            <p className="text-xs text-slate-500">Total Terdata</p>
+            <p className="text-xs text-slate-500">{t("vehicleDocuments.totalRecorded")}</p>
             <p className="text-lg font-bold text-slate-900 dark:text-white">{docs.length}</p>
           </div>
         </div>
 
         {/* Aksi */}
         <div className="flex items-center justify-between">
-          <p className="text-sm text-slate-500">Data hanya untuk admin — tidak ada info pribadi pelanggan selain nama & nomor HP.</p>
+          <p className="text-sm text-slate-500">{t("vehicleDocuments.adminOnlyNote")}</p>
           {isAdmin && (
             <Button size="sm" className="gap-2 bg-sky-500 hover:bg-sky-600" onClick={() => setDialogOpen(true)}>
-              <Plus className="h-4 w-4" /> Tambah Reminder
+              <Plus className="h-4 w-4" /> {t("vehicleDocuments.addReminder")}
             </Button>
           )}
         </div>
@@ -171,18 +173,18 @@ export function VehicleDocumentsPage() {
             </div>
           ) : sorted.length === 0 ? (
             <p className="p-8 text-center text-sm text-slate-400">
-              Belum ada reminder. {isAdmin ? "Klik Tambah Reminder untuk mulai." : ""}
+              {t("vehicleDocuments.noReminders")} {isAdmin ? t("vehicleDocuments.clickAddReminder") : ""}
             </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="border-b bg-slate-50 dark:bg-slate-900/50">
                   <tr className="text-left text-xs text-slate-500">
-                    <th className="px-4 py-3">Kendaraan</th>
-                    <th className="px-4 py-3">Pemilik</th>
-                    <th className="px-4 py-3">Jenis</th>
-                    <th className="px-4 py-3">Jatuh Tempo</th>
-                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">{t("vehicleDocuments.vehicle")}</th>
+                    <th className="px-4 py-3">{t("vehicleDocuments.owner")}</th>
+                    <th className="px-4 py-3">{t("vehicleDocuments.type")}</th>
+                    <th className="px-4 py-3">{t("vehicleDocuments.dueDate")}</th>
+                    <th className="px-4 py-3">{t("common.status")}</th>
                     {isAdmin && <th className="px-4 py-3 w-16"></th>}
                   </tr>
                 </thead>
@@ -191,10 +193,10 @@ export function VehicleDocumentsPage() {
                     const days = daysUntil(d.due_date);
                     const status =
                       days < 0
-                        ? { label: "Lewat", cls: "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400" }
+                        ? { label: t("vehicleDocuments.statusOverdue"), cls: "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400" }
                         : days <= 30
-                          ? { label: `${days} hari lagi`, cls: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400" }
-                          : { label: `${days} hari`, cls: "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400" };
+                          ? { label: t("vehicleDocuments.statusDaysLeft", { n: days }), cls: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400" }
+                          : { label: t("vehicleDocuments.statusDays", { n: days }), cls: "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400" };
                     return (
                       <tr key={d.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
                         <td className="px-4 py-3">
@@ -209,7 +211,7 @@ export function VehicleDocumentsPage() {
                         </td>
                         <td className="px-4 py-3">
                           <Badge variant="secondary" className="text-[11px]">
-                            {d.doc_type === "stnk" ? "STNK" : "Pajak"}
+                            {d.doc_type === "stnk" ? t("vehicleDocuments.stnk") : t("vehicleDocuments.tax")}
                           </Badge>
                         </td>
                         <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{d.due_date}</td>
@@ -239,17 +241,17 @@ export function VehicleDocumentsPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Tambah Reminder Pajak/STNK</DialogTitle>
+            <DialogTitle>{t("vehicleDocuments.addTitle")}</DialogTitle>
             <DialogDescription>
-              Pilih kendaraan pelanggan dan tanggal jatuh tempo.
+              {t("vehicleDocuments.addDesc")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label>Kendaraan <span className="text-red-500">*</span></Label>
+              <Label>{t("vehicleDocuments.vehicle")} <span className="text-red-500">*</span></Label>
               <Select value={form.vehicle_id} onValueChange={(v) => setForm({ ...form, vehicle_id: v })}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih kendaraan..." />
+                  <SelectValue placeholder={t("vehicleDocuments.selectVehicle")} />
                 </SelectTrigger>
                 <SelectContent>
                   {vehicles.map((v) => (
@@ -262,19 +264,19 @@ export function VehicleDocumentsPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Jenis <span className="text-red-500">*</span></Label>
+                <Label>{t("vehicleDocuments.type")} <span className="text-red-500">*</span></Label>
                 <Select value={form.doc_type} onValueChange={(v) => setForm({ ...form, doc_type: v as "stnk" | "pajak" })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="pajak">Pajak Tahunan</SelectItem>
-                    <SelectItem value="stnk">STNK (5 Tahunan)</SelectItem>
+                    <SelectItem value="pajak">{t("vehicleDocuments.typeAnnualTax")}</SelectItem>
+                    <SelectItem value="stnk">{t("vehicleDocuments.typeStnk")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Jatuh Tempo <span className="text-red-500">*</span></Label>
+                <Label>{t("vehicleDocuments.dueDate")} <span className="text-red-500">*</span></Label>
                 <Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
               </div>
             </div>
@@ -284,9 +286,9 @@ export function VehicleDocumentsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Batal</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>{t("common.cancel")}</Button>
             <Button onClick={handleSubmit} disabled={saving} className="gap-2 bg-sky-500 hover:bg-sky-600">
-              {saving && <Loader2 className="h-4 w-4 animate-spin" />} Simpan
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />} {t("settings.save")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -34,6 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader, ShieldAlert, ChevronLeft, ChevronRight, Wrench } from "lucide-react";
 import type { WarrantyClaimWithDetails, PaginatedResponse } from "@/lib/types/database";
 import { formatCurrency } from "@/lib/format";
+import { useLocale } from "@/lib/locales";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -44,18 +45,19 @@ const statusStyles: Record<string, string> = {
   completed: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800",
 };
 
+// Label pakai KEY locale — di-resolve via t() saat render
 const statusLabels: Record<string, string> = {
-  pending: "Pending",
-  approved: "Disetujui",
-  rejected: "Ditolak",
-  completed: "Selesai",
+  pending: "warrantyClaims.statusPending",
+  approved: "warrantyClaims.statusApproved",
+  rejected: "warrantyClaims.statusRejected",
+  completed: "warrantyClaims.statusCompleted",
 };
 
 const resolutionLabels: Record<string, string> = {
-  repair: "Perbaikan",
-  replace: "Ganti Baru",
-  refund: "Refund",
-  none: "—",
+  repair: "warrantyClaims.resolutionRepair",
+  replace: "warrantyClaims.resolutionReplace",
+  refund: "warrantyClaims.resolutionRefund",
+  none: "warrantyClaims.resolutionNone",
 };
 
 /** Item garansi aktif dari /api/warranty (untuk dropdown) */
@@ -72,6 +74,7 @@ type WarrantyOption = {
 
 export function WarrantyClaimsPage() {
   const { showToast } = useToast();
+  const { t, locale } = useLocale();
   const [claims, setClaims] = useState<WarrantyClaimWithDetails[]>([]);
   const [warrantyOptions, setWarrantyOptions] = useState<WarrantyOption[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -115,26 +118,26 @@ export function WarrantyClaimsPage() {
   }, [statusFilter, currentPage]);
 
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void fetchClaims();
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, [fetchClaims]);
 
   // Load daftar garansi aktif untuk dropdown
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void fetch("/api/warranty?status=active", { cache: "no-store" })
         .then((r) => (r.ok ? r.json() : []))
         .then((list) => setWarrantyOptions(Array.isArray(list) ? list : []))
         .catch(() => setWarrantyOptions([]));
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, []);
 
   async function handleSubmit() {
     if (!selectedWarranty || !form.description.trim()) {
-      showToast("Pilih barang garansi dan isi deskripsi", "error");
+      showToast(t("warrantyClaims.claimRequire"), "error");
       return;
     }
     setSaving(true);
@@ -151,15 +154,15 @@ export function WarrantyClaimsPage() {
           notes: form.notes || null,
         }),
       });
-      if (!res.ok) throw new Error("Gagal");
-      showToast("Klaim garansi dibuat", "success");
+      if (!res.ok) throw new Error("Failed");
+      showToast(t("warrantyClaims.claimCreated"), "success");
       setDialogOpen(false);
       setSelectedWarranty(null);
       setForm({ claim_date: new Date().toISOString().slice(0, 10), description: "", cost: "0", notes: "" });
       setCurrentPage(1);
       await fetchClaims(1);
     } catch {
-      showToast("Gagal membuat klaim", "error");
+      showToast(t("warrantyClaims.claimCreateFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -189,12 +192,12 @@ export function WarrantyClaimsPage() {
           resolved_date: new Date().toISOString().slice(0, 10),
         }),
       });
-      if (!res.ok) throw new Error("Gagal");
-      showToast("Klaim disetujui", "success");
+      if (!res.ok) throw new Error("Failed");
+      showToast(t("warrantyClaims.claimApproved"), "success");
       setProcessDialog(null);
       await fetchClaims();
     } catch {
-      showToast("Gagal update status", "error");
+      showToast(t("warrantyClaims.statusUpdateFailed"), "error");
     } finally {
       setProcessing(false);
     }
@@ -210,39 +213,39 @@ export function WarrantyClaimsPage() {
           resolved_date: status === "completed" || status === "rejected" ? new Date().toISOString().slice(0, 10) : null,
         }),
       });
-      if (!res.ok) throw new Error("Gagal");
-      showToast(status === "completed" ? "Klaim selesai" : "Klaim ditolak", "success");
+      if (!res.ok) throw new Error("Failed");
+      showToast(status === "completed" ? t("warrantyClaims.claimCompleted") : t("warrantyClaims.claimRejected"), "success");
       await fetchClaims();
     } catch {
-      showToast("Gagal update status", "error");
+      showToast(t("warrantyClaims.statusUpdateFailed"), "error");
     }
   }
 
   return (
     <div className="space-y-6">
       <Navbar
-        title="Klaim Garansi"
-        subtitle="Kelola klaim garansi barang rusak dalam masa garansi."
+        title={t("nav.warrantyClaims")}
+        subtitle={t("warrantyClaims.subtitle")}
       />
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
           <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
             <SelectTrigger className="w-44">
-              <SelectValue placeholder="Semua status" />
+              <SelectValue placeholder={t("masterData.allStatuses")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Semua status</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="approved">Disetujui</SelectItem>
-              <SelectItem value="rejected">Ditolak</SelectItem>
-              <SelectItem value="completed">Selesai</SelectItem>
+              <SelectItem value="">{t("masterData.allStatuses")}</SelectItem>
+              <SelectItem value="pending">{t("warrantyClaims.statusPending")}</SelectItem>
+              <SelectItem value="approved">{t("warrantyClaims.statusApproved")}</SelectItem>
+              <SelectItem value="rejected">{t("warrantyClaims.statusRejected")}</SelectItem>
+              <SelectItem value="completed">{t("warrantyClaims.statusCompleted")}</SelectItem>
             </SelectContent>
           </Select>
-          <span className="text-sm text-slate-500">{total} klaim</span>
+          <span className="text-sm text-slate-500">{t("warrantyClaims.claimCount", { n: total })}</span>
         </div>
         <Button onClick={() => setDialogOpen(true)} className="gap-2">
-          <ShieldAlert className="h-4 w-4" /> Buat Klaim
+          <ShieldAlert className="h-4 w-4" /> {t("warrantyClaims.createClaim")}
         </Button>
       </div>
 
@@ -251,14 +254,14 @@ export function WarrantyClaimsPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50 dark:bg-slate-800/60">
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Item</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Invoice</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Customer</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tgl Klaim</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Deskripsi</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">Biaya</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Status</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center w-32">Aksi</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("warrantyClaims.item")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("transactions.invoice")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("masterData.customer")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("warrantyClaims.claimDate")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("warrantyClaims.description")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">{t("warrantyClaims.cost")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("common.status")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center w-32">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -268,7 +271,7 @@ export function WarrantyClaimsPage() {
                 </TableCell></TableRow>
               ) : claims.length === 0 ? (
                 <TableRow><TableCell colSpan={8} className="py-16 text-center text-sm text-slate-400">
-                  Belum ada klaim garansi
+                  {t("warrantyClaims.noData")}
                 </TableCell></TableRow>
               ) : (
                 claims.map((c) => (
@@ -284,7 +287,7 @@ export function WarrantyClaimsPage() {
                       {(c.sale as unknown as { customer?: { name?: string } })?.customer?.name ?? "—"}
                     </TableCell>
                     <TableCell className="px-5 text-sm text-slate-500">
-                      {new Date(c.claim_date).toLocaleDateString("id-ID")}
+                      {new Date(c.claim_date).toLocaleDateString(locale)}
                     </TableCell>
                     <TableCell className="px-5 text-sm text-slate-500 dark:text-slate-400 max-w-48 truncate">
                       {c.description}
@@ -294,25 +297,25 @@ export function WarrantyClaimsPage() {
                     </TableCell>
                     <TableCell className="px-5">
                       <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 border ${statusStyles[c.status] ?? ""}`}>
-                        {statusLabels[c.status] ?? c.status}
+                        {statusLabels[c.status] ? t(statusLabels[c.status]) : c.status}
                       </Badge>
                       {c.resolution !== "none" && c.status === "approved" && (
-                        <p className="text-[10px] text-slate-400 mt-0.5">{resolutionLabels[c.resolution]}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{resolutionLabels[c.resolution] ? t(resolutionLabels[c.resolution]) : c.resolution}</p>
                       )}
                     </TableCell>
                     <TableCell className="px-5">
                       {c.status === "pending" ? (
                         <div className="flex gap-1 justify-center">
                           <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => openProcessDialog(c)}>
-                            <Wrench className="h-3.5 w-3.5" /> Proses
+                            <Wrench className="h-3.5 w-3.5" /> {t("warrantyClaims.process")}
                           </Button>
                           <Button size="sm" variant="outline" className="h-7 text-xs text-red-500" onClick={() => handleStatus(c.id, "rejected")}>
-                            Tolak
+                            {t("warrantyClaims.reject")}
                           </Button>
                         </div>
                       ) : c.status === "approved" ? (
                         <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleStatus(c.id, "completed")}>
-                          Selesai
+                          {t("warrantyClaims.statusCompleted")}
                         </Button>
                       ) : (
                         <span className="text-xs text-slate-400">—</span>
@@ -326,7 +329,7 @@ export function WarrantyClaimsPage() {
         </div>
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-5 py-3 border-t border-slate-200 dark:border-slate-800">
-            <p className="text-xs text-slate-500">Halaman {currentPage} dari {totalPages}</p>
+            <p className="text-xs text-slate-500">{t("inventory.pageInfo", { page: currentPage, total: totalPages })}</p>
             <div className="flex gap-1">
               <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => setCurrentPage((p) => p - 1)}>
                 <ChevronLeft className="h-4 w-4" />
@@ -343,12 +346,12 @@ export function WarrantyClaimsPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Buat Klaim Garansi</DialogTitle>
-            <DialogDescription>Isi detail barang yang diklaim garansi.</DialogDescription>
+            <DialogTitle>{t("warrantyClaims.createTitle")}</DialogTitle>
+            <DialogDescription>{t("warrantyClaims.createDesc")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label>Barang dalam Garansi <span className="text-red-500">*</span></Label>
+              <Label>{t("warrantyClaims.warrantyItem")} <span className="text-red-500">*</span></Label>
               <Select
                 value={selectedWarranty ? String(selectedWarranty.sale_detail_id) : ""}
                 onValueChange={(v) => {
@@ -357,11 +360,11 @@ export function WarrantyClaimsPage() {
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih barang garansi aktif..." />
+                  <SelectValue placeholder={t("warrantyClaims.selectWarranty")} />
                 </SelectTrigger>
                 <SelectContent>
                   {warrantyOptions.length === 0 ? (
-                    <SelectItem value="__none__" disabled>Tidak ada garansi aktif</SelectItem>
+                    <SelectItem value="__none__" disabled>{t("warrantyClaims.noActiveWarranty")}</SelectItem>
                   ) : (
                     warrantyOptions.map((w) => (
                       <SelectItem key={w.sale_detail_id} value={String(w.sale_detail_id)}>
@@ -373,23 +376,23 @@ export function WarrantyClaimsPage() {
               </Select>
               {selectedWarranty && (
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  SKU: {selectedWarranty.sku ?? "-"} · Garansi s/d {selectedWarranty.warranty_until}
+                  {t("warrantyClaims.skuUntil", { sku: selectedWarranty.sku ?? "-", date: selectedWarranty.warranty_until })}
                 </p>
               )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Tanggal Klaim <span className="text-red-500">*</span></Label>
+                <Label>{t("warrantyClaims.claimDate")} <span className="text-red-500">*</span></Label>
                 <Input type="date" value={form.claim_date} onChange={(e) => setForm({ ...form, claim_date: e.target.value })} />
               </div>
               <div className="space-y-1.5">
-                <Label>Biaya (Rp)</Label>
+                <Label>{t("warrantyClaims.costLabel")}</Label>
                 <Input type="number" min="0" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Deskripsi Kerusakan <span className="text-red-500">*</span></Label>
-              <Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Jelaskan kerusakan / keluhan" />
+              <Label>{t("warrantyClaims.damageDesc")} <span className="text-red-500">*</span></Label>
+              <Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder={t("warrantyClaims.damagePlaceholder")} />
             </div>
             <div className="space-y-1.5">
               <Label>Catatan</Label>
@@ -397,9 +400,9 @@ export function WarrantyClaimsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Batal</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>{t("common.cancel")}</Button>
             <Button onClick={handleSubmit} disabled={saving} className="gap-2">
-              {saving && <Loader className="h-4 w-4 animate-spin" />} Simpan
+              {saving && <Loader className="h-4 w-4 animate-spin" />} {t("settings.save")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -409,26 +412,26 @@ export function WarrantyClaimsPage() {
       <Dialog open={!!processDialog} onOpenChange={(o) => { if (!o) setProcessDialog(null); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Proses Klaim Garansi</DialogTitle>
+            <DialogTitle>{t("warrantyClaims.processTitle")}</DialogTitle>
             <DialogDescription>
-              {processDialog ? `Klaim #${processDialog.id} — ${processDialog.item?.name ?? ""}` : ""}
+              {processDialog ? t("warrantyClaims.claimHash", { id: processDialog.id, item: processDialog.item?.name ?? "" }) : ""}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label>Solusi <span className="text-red-500">*</span></Label>
+              <Label>{t("warrantyClaims.resolution")} <span className="text-red-500">*</span></Label>
               <Select
                 value={processForm.resolution}
                 onValueChange={(v) => setProcessForm({ ...processForm, resolution: v as "repair" | "replace" | "refund" | "none" })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih solusi..." />
+                  <SelectValue placeholder={t("warrantyClaims.selectResolution")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="repair">🔧 Perbaikan</SelectItem>
-                  <SelectItem value="replace">🔁 Ganti Baru</SelectItem>
-                  <SelectItem value="refund">💸 Refund</SelectItem>
-                  <SelectItem value="none">Tanpa solusi</SelectItem>
+                  <SelectItem value="repair">{t("warrantyClaims.resolutionRepairOpt")}</SelectItem>
+                  <SelectItem value="replace">{t("warrantyClaims.resolutionReplaceOpt")}</SelectItem>
+                  <SelectItem value="refund">{t("warrantyClaims.resolutionRefundOpt")}</SelectItem>
+                  <SelectItem value="none">{t("warrantyClaims.resolutionNoneOpt")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -443,13 +446,13 @@ export function WarrantyClaimsPage() {
               />
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Menyetujui klaim akan mencatat solusi & biaya. Status klaim menjadi &quot;Disetujui&quot;.
+              {t("warrantyClaims.approveHint")}
             </p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setProcessDialog(null)} disabled={processing}>Batal</Button>
+            <Button variant="outline" onClick={() => setProcessDialog(null)} disabled={processing}>{t("common.cancel")}</Button>
             <Button onClick={handleApprove} disabled={processing} className="gap-2">
-              {processing && <Loader className="h-4 w-4 animate-spin" />} Setujui Klaim
+              {processing && <Loader className="h-4 w-4 animate-spin" />} {t("warrantyClaims.approveClaim")}
             </Button>
           </DialogFooter>
         </DialogContent>

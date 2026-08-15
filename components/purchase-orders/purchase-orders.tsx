@@ -33,6 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader, Plus, Trash2, FileText, ChevronLeft, ChevronRight } from "lucide-react";
 import type { PurchaseOrderWithDetails, PaginatedResponse, Supplier, Item } from "@/lib/types/database";
 import { formatCurrency } from "@/lib/format";
+import { useLocale } from "@/lib/locales";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -44,18 +45,20 @@ const statusStyles: Record<string, string> = {
   cancelled: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800",
 };
 
+// Label pakai KEY locale — di-resolve via t() saat render
 const statusLabels: Record<string, string> = {
-  draft: "Draft",
-  sent: "Dikirim",
-  partial: "Sebagian",
-  received: "Diterima",
-  cancelled: "Dibatalkan",
+  draft: "purchaseOrders.statusDraft",
+  sent: "purchaseOrders.statusSent",
+  partial: "purchaseOrders.statusPartial",
+  received: "purchaseOrders.statusReceived",
+  cancelled: "purchaseOrders.statusCancelled",
 };
 
 type POItemRow = { item_id: string; quantity: string; price: string };
 
 export function PurchaseOrdersPage() {
   const { showToast } = useToast();
+  const { t, locale } = useLocale();
   const [orders, setOrders] = useState<PurchaseOrderWithDetails[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [items, setItems] = useState<Item[]>([]);
@@ -90,10 +93,10 @@ export function PurchaseOrdersPage() {
   }, [currentPage]);
 
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void fetchOrders();
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, [fetchOrders]);
 
   useEffect(() => {
@@ -124,7 +127,7 @@ export function PurchaseOrdersPage() {
 
   async function handleSubmit() {
     if (!form.supplier_id || !form.po_number.trim()) {
-      showToast("Supplier dan No. PO wajib diisi", "error");
+      showToast(t("purchaseOrders.supplierRequired"), "error");
       return;
     }
     const details = rows
@@ -135,7 +138,7 @@ export function PurchaseOrdersPage() {
         price: Number(r.price) || 0,
       }));
     if (details.length === 0) {
-      showToast("Minimal 1 item PO", "error");
+      showToast(t("purchaseOrders.minOneItem"), "error");
       return;
     }
     setSaving(true);
@@ -154,16 +157,16 @@ export function PurchaseOrdersPage() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error ?? "Gagal");
+        throw new Error(err.error ?? t("purchaseOrders.createFailed"));
       }
-      showToast("Purchase Order dibuat", "success");
+      showToast(t("purchaseOrders.created"), "success");
       setDialogOpen(false);
       setForm({ supplier_id: "", po_number: "", order_date: new Date().toISOString().slice(0, 10), expected_date: "", notes: "" });
       setRows([{ item_id: "", quantity: "1", price: "" }]);
       setCurrentPage(1);
       await fetchOrders(1);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Gagal membuat PO", "error");
+      showToast(err instanceof Error ? err.message : t("purchaseOrders.createFailed"), "error");
     } finally {
       setSaving(false);
     }
@@ -173,9 +176,7 @@ export function PurchaseOrdersPage() {
     try {
       // Konfirmasi saat menerima barang — akan membuat transaksi pembelian + stok masuk
       if (status === "received") {
-        const ok = confirm(
-          "Terima barang dari PO ini?\n\nStok akan masuk otomatis dan transaksi pembelian akan dibuat.",
-        );
+        const ok = confirm(t("purchaseOrders.receiveConfirm"));
         if (!ok) return;
       }
       const res = await fetch(`/api/purchase-orders?id=${id}`, {
@@ -183,42 +184,42 @@ export function PurchaseOrdersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
-      if (!res.ok) throw new Error("Gagal");
+      if (!res.ok) throw new Error("Failed");
       const json = (await res.json()) as { purchase?: { id: number; invoice_number: string } | null };
       if (status === "received" && json.purchase) {
-        showToast(`Barang diterima — pembelian ${json.purchase.invoice_number} dibuat`, "success");
+        showToast(t("purchaseOrders.receivedWithPurchase", { invoice: json.purchase.invoice_number }), "success");
       } else {
-        showToast("Status PO diperbarui", "success");
+        showToast(t("purchaseOrders.statusUpdated"), "success");
       }
       await fetchOrders();
     } catch {
-      showToast("Gagal update status", "error");
+      showToast(t("purchaseOrders.statusUpdateFailed"), "error");
     }
   }
 
   async function handleDelete(id: number) {
-    if (!confirm("Hapus PO ini?")) return;
+    if (!confirm(t("purchaseOrders.deleteConfirm"))) return;
     try {
       const res = await fetch(`/api/purchase-orders?id=${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Gagal");
-      showToast("PO dihapus", "success");
+      if (!res.ok) throw new Error("Failed");
+      showToast(t("purchaseOrders.deleted"), "success");
       await fetchOrders();
     } catch {
-      showToast("Gagal menghapus", "error");
+      showToast(t("purchaseOrders.deleteFailed"), "error");
     }
   }
 
   return (
     <div className="space-y-6">
       <Navbar
-        title="Purchase Order"
-        subtitle="Buat PO ke supplier sebelum barang datang."
+        title={t("nav.purchaseOrders")}
+        subtitle={t("purchaseOrders.subtitle")}
       />
 
       <div className="flex items-center justify-between">
-        <span className="text-sm text-slate-500">{total} PO</span>
+        <span className="text-sm text-slate-500">{t("purchaseOrders.count", { n: total })}</span>
         <Button onClick={() => setDialogOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" /> Buat PO
+          <Plus className="h-4 w-4" /> {t("purchaseOrders.create")}
         </Button>
       </div>
 
@@ -227,14 +228,14 @@ export function PurchaseOrdersPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50 dark:bg-slate-800/60">
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">No. PO</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Supplier</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tgl PO</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tgl Estimasi</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Items</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">Total</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Status</TableHead>
-                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center w-28">Aksi</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("purchaseOrders.noPo")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("masterData.supplier")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("purchaseOrders.poDate")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("purchaseOrders.expectedDate")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("purchaseOrders.items")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">{t("common.total")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("common.status")}</TableHead>
+                <TableHead className="px-5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-center w-28">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -244,7 +245,7 @@ export function PurchaseOrdersPage() {
                 </TableCell></TableRow>
               ) : orders.length === 0 ? (
                 <TableRow><TableCell colSpan={8} className="py-16 text-center text-sm text-slate-400">
-                  Belum ada purchase order
+                  {t("purchaseOrders.noData")}
                 </TableCell></TableRow>
               ) : (
                 orders.map((po) => (
@@ -253,17 +254,17 @@ export function PurchaseOrdersPage() {
                       <p className="text-sm font-semibold text-slate-900 dark:text-white font-mono">{po.po_number}</p>
                     </TableCell>
                     <TableCell className="px-5 text-sm text-slate-600 dark:text-slate-300">{po.supplier?.name ?? "—"}</TableCell>
-                    <TableCell className="px-5 text-sm text-slate-500">{new Date(po.order_date).toLocaleDateString("id-ID")}</TableCell>
+                    <TableCell className="px-5 text-sm text-slate-500">{new Date(po.order_date).toLocaleDateString(locale)}</TableCell>
                     <TableCell className="px-5 text-sm text-slate-500">
-                      {po.expected_date ? new Date(po.expected_date).toLocaleDateString("id-ID") : "—"}
+                      {po.expected_date ? new Date(po.expected_date).toLocaleDateString(locale) : "—"}
                     </TableCell>
-                    <TableCell className="px-5 text-sm text-slate-500">{po.details?.length ?? 0} item</TableCell>
+                    <TableCell className="px-5 text-sm text-slate-500">{t("purchaseOrders.itemCount", { n: po.details?.length ?? 0 })}</TableCell>
                     <TableCell className="px-5 text-right text-sm font-mono text-slate-700 dark:text-slate-200">
                       {formatCurrency(Number(po.total_amount))}
                     </TableCell>
                     <TableCell className="px-5">
                       <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 border ${statusStyles[po.status] ?? ""}`}>
-                        {statusLabels[po.status] ?? po.status}
+                        {statusLabels[po.status] ? t(statusLabels[po.status]) : po.status}
                       </Badge>
                     </TableCell>
                     <TableCell className="px-5">
@@ -271,7 +272,7 @@ export function PurchaseOrdersPage() {
                         {po.status === "draft" && (
                           <>
                             <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleStatus(po.id, "sent")}>
-                              Kirim
+                              {t("purchaseOrders.send")}
                             </Button>
                             <Button size="sm" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-red-500 p-0" onClick={() => handleDelete(po.id)}>
                               <Trash2 className="h-3.5 w-3.5" />
@@ -280,7 +281,7 @@ export function PurchaseOrdersPage() {
                         )}
                         {po.status === "sent" && (
                           <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleStatus(po.id, "received")}>
-                            Terima
+                            {t("purchaseOrders.receive")}
                           </Button>
                         )}
                         {(po.status === "received" || po.status === "cancelled") && <span className="text-xs text-slate-400">—</span>}
@@ -294,7 +295,7 @@ export function PurchaseOrdersPage() {
         </div>
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-5 py-3 border-t border-slate-200 dark:border-slate-800">
-            <p className="text-xs text-slate-500">Halaman {currentPage} dari {totalPages}</p>
+            <p className="text-xs text-slate-500">{t("inventory.pageInfo", { page: currentPage, total: totalPages })}</p>
             <div className="flex gap-1">
               <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => setCurrentPage((p) => p - 1)}>
                 <ChevronLeft className="h-4 w-4" />
@@ -314,17 +315,17 @@ export function PurchaseOrdersPage() {
             <div className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-sky-500" />
               <div>
-                <DialogTitle>Buat Purchase Order</DialogTitle>
-                <DialogDescription>Pesanan ke supplier sebelum barang datang.</DialogDescription>
+                <DialogTitle>{t("purchaseOrders.createTitle")}</DialogTitle>
+                <DialogDescription>{t("purchaseOrders.createDesc")}</DialogDescription>
               </div>
             </div>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Supplier <span className="text-red-500">*</span></Label>
+                <Label>{t("masterData.supplier")} <span className="text-red-500">*</span></Label>
                 <Select value={form.supplier_id} onValueChange={(v) => setForm({ ...form, supplier_id: v })}>
-                  <SelectTrigger><SelectValue placeholder="Pilih supplier" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("purchaseOrders.selectSupplier")} /></SelectTrigger>
                   <SelectContent>
                     {suppliers.map((s) => (
                       <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
@@ -333,17 +334,17 @@ export function PurchaseOrdersPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>No. PO <span className="text-red-500">*</span></Label>
-                <Input value={form.po_number} onChange={(e) => setForm({ ...form, po_number: e.target.value })} placeholder="PO-2026-001" />
+                <Label>{t("purchaseOrders.noPo")} <span className="text-red-500">*</span></Label>
+                <Input value={form.po_number} onChange={(e) => setForm({ ...form, po_number: e.target.value })} placeholder={t("purchaseOrders.poNumberPlaceholder")} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Tanggal PO <span className="text-red-500">*</span></Label>
+                <Label>{t("purchaseOrders.orderDate")} <span className="text-red-500">*</span></Label>
                 <Input type="date" value={form.order_date} onChange={(e) => setForm({ ...form, order_date: e.target.value })} />
               </div>
               <div className="space-y-1.5">
-                <Label>Estimasi Datang</Label>
+                <Label>{t("purchaseOrders.expectedArrival")}</Label>
                 <Input type="date" value={form.expected_date} onChange={(e) => setForm({ ...form, expected_date: e.target.value })} />
               </div>
             </div>
@@ -351,15 +352,15 @@ export function PurchaseOrdersPage() {
             {/* Item rows */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Items <span className="text-red-500">*</span></Label>
+                <Label className="text-sm font-medium">{t("purchaseOrders.items")} <span className="text-red-500">*</span></Label>
                 <Button type="button" variant="outline" size="sm" onClick={handleAddRow} className="gap-1 text-xs">
-                  <Plus className="h-3.5 w-3.5" /> Tambah Item
+                  <Plus className="h-3.5 w-3.5" /> {t("purchaseOrders.addItem")}
                 </Button>
               </div>
               {rows.map((row, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <Select value={row.item_id} onValueChange={(v) => handleRowChange(idx, "item_id", v)}>
-                    <SelectTrigger className="flex-1"><SelectValue placeholder="Pilih barang" /></SelectTrigger>
+                    <SelectTrigger className="flex-1"><SelectValue placeholder={t("purchaseOrders.selectItemPlaceholder")} /></SelectTrigger>
                     <SelectContent>
                       {items.map((it) => (
                         <SelectItem key={it.id} value={String(it.id)}>
@@ -373,7 +374,7 @@ export function PurchaseOrdersPage() {
                     min="1"
                     value={row.quantity}
                     onChange={(e) => handleRowChange(idx, "quantity", e.target.value)}
-                    placeholder="Qty"
+                    placeholder={t("transactions.qty")}
                     className="w-20"
                   />
                   <Input
@@ -381,7 +382,7 @@ export function PurchaseOrdersPage() {
                     min="0"
                     value={row.price}
                     onChange={(e) => handleRowChange(idx, "price", e.target.value)}
-                    placeholder="Harga"
+                    placeholder={t("transactions.price")}
                     className="w-28"
                   />
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-500 shrink-0" onClick={() => handleRemoveRow(idx)}>
@@ -390,20 +391,20 @@ export function PurchaseOrdersPage() {
                 </div>
               ))}
               <div className="flex items-center justify-end text-sm pt-1">
-                <span className="text-slate-500 mr-2">Total:</span>
+                <span className="text-slate-500 mr-2">{t("common.total")}:</span>
                 <span className="font-semibold font-mono">{formatCurrency(totalAmount)}</span>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label>Catatan</Label>
-              <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Opsional" />
+              <Label>{t("masterData.notes")}</Label>
+              <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder={t("purchaseOrders.notesOptionalPlaceholder")} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Batal</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>{t("common.cancel")}</Button>
             <Button onClick={handleSubmit} disabled={saving} className="gap-2">
-              {saving && <Loader className="h-4 w-4 animate-spin" />} Simpan PO
+              {saving && <Loader className="h-4 w-4 animate-spin" />} {t("purchaseOrders.savePo")}
             </Button>
           </DialogFooter>
         </DialogContent>

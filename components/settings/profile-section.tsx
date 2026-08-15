@@ -17,10 +17,12 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useToast } from "@/lib/toast-provider";
+import { useLocale } from "@/lib/locales";
 
 /* ─── Mechanic Earnings Card ─────────────────────────────────────── */
 
 function MechanicEarningsCard() {
+  const { t } = useLocale();
   const [earnings, setEarnings] = useState<{ weeklySalary: number; commissionPct: number; weekCommission: number; estimatedWeekEarnings: number; weekServiceFees: number; weekTransactions: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -65,25 +67,25 @@ function MechanicEarningsCard() {
     <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-amber-200 dark:border-amber-800 overflow-hidden">
       <div className="p-5">
         <h4 className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-300 mb-4">
-          <Wallet className="h-4 w-4" /> Pendapatan Minggu Ini
+          <Wallet className="h-4 w-4" /> {t("settings.weeklyEarnings")}
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-3 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Gaji Pokok</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t("mechanic.baseSalary")}</p>
             <p className="mt-1 text-lg font-bold text-slate-800 dark:text-white">{formatCurrency(e.weeklySalary)}</p>
           </div>
           <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-3 text-center">
             <div className="flex items-center justify-center gap-1">
               <Wrench className="h-3 w-3 text-sky-500" />
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Komisi ({e.commissionPct}%)</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t("settings.commissionRate", { pct: e.commissionPct })}</p>
             </div>
             <p className="mt-1 text-lg font-bold text-amber-600 dark:text-amber-400">{formatCurrency(e.weekCommission)}</p>
-            <p className="text-[10px] text-slate-400">{e.weekTransactions} tx | Jasa: {formatCurrency(e.weekServiceFees)}</p>
+            <p className="text-[10px] text-slate-400">{t("settings.txCountService", { n: e.weekTransactions, value: formatCurrency(e.weekServiceFees) })}</p>
           </div>
           <div className="rounded-lg border-2 border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 p-3 text-center">
             <div className="flex items-center justify-center gap-1">
               <TrendingUp className="h-3 w-3 text-amber-600" />
-              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">Estimasi Total</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">{t("settings.estimatedTotal")}</p>
             </div>
             <p className="mt-1 text-xl font-extrabold text-amber-700 dark:text-amber-300">{formatCurrency(e.estimatedWeekEarnings)}</p>
           </div>
@@ -108,6 +110,7 @@ function ChangePasswordDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { showToast } = useToast();
+  const { t } = useLocale();
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -123,17 +126,17 @@ function ChangePasswordDialog({
     const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
     if (!currentPassword) {
-      showToast("Masukkan password saat ini.", "error", 3000);
+      showToast(t("settings.currentPasswordRequired"), "error", 3000);
       return;
     }
 
     if (newPassword.length < 6) {
-      showToast("Password baru minimal 6 karakter.", "error", 3000);
+      showToast(t("settings.newPasswordMin"), "error", 3000);
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      showToast("Password dan konfirmasi harus sama.", "error", 3000);
+      showToast(t("settings.passwordMismatch"), "error", 3000);
       return;
     }
 
@@ -149,7 +152,7 @@ function ChangePasswordDialog({
       const result = await response.json();
 
       if (!response.ok) {
-        showToast(result?.error || "Gagal mengubah password.", "error", 3000);
+        showToast(result?.error || t("settings.changePasswordFailed"), "error", 3000);
         return;
       }
 
@@ -160,7 +163,7 @@ function ChangePasswordDialog({
         e.currentTarget.reset();
       }, 2000);
     } catch {
-      showToast("Terjadi kesalahan jaringan.", "error", 3000);
+      showToast(t("settings.networkError"), "error", 3000);
     } finally {
       setIsLoading(false);
     }
@@ -171,12 +174,12 @@ function ChangePasswordDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {isSuccess ? "Password Diubah" : "Ganti Password"}
+            {isSuccess ? t("settings.passwordChanged") : t("auth.changePassword")}
           </DialogTitle>
           <DialogDescription>
             {isSuccess
-              ? "Password berhasil diubah."
-              : "Masukkan password saat ini dan password baru Anda."}
+              ? t("settings.passwordChangedDesc")
+              : t("settings.changePasswordDesc")}
           </DialogDescription>
         </DialogHeader>
 
@@ -186,21 +189,21 @@ function ChangePasswordDialog({
               <CheckCircle className="h-7 w-7 text-green-600 dark:text-green-400" />
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Password berhasil diubah!
+              {t("settings.passwordChangedSuccess")}
             </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="currentPassword">Password Saat Ini</Label>
+                <Label htmlFor="currentPassword">{t("settings.currentPasswordLabel")}</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                   <Input
                     id="currentPassword"
                     name="currentPassword"
                     type={showCurrent ? "text" : "password"}
-                    placeholder="Password saat ini"
+                    placeholder={t("settings.currentPasswordPlaceholder")}
                     required
                     className="pl-10 pr-10"
                   />
@@ -216,14 +219,14 @@ function ChangePasswordDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="newPassword">Password Baru</Label>
+                <Label htmlFor="newPassword">{t("auth.newPassword")}</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                   <Input
                     id="newPassword"
                     name="newPassword"
                     type={showNew ? "text" : "password"}
-                    placeholder="Minimal 6 karakter"
+                    placeholder={t("auth.min6Chars")}
                     required
                     minLength={6}
                     className="pl-10 pr-10"
@@ -240,7 +243,7 @@ function ChangePasswordDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Konfirmasi Password Baru</Label>
+                <Label htmlFor="confirmPassword">{t("auth.confirmNewPassword")}</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                   <Input
@@ -267,7 +270,7 @@ function ChangePasswordDialog({
             <DialogFooter>
               <DialogClose asChild>
                 <Button type="button" variant="outline">
-                  Batal
+                  {t("common.cancel")}
                 </Button>
               </DialogClose>
               <Button
@@ -278,10 +281,10 @@ function ChangePasswordDialog({
                 {isLoading ? (
                   <span className="flex items-center gap-2">
                     <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Menyimpan...
+                    {t("settings.saving")}
                   </span>
                 ) : (
-                  "Simpan Password"
+                  t("settings.savePassword")
                 )}
               </Button>
             </DialogFooter>
@@ -304,22 +307,23 @@ function EditProfileDialog({
   onSaved: () => void;
 }) {
   const { showToast } = useToast();
+  const { t } = useLocale();
   const [name, setName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
-      const t = window.setTimeout(() => {
+      const timer = window.setTimeout(() => {
         setName(data?.profile?.name ?? "");
       }, 0);
-      return () => window.clearTimeout(t);
+      return () => window.clearTimeout(timer);
     }
   }, [open, data]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) {
-      showToast("Nama tidak boleh kosong.", "error", 3000);
+      showToast(t("settings.nameRequired"), "error", 3000);
       return;
     }
 
@@ -336,15 +340,15 @@ function EditProfileDialog({
 
       if (!response.ok) {
         const result = await response.json();
-        showToast(result?.error || "Gagal menyimpan.", "error", 3000);
+        showToast(result?.error || t("settings.saveFailed"), "error", 3000);
         return;
       }
 
-      showToast("Profil berhasil diperbarui.", "success", 1500);
+      showToast(t("settings.profileUpdated"), "success", 1500);
       onSaved();
       onOpenChange(false);
     } catch {
-      showToast("Terjadi kesalahan jaringan.", "error", 3000);
+      showToast(t("settings.networkError"), "error", 3000);
     } finally {
       setIsSaving(false);
     }
@@ -354,18 +358,18 @@ function EditProfileDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit Profil</DialogTitle>
-          <DialogDescription>Perbarui nama tampilan Anda.</DialogDescription>
+          <DialogTitle>{t("settings.editProfileTitle")}</DialogTitle>
+          <DialogDescription>{t("settings.editProfileDesc")}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="py-4 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Nama Lengkap</Label>
+              <Label htmlFor="edit-name">{t("auth.fullName")}</Label>
               <Input
                 id="edit-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Nama Anda"
+                placeholder={t("auth.namePlaceholder")}
                 required
                 className="bg-slate-50 dark:bg-slate-800"
               />
@@ -393,6 +397,7 @@ function EditProfileDialog({
 }
 
 export function ProfileSection() {
+  const { t } = useLocale();
   const [data, setData] = useState<ProfileData | null>(null);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
@@ -458,9 +463,9 @@ export function ProfileSection() {
       .catch((err) => console.error("Failed to load profile:", err));
   }, []);
 
-  const name = data?.profile?.name ?? "Username";
+  const name = data?.profile?.name ?? t("settings.usernameFallback");
   const email = data?.user?.email ?? "email@example.com";
-  const role = data?.profile?.role ?? "User";
+  const role = data?.profile?.role ?? t("settings.userRoleFallback");
   const initials = name
     .split(" ")
     .filter(Boolean)
@@ -509,7 +514,7 @@ export function ProfileSection() {
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
-                aria-label="Ganti foto"
+                aria-label={t("settings.changePhotoAria")}
                 className="absolute bottom-0 right-0 p-2 bg-sky-500 text-white rounded-full shadow-lg hover:bg-sky-600 transition-colors border-4 border-white dark:border-slate-800"
               >
                 <Camera className="h-4 w-4" />
@@ -535,7 +540,7 @@ export function ProfileSection() {
                   className="bg-sky-500 hover:bg-sky-600 text-white gap-2"
                 >
                   <Pencil className="h-4 w-4" />
-                  Edit Profil
+                  {t("settings.editProfile")}
                 </Button>
                 <Button
                   variant="outline"
@@ -543,7 +548,7 @@ export function ProfileSection() {
                   onClick={() => setShowChangePassword(true)}
                 >
                   <KeyRound className="h-4 w-4" />
-                  Ganti Password
+                  {t("auth.changePassword")}
                 </Button>
               </div>
             </div>

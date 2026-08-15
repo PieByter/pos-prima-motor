@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, type JSX } from "react";
 import { Search, Loader2, Package, Users, ShoppingCart } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { NotificationDropdown } from "@/components/layout/notification-dropdown";
+import { useLocale } from "@/lib/locales";
 import { useRouter } from "next/navigation";
 
 interface NavbarProps {
@@ -21,6 +22,7 @@ type SearchResult = {
 
 export function Navbar({ title, subtitle }: NavbarProps): JSX.Element {
   const router = useRouter();
+  const { t, locale } = useLocale();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -88,14 +90,14 @@ export function Navbar({ title, subtitle }: NavbarProps): JSX.Element {
             type: "sale" as const,
             id: s.id,
             label: `${s.invoice_number ?? "#" + s.id}`,
-            subLabel: `${new Date(s.sale_date ?? "").toLocaleDateString("id-ID")} | Rp ${Number(s.total_amount ?? 0).toLocaleString("id-ID")}`,
+            subLabel: `${new Date(s.sale_date ?? "").toLocaleDateString(locale)} | Rp ${Number(s.total_amount ?? 0).toLocaleString(locale)}`,
             href: `/dashboard/transactions/sales/${s.id}`,
           })),
           ...items.map((i: { id: number; name?: string; sku?: string | null; selling_price?: number | string }) => ({
             type: "item" as const,
             id: i.id,
             label: i.name ?? "",
-            subLabel: `SKU: ${i.sku ?? "-"} | Rp ${Number(i.selling_price ?? 0).toLocaleString("id-ID")}`,
+            subLabel: `SKU: ${i.sku ?? "-"} | Rp ${Number(i.selling_price ?? 0).toLocaleString(locale)}`,
             href: `/dashboard/master-data`,
           })),
           ...customers.map((c: { id: number; name?: string; phone?: string | null }) => ({
@@ -116,7 +118,7 @@ export function Navbar({ title, subtitle }: NavbarProps): JSX.Element {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [locale, searchQuery]);
 
   const handleSelect = (result: SearchResult) => {
     setSearchOpen(false);
@@ -156,7 +158,7 @@ export function Navbar({ title, subtitle }: NavbarProps): JSX.Element {
           </kbd>
           <Input
             ref={inputRef}
-            placeholder="Cari invoice, barang, customer..."
+            placeholder={t("common.searchEverything")}
             className="w-56 pl-10 pr-12 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-sm"
             value={searchQuery}
             onChange={(e) => {
@@ -176,7 +178,7 @@ export function Navbar({ title, subtitle }: NavbarProps): JSX.Element {
                 </div>
               ) : results.length === 0 ? (
                 <div className="py-6 text-center text-sm text-slate-400">
-                  Tidak ditemukan untuk &ldquo;{searchQuery}&rdquo;
+                  {t("common.noResultsFor", { query: searchQuery })}
                 </div>
               ) : (
                 <div>

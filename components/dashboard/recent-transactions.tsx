@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { useFetch } from "@/lib/hooks/use-fetch";
 import { formatCurrency } from "@/lib/format";
+import { useLocale } from "@/lib/locales";
 import {
   DashboardCard,
   SectionHeader,
@@ -34,25 +35,26 @@ interface Transaction {
 }
 
 export function RecentTransactions() {
+  const { t } = useLocale();
   const { data: rawData, isLoading } = useFetch<TransactionRaw[]>(
     "/api/dashboard/recent",
   );
 
   const transactions: Transaction[] = (rawData ?? []).map((row) => ({
     id: row.invoice_number ?? `TRX-${row.id}`,
-    customer: row.customer?.name ?? "Walk-in Customer",
+    customer: row.customer?.name ?? t("dashboard.walkInCustomer"),
     amount: Number(row.total_amount ?? 0),
     status: row.status === "completed" ? "completed" : "processing",
   }));
 
   return (
     <DashboardCard>
-      <SectionHeader label="Latest activity" title="Recent Transactions">
+      <SectionHeader label={t("dashboard.latestActivity")} title={t("dashboard.recentTransactions")}>
         <Link
           href="/dashboard/transactions/sales"
           className="text-xs font-semibold text-sky-600 transition-colors hover:text-sky-500 dark:text-sky-400"
         >
-          View All
+          {t("common.seeAll")}
         </Link>
       </SectionHeader>
 
@@ -61,16 +63,16 @@ export function RecentTransactions() {
           <TableHeader>
             <TableRow className="bg-slate-50/60 dark:bg-slate-900/30">
               <TableHead className="text-[10px] font-bold uppercase tracking-[0.15em]">
-                Order ID
+                {t("dashboard.orderId")}
               </TableHead>
               <TableHead className="text-[10px] font-bold uppercase tracking-[0.15em]">
-                Customer
+                {t("masterData.customer")}
               </TableHead>
               <TableHead className="text-[10px] font-bold uppercase tracking-[0.15em]">
-                Amount
+                {t("dashboard.amount")}
               </TableHead>
               <TableHead className="text-[10px] font-bold uppercase tracking-[0.15em]">
-                Status
+                {t("common.status")}
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -87,7 +89,7 @@ export function RecentTransactions() {
                   colSpan={4}
                   className="py-8 text-center text-sm text-slate-400"
                 >
-                  Belum ada transaksi terbaru.
+                  {t("dashboard.noRecentTransactions")}
                 </TableCell>
               </TableRow>
             ) : (
@@ -108,11 +110,11 @@ export function RecentTransactions() {
                   <TableCell>
                     {tx.status === "completed" ? (
                       <Badge className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 hover:bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-300">
-                        Completed
+                        {t("dashboard.statusCompleted")}
                       </Badge>
                     ) : (
                       <Badge className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700 hover:bg-sky-50 dark:bg-sky-900/20 dark:text-sky-300">
-                        Processing
+                        {t("dashboard.statusProcessing")}
                       </Badge>
                     )}
                   </TableCell>

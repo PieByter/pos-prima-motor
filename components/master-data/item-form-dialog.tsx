@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { type Item } from "@/lib/data/items";
 import { itemSchema, type ItemFormData } from "@/lib/validations";
+import { useLocale } from "@/lib/locales";
 
 interface ItemFormDialogProps {
   open: boolean;
@@ -55,6 +56,7 @@ function ItemFormContent({
   onSave: (data: Omit<Item, "id" | "createdAt">) => void;
   onCancel: () => void;
 }) {
+  const { t } = useLocale();
   const isEdit = !!item;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -111,7 +113,7 @@ function ItemFormContent({
 
   // Load suppliers once
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void fetch("/api/suppliers?limit=500", { cache: "no-store" })
         .then((r) => (r.ok ? r.json() : null))
         .then((json) => {
@@ -122,12 +124,12 @@ function ItemFormContent({
         })
         .catch(() => setSupplierOptions([]));
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, []);
 
   // Load categories & brands once
   useEffect(() => {
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void Promise.all([
         fetch("/api/categories", { cache: "no-store" }).then((r) => (r.ok ? r.json() : [])),
         fetch("/api/brands", { cache: "no-store" }).then((r) => (r.ok ? r.json() : [])),
@@ -138,7 +140,7 @@ function ItemFormContent({
         })
         .catch(() => {});
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const isSupplierChecked = (id: number) => supplierLinks.some((l) => l.supplier_id === id);
@@ -236,7 +238,7 @@ function ItemFormContent({
             htmlFor="item-name"
             className="text-slate-900 dark:text-slate-200 text-sm font-medium"
           >
-            Nama Barang
+            {t("masterData.itemName")}
           </Label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
@@ -245,7 +247,7 @@ function ItemFormContent({
             <input
               id="item-name"
               type="text"
-              placeholder="Contoh: Oli Yamalube Sport"
+              placeholder={t("masterData.itemNamePlaceholder")}
               {...register("name")}
               className={`w-full pl-10 pr-4 py-3 rounded-lg border ${errors.name ? "border-red-500" : "border-slate-200 dark:border-slate-600"} bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-shadow text-sm`}
             />
@@ -260,14 +262,14 @@ function ItemFormContent({
               htmlFor="item-sku"
               className="text-slate-900 dark:text-slate-200 text-sm font-medium"
             >
-              SKU
+              {t("masterData.sku")}
             </Label>
             <button
               type="button"
               onClick={() => setValue("sku", generateSKU())}
               className="text-xs text-sky-500 font-semibold hover:underline"
             >
-              Auto-Generate
+              {t("common.autoGenerate")}
             </button>
           </div>
           <div className="relative">
@@ -277,7 +279,7 @@ function ItemFormContent({
             <input
               id="item-sku"
               type="text"
-              placeholder="SKU-XXXXX"
+              placeholder={t("masterData.skuPlaceholder")}
               {...register("sku")}
               className={`w-full pl-10 pr-4 py-3 rounded-lg border ${errors.sku ? "border-red-500" : "border-slate-200 dark:border-slate-600"} bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-shadow text-sm`}
             />
@@ -292,12 +294,13 @@ function ItemFormContent({
           htmlFor="item-description"
           className="text-slate-900 dark:text-slate-200 text-sm font-medium"
         >
-          Deskripsi <span className="text-slate-400 font-normal">(opsional)</span>
+          {t("masterData.description")}{" "}
+          <span className="text-slate-400 font-normal">({t("common.optional")})</span>
         </Label>
         <textarea
           id="item-description"
           rows={2}
-          placeholder="Deskripsi singkat barang, spesifikasi, dll."
+          placeholder={t("masterData.descriptionPlaceholder")}
           {...register("description")}
           className={`w-full px-4 py-3 rounded-lg border ${errors.description ? "border-red-500" : "border-slate-200 dark:border-slate-600"} bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-shadow text-sm resize-none`}
         />
@@ -311,7 +314,7 @@ function ItemFormContent({
             htmlFor="item-purchase"
             className="text-slate-900 dark:text-slate-200 text-sm font-medium"
           >
-            Harga Beli
+            {t("masterData.purchasePrice")}
           </Label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-semibold text-sm">
@@ -334,7 +337,7 @@ function ItemFormContent({
             htmlFor="item-selling"
             className="text-slate-900 dark:text-slate-200 text-sm font-medium"
           >
-            Harga Jual
+            {t("masterData.sellingPrice")}
           </Label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-semibold text-sm">
@@ -360,8 +363,8 @@ function ItemFormContent({
             htmlFor="item-warranty"
             className="text-slate-900 dark:text-slate-200 text-sm font-medium"
           >
-            Garansi{" "}
-            <span className="text-slate-400 font-normal">(bulan, opsional)</span>
+            {t("masterData.warranty")}{" "}
+            <span className="text-slate-400 font-normal">({t("masterData.monthsWord")}, {t("common.optional")})</span>
           </Label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-semibold text-sm">
@@ -378,7 +381,7 @@ function ItemFormContent({
           </div>
           {errors.warrantyMonths && <p className="text-xs text-red-500">{errors.warrantyMonths.message}</p>}
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Garansi default untuk barang ini saat dijual (mis. 3 = 3 bulan).
+            {t("masterData.warrantyHint")}
           </p>
         </div>
 
@@ -387,7 +390,7 @@ function ItemFormContent({
             htmlFor="item-stock"
             className="text-slate-900 dark:text-slate-200 text-sm font-medium"
           >
-            Stok Awal
+            {t("masterData.initialStock")}
           </Label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-semibold text-sm">
@@ -404,7 +407,7 @@ function ItemFormContent({
           </div>
           {errors.stock && <p className="text-xs text-red-500">{errors.stock.message}</p>}
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Jumlah stok saat pertama kali barang dibuat.
+            {t("masterData.initialStockHint")}
           </p>
         </div>
       </div>
@@ -416,8 +419,8 @@ function ItemFormContent({
             htmlFor="item-service"
             className="text-slate-900 dark:text-slate-200 text-sm font-medium"
           >
-            Biaya Jasa Service{" "}
-            <span className="text-slate-400 font-normal">(Opsional)</span>
+            {t("masterData.serviceFee")}{" "}
+            <span className="text-slate-400 font-normal">({t("common.optional")})</span>
           </Label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-semibold text-sm">
@@ -434,23 +437,23 @@ function ItemFormContent({
           </div>
           {errors.serviceFee && <p className="text-xs text-red-500">{errors.serviceFee.message}</p>}
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Isi jika barang ini termasuk jasa pasang/service.
+            {t("masterData.serviceFeeHint")}
           </p>
         </div>
 
         <div className="flex flex-col gap-2">
           <Label className="text-slate-900 dark:text-slate-200 text-sm font-medium">
-            Kategori
+            {t("masterData.category")}
           </Label>
           <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
             <SelectTrigger className={`py-3 h-auto ${errors.category ? "border-red-500" : ""}`}>
               <div className="flex items-center gap-2">
                 <Tag className="h-5 w-5 text-slate-400" />
-                <SelectValue placeholder="Pilih Kategori" />
+                <SelectValue placeholder={t("masterData.categoryPlaceholder")} />
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tanpa kategori</SelectItem>
+              <SelectItem value="">{t("masterData.noCategory")}</SelectItem>
               {categoryOptions.map((c) => (
                 <SelectItem key={c.id} value={String(c.id)}>
                   {c.name}
@@ -460,7 +463,7 @@ function ItemFormContent({
           </Select>
           {categoryOptions.length === 0 && (
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Belum ada kategori di database — bisa dibiarkan kosong.
+              {t("masterData.noCategoryHint")}
             </p>
           )}
         </div>
@@ -470,17 +473,17 @@ function ItemFormContent({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <div className="flex flex-col gap-2">
           <Label className="text-slate-900 dark:text-slate-200 text-sm font-medium">
-            Brand / Merek
+            {t("masterData.brandLabel")}
           </Label>
           <Select value={selectedBrandId} onValueChange={setSelectedBrandId}>
             <SelectTrigger className="py-3 h-auto">
               <div className="flex items-center gap-2">
                 <Tag className="h-5 w-5 text-slate-400" />
-                <SelectValue placeholder="Pilih brand" />
+                <SelectValue placeholder={t("masterData.brandPlaceholder")} />
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tanpa brand</SelectItem>
+              <SelectItem value="">{t("masterData.noBrand")}</SelectItem>
               {brandOptions.map((b) => (
                 <SelectItem key={b.id} value={String(b.id)}>
                   {b.name}
@@ -490,7 +493,7 @@ function ItemFormContent({
           </Select>
           {brandOptions.length === 0 && (
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Belum ada brand di database.
+              {t("masterData.noBrandHint")}
             </p>
           )}
         </div>
@@ -499,11 +502,11 @@ function ItemFormContent({
       {/* Supplier (many-to-many + harga per supplier) */}
       <div className="flex flex-col gap-2">
         <Label className="text-slate-900 dark:text-slate-200 text-sm font-medium">
-          Supplier
+          {t("masterData.supplier")}
         </Label>
         {supplierOptions.length === 0 ? (
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Belum ada supplier terdaftar. Tambahkan di menu Suppliers terlebih dahulu.
+            {t("masterData.noSupplierHint")}
           </p>
         ) : (
           <>
@@ -541,7 +544,7 @@ function ItemFormContent({
                     {checked && (
                       <div className="mt-2 flex items-center gap-1.5 pl-6">
                         <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">
-                          Harga beli
+                          {t("masterData.purchasePrice")}
                         </span>
                         <input
                           type="number"
@@ -559,8 +562,8 @@ function ItemFormContent({
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {supplierLinks.length > 0
-                ? `${supplierLinks.length} supplier dipilih — isi harga beli khusus per supplier (opsional, kosongkan untuk pakai harga beli utama).`
-                : "Pilih satu atau lebih supplier pemasok barang ini."}
+                ? t("masterData.supplierSelectedHint", { n: supplierLinks.length })
+                : t("masterData.supplierPickHint")}
             </p>
           </>
         )}
@@ -569,7 +572,7 @@ function ItemFormContent({
       {/* Foto Produk */}
       <div className="flex flex-col gap-2">
         <Label className="text-slate-900 dark:text-slate-200 text-sm font-medium">
-          Foto Produk
+          {t("masterData.photo")}
         </Label>
         <div
           onClick={() => fileInputRef.current?.click()}
@@ -612,10 +615,10 @@ function ItemFormContent({
                 <CloudUpload className="h-6 w-6 text-sky-500" />
               </div>
               <p className="text-slate-900 dark:text-white text-sm font-semibold mb-1">
-                Klik untuk upload atau drag and drop
+                {t("masterData.photoPlaceholder")}
               </p>
               <p className="text-slate-500 dark:text-slate-400 text-xs">
-                SVG, PNG, JPG atau GIF (Maks. 800×400px)
+                {t("masterData.photoHint")}
               </p>
             </>
           )}
@@ -640,7 +643,7 @@ function ItemFormContent({
           onClick={onCancel}
           className="px-5"
         >
-          Batal
+          {t("common.cancel")}
         </Button>
         <Button
           type="submit"
@@ -653,12 +656,12 @@ function ItemFormContent({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              Mengupload...
+              {t("masterData.uploading")}
             </span>
           ) : (
             <>
               <Save className="h-4 w-4" />
-              {isEdit ? "Simpan Perubahan" : "Simpan Barang"}
+              {isEdit ? t("common.saveChanges") : t("masterData.saveItem")}
             </>
           )}
         </Button>
@@ -673,6 +676,7 @@ export function ItemFormDialog({
   item,
   onSave,
 }: ItemFormDialogProps) {
+  const { t } = useLocale();
   const isEdit = !!item;
 
   return (
@@ -681,12 +685,12 @@ export function ItemFormDialog({
         {/* Header */}
         <DialogHeader className="p-6 border-b border-slate-200 dark:border-slate-700">
           <DialogTitle className="text-2xl font-bold">
-            {isEdit ? "Edit Barang" : "Tambah Barang Baru"}
+            {isEdit ? t("masterData.editItem") : t("masterData.addItemNew")}
           </DialogTitle>
           <DialogDescription className="text-slate-500 dark:text-slate-400 text-sm">
             {isEdit
-              ? "Perbarui detail barang di bawah ini."
-              : "Masukkan detail suku cadang atau layanan baru ke inventaris."}
+              ? t("masterData.editItemDescription")
+              : t("masterData.addItemDescription")}
           </DialogDescription>
         </DialogHeader>
 

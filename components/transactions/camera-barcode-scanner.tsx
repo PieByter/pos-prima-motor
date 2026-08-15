@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Camera, CameraOff, Loader2, ScanLine, AlertTriangle } from "lucide-react";
 import { BrowserMultiFormatReader } from "@zxing/library";
+import { useLocale } from "@/lib/locales";
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */
@@ -30,6 +31,7 @@ export function CameraBarcodeScanner({
   onOpenChange,
   onDetected,
 }: CameraBarcodeScannerProps) {
+  const { t } = useLocale();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -92,26 +94,20 @@ export function CameraBarcodeScanner({
       if (err instanceof Error && err.message === "MEDIA_DEVICES_UNAVAILABLE") {
         setError(
           typeof window !== "undefined" && window.isSecureContext
-            ? "Browser tidak mendukung akses kamera. Gunakan browser terbaru (Chrome/Edge/Safari)."
-            : "Kamera hanya berfungsi di koneksi aman (HTTPS). Buka aplikasi lewat HTTPS atau localhost."
+            ? t("scanner.cameraUnsupported")
+            : t("scanner.secureContextRequired")
         );
       } else if (err instanceof DOMException && err.name === "NotAllowedError") {
-        setError(
-          "Izin kamera ditolak. Izinkan akses kamera di pengaturan browser."
-        );
+        setError(t("scanner.permissionDenied"));
       } else if (err instanceof DOMException && err.name === "NotReadableError") {
-        setError(
-          "Kamera sedang digunakan aplikasi lain. Tutup aplikasi lain lalu coba lagi."
-        );
+        setError(t("scanner.cameraInUse"));
       } else if (err instanceof DOMException && err.name === "NotFoundError") {
-        setError("Tidak ditemukan kamera di perangkat ini.");
+        setError(t("scanner.cameraNotFound"));
       } else {
-        setError(
-          "Tidak dapat mengakses kamera. Pastikan perangkat memiliki kamera."
-        );
+        setError(t("scanner.cameraAccessFailed"));
       }
     }
-  }, []);
+  }, [t]);
 
   // Stop camera — pure media cleanup, no setState
   const cleanupMediaStream = useCallback(() => {
@@ -279,14 +275,14 @@ export function CameraBarcodeScanner({
               <ScanLine className="h-5 w-5 text-sky-600 dark:text-sky-400" />
             </div>
             <div>
-              <DialogTitle className="text-lg">Scan Barcode</DialogTitle>
+              <DialogTitle className="text-lg">{t("scanner.title")}</DialogTitle>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                Arahkan kamera ke barcode barang
+                {t("scanner.subtitle")}
               </p>
               {!detectorSupported && (
                 <span className="inline-flex items-center gap-1 mt-1 text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">
                   <AlertTriangle className="h-3 w-3" />
-                  ZXing fallback
+                  {t("scanner.zxingFallback")}
                 </span>
               )}
             </div>
@@ -309,7 +305,7 @@ export function CameraBarcodeScanner({
                 <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80">
                   <div className="flex flex-col items-center gap-3 text-center">
                     <Camera className="h-10 w-10 text-slate-400" />
-                    <p className="text-sm text-slate-300">Menyiapkan kamera...</p>
+                    <p className="text-sm text-slate-300">{t("scanner.preparingCamera")}</p>
                     <Loader2 className="h-6 w-6 animate-spin text-sky-400" />
                   </div>
                 </div>
@@ -337,7 +333,7 @@ export function CameraBarcodeScanner({
                   <div className="rounded-lg bg-emerald-500 px-5 py-3 text-center text-white shadow-lg">
                     <ScanLine className="mx-auto mb-1 h-6 w-6" />
                     <p className="text-lg font-bold">{detectedCode}</p>
-                    <p className="text-xs text-emerald-100">Barcode terdeteksi!</p>
+                    <p className="text-xs text-emerald-100">{t("scanner.detected")}</p>
                   </div>
                 </div>
               )}
@@ -346,7 +342,7 @@ export function CameraBarcodeScanner({
               <button
                 onClick={() => onOpenChange(false)}
                 className="absolute right-3 top-3 rounded-full bg-black/50 p-2 text-white hover:bg-black/70 transition-colors"
-                aria-label="Tutup scanner"
+                aria-label={t("scanner.close")}
               >
                 <CameraOff className="h-4 w-4" />
               </button>
@@ -356,10 +352,10 @@ export function CameraBarcodeScanner({
             <div className="rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 p-8 text-center">
               <CameraOff className="mx-auto mb-3 h-10 w-10 text-slate-300" />
               <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                {error || "Kamera tidak tersedia"}
+                {error || t("scanner.noCamera")}
               </p>
               <p className="mt-1 text-xs text-slate-400">
-                Masukkan kode barcode secara manual
+                {t("scanner.manualInput")}
               </p>
 
               <div className="mt-4 flex items-center gap-2 max-w-xs mx-auto">
@@ -373,7 +369,7 @@ export function CameraBarcodeScanner({
                       onOpenChange(false);
                     }
                   }}
-                  placeholder="Ketik kode barcode..."
+                  placeholder={t("scanner.manualPlaceholder")}
                   className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   autoFocus
                 />
@@ -386,7 +382,7 @@ export function CameraBarcodeScanner({
                     }
                   }}
                 >
-                  Cari
+                  {t("scanner.search")}
                 </Button>
               </div>
             </div>
@@ -403,8 +399,8 @@ export function CameraBarcodeScanner({
           <div className="rounded-lg bg-slate-50 dark:bg-slate-900/50 px-4 py-3">
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {detectorSupported
-                ? "Kompatibel: EAN-13, Code-128, Code-39, QR Code, UPC-A, dan lainnya."
-                : "Browser Anda tidak mendukung deteksi barcode otomatis. Gunakan input manual atau scanner fisik."}
+                ? t("scanner.compatibleFormats")
+                : t("scanner.browserNotSupported")}
             </p>
           </div>
         </div>

@@ -30,6 +30,7 @@ import {
 } from "@/lib/data/invoice-details";
 import { STATUS_STYLES } from "@/lib/data/transactions";
 import { openWhatsAppReceipt } from "@/lib/utils/whatsapp";
+import { useLocale } from "@/lib/locales";
 
 const ICON_MAP: Record<InvoiceItem["icon"], React.ElementType> = {
   wrench: Wrench,
@@ -62,14 +63,15 @@ export function TransactionDetail({
 }: TransactionDetailProps) {
   const router = useRouter();
   const { showToast } = useToast();
+  const { t } = useLocale();
 
   function handleWhatsApp() {
     if (invoice.entityPhone === "-" || !invoice.entityPhone) {
-      showToast("Customer tidak punya nomor HP", "error");
+      showToast(t("transactions.customerNoPhone"), "error");
       return;
     }
     const ok = openWhatsAppReceipt(invoice);
-    if (!ok) showToast("Nomor HP tidak valid", "error");
+    if (!ok) showToast(t("transactions.invalidPhone"), "error");
   }
   const statusStyle = STATUS_STYLES[invoice.status];
   const isSale = invoice.transactionType === "sale";
@@ -79,7 +81,7 @@ export function TransactionDetail({
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
         <Link href={backHref} className="hover:text-sky-500 transition-colors">
-          {isSale ? "Penjualan" : "Pembelian"}
+          {isSale ? t("nav.sales") : t("nav.purchases")}
         </Link>
         <span className="text-slate-300 dark:text-slate-600">/</span>
         <span className="font-medium text-slate-900 dark:text-white">
@@ -92,7 +94,7 @@ export function TransactionDetail({
         <div>
           <div className="flex items-center gap-4">
             <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Invoice #{invoice.invoiceNumber}
+              {t("transactions.invoiceLabel")} #{invoice.invoiceNumber}
             </h1>
             <span
               className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-sm font-medium ${statusStyle.bg}`}
@@ -111,10 +113,10 @@ export function TransactionDetail({
                 }`}
               >
                 {invoice.saleType === "service"
-                  ? "🔧 Service"
+                  ? t("transactions.typeService")
                   : invoice.saleType === "hybrid"
-                  ? "⚙️ Hybrid"
-                  : "🛒 Beli Barang"}
+                  ? t("transactions.typeHybrid")
+                  : t("transactions.typeGoods")}
               </span>
             )}
             {invoice.paymentStatus && invoice.paymentStatus !== "paid" && (
@@ -125,12 +127,12 @@ export function TransactionDetail({
                     : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
                 }`}
               >
-                {invoice.paymentStatus === "unpaid" ? "📝 Utang" : "💰 Sebagian (DP)"}
+                {invoice.paymentStatus === "unpaid" ? t("transactions.debt") : t("transactions.partialDp")}
               </span>
             )}
           </div>
           <p className="mt-1 text-slate-500 dark:text-slate-400">
-            Created on {invoice.createdAt}
+            {t("transactions.createdOn", { date: invoice.createdAt })}
           </p>
         </div>
         <div className="flex gap-3">
@@ -140,7 +142,7 @@ export function TransactionDetail({
             onClick={() => router.push(backHref)}
           >
             <ArrowLeft className="h-4 w-4" />
-            Kembali
+            {t("common.back")}
           </Button>
           <Button
             variant="outline"
@@ -150,17 +152,17 @@ export function TransactionDetail({
             }
           >
             <Pencil className="h-4 w-4" />
-            Edit
+            {t("common.edit")}
           </Button>
           {invoice.transactionType === "sale" && (
             <Button
               variant="outline"
               className="gap-2 text-emerald-600 dark:text-emerald-400 hover:text-emerald-600"
               onClick={handleWhatsApp}
-              title="Kirim struk ke WhatsApp customer"
+              title={t("transactions.sendWhatsAppTitle")}
             >
               <MessageCircle className="h-4 w-4" />
-              Kirim WA
+              {t("transactions.sendWhatsApp")}
             </Button>
           )}
           <Receipt invoice={invoice} />
@@ -176,25 +178,25 @@ export function TransactionDetail({
               <User className="h-5 w-5" />
             </div>
             <h3 className="font-semibold">
-              {isSale ? "Info Customer" : "Info Supplier"}
+              {isSale ? t("transactions.customerInfo") : t("transactions.supplierInfo")}
             </h3>
           </div>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-slate-500 dark:text-slate-400">Nama</span>
+              <span className="text-slate-500 dark:text-slate-400">{t("transactions.nameLabel")}</span>
               <span className="font-medium text-slate-900 dark:text-white">
                 {invoice.entityName}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500 dark:text-slate-400">Telepon</span>
+              <span className="text-slate-500 dark:text-slate-400">{t("transactions.phoneLabel")}</span>
               <span className="font-medium text-slate-900 dark:text-white">
                 {invoice.entityPhone}
               </span>
             </div>
             {invoice.entityVehicle && (
               <div className="flex justify-between">
-                <span className="text-slate-500 dark:text-slate-400">Kendaraan</span>
+                <span className="text-slate-500 dark:text-slate-400">{t("transactions.vehicleLabel")}</span>
                 <span className="font-medium text-slate-900 dark:text-white">
                   {invoice.entityVehicle}
                 </span>
@@ -202,7 +204,7 @@ export function TransactionDetail({
             )}
             {invoice.entityPlate && (
               <div className="flex justify-between">
-                <span className="text-slate-500 dark:text-slate-400">Plat Nomor</span>
+                <span className="text-slate-500 dark:text-slate-400">{t("masterData.plateNumber")}</span>
                 <span className="font-medium text-slate-900 dark:text-white">
                   {invoice.entityPlate}
                 </span>
@@ -218,29 +220,29 @@ export function TransactionDetail({
               <div className="flex size-8 items-center justify-center rounded-lg bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400">
                 <Wrench className="h-5 w-5" />
               </div>
-              <h3 className="font-semibold">Info Mekanik</h3>
+              <h3 className="font-semibold">{t("transactions.mechanicInfo")}</h3>
             </div>
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-slate-500 dark:text-slate-400">Ditugaskan</span>
+                <span className="text-slate-500 dark:text-slate-400">{t("transactions.assigned")}</span>
                 <span className="font-medium text-slate-900 dark:text-white">
                   {invoice.mechanicName}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500 dark:text-slate-400">Station</span>
+                <span className="text-slate-500 dark:text-slate-400">{t("transactions.station")}</span>
                 <span className="font-medium text-slate-900 dark:text-white">
                   {invoice.mechanicStation}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500 dark:text-slate-400">Mulai</span>
+                <span className="text-slate-500 dark:text-slate-400">{t("transactions.startTime")}</span>
                 <span className="font-medium text-slate-900 dark:text-white">
                   {invoice.jobStart}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500 dark:text-slate-400">Selesai</span>
+                <span className="text-slate-500 dark:text-slate-400">{t("transactions.endTime")}</span>
                 <span className="font-medium text-slate-900 dark:text-white">
                   {invoice.jobEnd}
                 </span>
@@ -255,18 +257,18 @@ export function TransactionDetail({
             <div className="flex size-8 items-center justify-center rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400">
               <CreditCard className="h-5 w-5" />
             </div>
-            <h3 className="font-semibold">Ringkasan Pembayaran</h3>
+            <h3 className="font-semibold">{t("transactions.paymentSummary")}</h3>
           </div>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-slate-500 dark:text-slate-400">Metode</span>
+              <span className="text-slate-500 dark:text-slate-400">{t("transactions.method")}</span>
               <span className="inline-flex items-center gap-1.5 font-medium text-slate-900 dark:text-white">
                 {invoice.paymentMethodIcon && getPaymentIcon(invoice.paymentMethodIcon)}
                 {invoice.paymentMethod}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500 dark:text-slate-400">ID Transaksi</span>
+              <span className="text-slate-500 dark:text-slate-400">{t("transactions.transactionId")}</span>
               <span className="font-medium text-slate-900 dark:text-white">
                 {invoice.transactionId}
               </span>
@@ -274,14 +276,14 @@ export function TransactionDetail({
             {invoice.cashAmount != null && (
               <>
                 <div className="flex justify-between">
-                  <span className="text-slate-500 dark:text-slate-400">Tunai Dibayar</span>
+                  <span className="text-slate-500 dark:text-slate-400">{t("transactions.cashAmount")}</span>
                   <span className="font-medium text-slate-900 dark:text-white">
                     {formatRupiah(invoice.cashAmount)}
                   </span>
                 </div>
                 {invoice.changeAmount != null && invoice.changeAmount > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-400">Kembalian</span>
+                    <span className="text-slate-500 dark:text-slate-400">{t("transactions.changeAmount")}</span>
                     <span className="font-medium text-emerald-600 dark:text-emerald-400">
                       {formatRupiah(invoice.changeAmount)}
                     </span>
@@ -293,14 +295,14 @@ export function TransactionDetail({
               <>
                 <div className="flex justify-between">
                   <span className="text-slate-500 dark:text-slate-400">
-                    {invoice.paymentStatus === "unpaid" ? "Uang Muka" : "Dibayar (DP)"}
+                    {invoice.paymentStatus === "unpaid" ? t("transactions.downPayment") : t("transactions.paidDp")}
                   </span>
                   <span className="font-medium text-slate-900 dark:text-white">
                     {formatRupiah(invoice.paidAmount)}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500 dark:text-slate-400">Sisa Tagihan</span>
+                  <span className="text-slate-500 dark:text-slate-400">{t("transactions.remainingBalance")}</span>
                   <span className="font-medium text-amber-600 dark:text-amber-400">
                     {formatRupiah(invoice.remainingAmount ?? invoice.grandTotal)}
                   </span>
@@ -309,7 +311,7 @@ export function TransactionDetail({
             )}
             <div className="mt-2 flex justify-between border-t border-dashed border-slate-200 dark:border-slate-600 pt-3">
               <span className="font-semibold text-slate-700 dark:text-slate-200">
-                Total Bayar
+                {t("transactions.totalPaid")}
               </span>
               <span className="font-bold text-sky-500">
                 {formatRupiah(invoice.grandTotal)}
@@ -323,7 +325,7 @@ export function TransactionDetail({
       <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden">
         <div className="border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 px-6 py-4">
           <h3 className="font-semibold text-slate-900 dark:text-white">
-            {isSale ? "Detail Service & Sparepart" : "Detail Barang Pembelian"}
+            {isSale ? t("transactions.detailServiceItems") : t("transactions.detailPurchaseItems")}
           </h3>
         </div>
         <div className="overflow-x-auto">
@@ -331,22 +333,22 @@ export function TransactionDetail({
             <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400">
               <tr>
                 <th className="px-6 py-3 font-medium" scope="col">
-                  Detail Item
+                  {t("transactions.detailItem")}
                 </th>
                 <th className="px-6 py-3 font-medium text-center" scope="col">
-                  Tipe
+                  {t("masterData.type")}
                 </th>
                 <th className="px-6 py-3 font-medium text-right" scope="col">
-                  Harga Satuan
+                  {t("transactions.pricePerUnit")}
                 </th>
                 <th className="px-6 py-3 font-medium text-center" scope="col">
-                  Qty
+                  {t("transactions.qty")}
                 </th>
                 <th className="px-6 py-3 font-medium text-right" scope="col">
-                  Diskon
+                  {t("transactions.discount")}
                 </th>
                 <th className="px-6 py-3 font-medium text-right" scope="col">
-                  Subtotal
+                  {t("transactions.subtotal")}
                 </th>
               </tr>
             </thead>
@@ -408,22 +410,22 @@ export function TransactionDetail({
         {/* Totals */}
         <div className="flex flex-col items-end gap-2 bg-slate-50/50 dark:bg-slate-900/30 p-6">
           <div className="flex w-full max-w-xs justify-between text-sm text-slate-600 dark:text-slate-300">
-            <span>Subtotal</span>
+            <span>{t("transactions.subtotal")}</span>
             <span>{formatRupiah(invoice.subtotal)}</span>
           </div>
           {invoice.totalDiscount > 0 && (
             <div className="flex w-full max-w-xs justify-between text-sm text-green-600 dark:text-green-400">
-              <span>Total Diskon</span>
+              <span>{t("transactions.totalDiscount")}</span>
               <span>- {formatRupiah(invoice.totalDiscount)}</span>
             </div>
           )}
           <div className="flex w-full max-w-xs justify-between text-sm text-slate-600 dark:text-slate-300">
-            <span>Pajak ({invoice.taxPercent}%)</span>
+            <span>{t("transactions.tax")} ({invoice.taxPercent}%)</span>
             <span>{formatRupiah(invoice.taxAmount)}</span>
           </div>
           <div className="my-2 h-px w-full max-w-xs bg-slate-200 dark:bg-slate-600" />
           <div className="flex w-full max-w-xs justify-between text-lg font-bold text-slate-900 dark:text-white">
-            <span>Grand Total</span>
+            <span>{t("transactions.grandTotal")}</span>
             <span>{formatRupiah(invoice.grandTotal)}</span>
           </div>
         </div>

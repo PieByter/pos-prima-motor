@@ -190,3 +190,32 @@
     display: none !important;
   }
 }
+
+/* ── Barcode Label Print Styles ── */
+@media print {
+  body.printing-barcode-labels * {
+    visibility: hidden;
+  }
+
+  body.printing-barcode-labels .barcode-labels-print,
+  body.printing-barcode-labels .barcode-labels-print * {
+    visibility: visible;
+  }
+
+  body.printing-barcode-labels .barcode-labels-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6mm;
+    padding: 6mm;
+    background: white;
+  }
+
+  body.printing-barcode-labels .barcode-labels-print > div {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}

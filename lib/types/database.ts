@@ -85,12 +85,31 @@ export type Customer = {
   birth_date: string | null
   customer_type: CustomerType
   notes: string | null
+  points: number
   created_at: string
   updated_at: string
 }
 
-export type CustomerInsert = Omit<Customer, 'id' | 'created_at' | 'updated_at'>
+export type CustomerInsert = Omit<Customer, 'id' | 'created_at' | 'updated_at' | 'points'>
 export type CustomerUpdate = Partial<CustomerInsert>
+
+// --- Point transactions (loyalty poin pelanggan) ---
+export type PointTransaction = {
+  id: number
+  customer_id: number
+  points: number
+  type: 'earn' | 'redeem' | 'adjust'
+  reference: string | null
+  created_by: string | null
+  created_at: string
+}
+
+export type CustomerLoyalty = {
+  customer_id: number
+  customer_name: string
+  balance: number
+  transactions: PointTransaction[]
+}
 
 // --- Vehicles (motor milik customer) ---
 export type Vehicle = {
@@ -194,6 +213,45 @@ export type PurchaseOrderDetailInsert = {
 export type PurchaseOrderWithDetails = PurchaseOrder & {
   supplier?: Supplier
   details: (PurchaseOrderDetail & { item?: Item })[]
+}
+
+// --- Estimates (estimasi / quotation service) ---
+export type EstimateStatus = 'draft' | 'sent' | 'approved' | 'converted' | 'cancelled'
+
+export type Estimate = {
+  id: number
+  customer_id: number | null
+  vehicle_id: number | null
+  estimate_number: string
+  description: string | null
+  status: EstimateStatus
+  total_amount: number
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type EstimateInsert = Omit<Estimate, 'id' | 'created_at' | 'updated_at'>
+
+export type EstimateItem = {
+  id: number
+  estimate_id: number
+  item_id: number | null
+  name: string
+  type: 'part' | 'service'
+  quantity: number
+  price: number
+  subtotal: number
+}
+
+/** Input baris estimasi (estimate_id & subtotal diisi di service) */
+export type EstimateItemInsert = Omit<EstimateItem, 'id' | 'estimate_id' | 'subtotal'>
+
+export type EstimateWithDetails = Estimate & {
+  customer?: { id: number; name: string; phone: string | null } | null
+  vehicle?: { id: number; plate_number: string; brand: string | null; model: string | null } | null
+  items: EstimateItem[]
 }
 
 // --- Salary Payments (gaji mekanik) ---

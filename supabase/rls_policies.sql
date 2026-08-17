@@ -102,6 +102,7 @@ ALTER TABLE public.salary_payments         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.purchase_orders         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.purchase_order_details  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.business_settings       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.point_transactions      ENABLE ROW LEVEL SECURITY;
 
 -- ───────────────────────────────────────────────────────────────────────────────
 -- 4. VIEW stock_summary — hardening (Postgres 15+):

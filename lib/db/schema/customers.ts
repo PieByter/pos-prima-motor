@@ -24,6 +24,7 @@ export const customers = pgTable('customers', {
     birth_date: date('birth_date'),
     customer_type: text('customer_type', { enum: ['retail', 'garage'] }).notNull().default('retail'),
     notes: text('notes'),
+    points: integer('points').notNull().default(0),
     created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
@@ -92,11 +93,39 @@ export const appointments = pgTable(
     ],
 )
 
+// ─── point_transactions (riwayat poin loyalty) ──────────────────────────────
+export const pointTransactions = pgTable(
+    'point_transactions',
+    {
+        id: serial('id').primaryKey(),
+        customer_id: integer('customer_id').notNull().references(() => customers.id, { onDelete: 'cascade' }),
+        // Positif = earn, negatif = redeem
+        points: integer('points').notNull(),
+        type: text('type', { enum: ['earn', 'redeem', 'adjust'] }).notNull().default('earn'),
+        reference: text('reference'),
+        created_by: uuid('created_by').references(() => profiles.id),
+        created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    },
+    (t) => [index('idx_point_transactions_customer').on(t.customer_id)],
+)
+
 // ─── relations ───────────────────────────────────────────────────────────────
 
 export const customersRelations = relations(customers, ({ many }) => ({
     sales: many(sales),
     vehicles: many(vehicles),
+    pointTransactions: many(pointTransactions),
+}))
+
+export const pointTransactionsRelations = relations(pointTransactions, ({ one }) => ({
+    customer: one(customers, {
+        fields: [pointTransactions.customer_id],
+        references: [customers.id],
+    }),
+    createdBy: one(profiles, {
+        fields: [pointTransactions.created_by],
+        references: [profiles.id],
+    }),
 }))
 
 export const vehiclesRelations = relations(vehicles, ({ one, many }) => ({

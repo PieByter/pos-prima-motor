@@ -33,6 +33,8 @@ export type LocaleDict = {
     vehicleDocuments: Record<string, string>;
     paymentHistory: Record<string, string>;
     vehicleHistory: Record<string, string>;
+    loyalty: Record<string, string>;
+    estimates: Record<string, string>;
     time: Record<string, string>;
     months: Record<string, string>;
     weekdays: Record<string, string>;

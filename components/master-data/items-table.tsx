@@ -13,6 +13,7 @@ import {
   Package2,
   Download,
   Trash,
+  Barcode,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ import { Loader } from "lucide-react";
 import { useToast } from "@/lib/toast-provider";
 import { useLocale } from "@/lib/locales";
 import { ItemFormDialog } from "./item-form-dialog";
+import { BarcodeLabelPrint, type BarcodeLabelItem } from "@/components/inventory/barcode-label-print";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -146,6 +148,8 @@ export function ItemsTable() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
+  const [labelPrintOpen, setLabelPrintOpen] = useState(false);
+  const [labelItems, setLabelItems] = useState<BarcodeLabelItem[]>([]);
 
   const filteredItems = items.filter((item) => {
     if (stockFilter === "all") return true;
@@ -239,6 +243,19 @@ export function ItemsTable() {
     const ids = [...selectedIds].join(",");
     window.open(`/api/export?type=items&ids=${ids}`, "_blank");
   }, [selectedIds]);
+
+  const openLabelPrint = useCallback(() => {
+    const targets = selectedIds.size > 0 ? items.filter((i) => selectedIds.has(i.id)) : items;
+    setLabelItems(
+      targets.map((i) => ({
+        id: i.id,
+        name: i.name,
+        sku: i.sku,
+        selling_price: i.sellingPrice,
+      })),
+    );
+    setLabelPrintOpen(true);
+  }, [items, selectedIds]);
 
   async function handleSaveItem(data: Omit<Item, "id" | "createdAt">) {
     const payload = {
@@ -396,6 +413,15 @@ export function ItemsTable() {
             >
               <Download className="h-3.5 w-3.5" />
               {t("common.export")}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 text-xs h-8"
+              onClick={openLabelPrint}
+            >
+              <Barcode className="h-3.5 w-3.5" />
+              {t("inventory.printBarcode")}
             </Button>
             <Button
               variant="destructive"
@@ -723,6 +749,11 @@ export function ItemsTable() {
         onOpenChange={setDialogOpen}
         item={editingItem}
         onSave={handleSaveItem}
+      />
+      <BarcodeLabelPrint
+        open={labelPrintOpen}
+        onOpenChange={setLabelPrintOpen}
+        items={labelItems}
       />
     </div>
   );

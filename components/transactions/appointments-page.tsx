@@ -22,8 +22,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Plus, Play, CheckCircle2, XCircle, User } from "lucide-react";
+import { Loader2, Plus, Play, CheckCircle2, XCircle, User, MessageCircle } from "lucide-react";
 import type { AppointmentWithDetails, AppointmentStatus } from "@/lib/services/appointments.service";
+import { openWhatsApp, buildAppointmentReminderMessage } from "@/lib/utils/whatsapp";
 import { useLocale } from "@/lib/locales";
 
 // Label pakai KEY locale — di-resolve via t() saat render
@@ -213,6 +214,18 @@ export function AppointmentsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 w-7 p-0 text-emerald-600"
+                            disabled={!a.customer?.phone}
+                            title={t("appointments.waReminderTitle")}
+                            onClick={() => {
+                              if (a.customer?.phone) openWhatsApp(a.customer.phone, buildAppointmentReminderMessage(a));
+                            }}
+                          >
+                            <MessageCircle className="h-3.5 w-3.5" />
+                          </Button>
                           {a.status === "waiting" && (
                             <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-sky-600" onClick={() => handleStatus(a.id, "in_progress")}>
                               <Play className="h-3 w-3" /> {t("mechanic.take")}

@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth'
 import { getSales, createSale, generateInvoiceNumber } from '@/lib/services/sales.service'
 import { notifyLargeTransaction, notifyMechanicSaleCreated, checkAndNotifyLowStock } from '@/lib/services/notification-triggers.service'
+import { earnPoints } from '@/lib/services/loyalty.service'
 
 export async function GET(request: NextRequest) {
   try {
@@ -81,6 +82,14 @@ export async function POST(request: NextRequest) {
       Number(sale.total_amount),
       sale.customer?.name ?? 'Walk-in',
     ).catch((e) => console.error('Failed to notify large tx:', e))
+
+    // Earn loyalty points for the customer (1 poin per Rp 10.000 belanja)
+    const loyaltyCustomerId = Number(header.customer_id)
+    if (loyaltyCustomerId) {
+      const earned = Math.max(1, Math.floor(Number(sale.total_amount) / 10000))
+      earnPoints(admin, loyaltyCustomerId, earned, sale.invoice_number, user.id)
+        .catch((e) => console.error('Failed to earn loyalty points:', e))
+    }
 
     // Check low stock for each item in the sale
     for (const d of details ?? []) {

@@ -4,8 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader, Phone, TrendingUp } from "lucide-react";
+import { Loader, Phone, TrendingUp, MessageCircle } from "lucide-react";
 import { formatRupiah } from "@/lib/data/items";
+import { openWhatsApp, buildReceivableReminderMessage } from "@/lib/utils/whatsapp";
 import { DashboardCard } from "@/components/dashboard/ui/dashboard-card";
 import type { ReceivablesReport, ReceivableRow } from "@/lib/types/database";
 import { useLocale } from "@/lib/locales";
@@ -168,12 +169,27 @@ export function ReceivablesTable() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <Link href={`/dashboard/transactions/sales/${r.sale_id}`}>
-                        <Button variant="outline" size="sm" className="gap-1.5 h-8">
-                          <TrendingUp className="h-3.5 w-3.5" />
-                          {t("reports.payNow")}
+                      <div className="flex justify-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 h-8"
+                          disabled={!r.customer_phone}
+                          title={t("reports.waReminderTitle")}
+                          onClick={() => {
+                            if (r.customer_phone) openWhatsApp(r.customer_phone, buildReceivableReminderMessage(r));
+                          }}
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          {t("reports.waReminder")}
                         </Button>
-                      </Link>
+                        <Link href={`/dashboard/transactions/sales/${r.sale_id}`}>
+                          <Button variant="outline" size="sm" className="gap-1.5 h-8">
+                            <TrendingUp className="h-3.5 w-3.5" />
+                            {t("reports.payNow")}
+                          </Button>
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))

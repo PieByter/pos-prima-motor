@@ -1,11 +1,14 @@
 "use client";
 
-import { ShoppingCart, AlertTriangle, ArrowRight } from "lucide-react";
+import { useCallback, useState } from "react";
+import { ShoppingCart, AlertTriangle, ArrowRight, PackagePlus } from "lucide-react";
 import { DashboardCard, SectionHeader, EmptyState, LoadingSpinner } from "@/components/dashboard/ui/dashboard-card";
 import { useFetch } from "@/lib/hooks/use-fetch";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { useLocale } from "@/lib/locales";
+import { useToast } from "@/lib/toast-provider";
+import { Button } from "@/components/ui/button";
 
 type RestockItem = {
   item_id: number;
@@ -21,9 +24,36 @@ type RestockItem = {
 
 export function RestockRecommendations() {
   const { t } = useLocale();
+  const { showToast } = useToast();
   const { data: items, isLoading } = useFetch<RestockItem[]>("/api/stock/restock-recommendations");
+  const [creatingPO, setCreatingPO] = useState(false);
 
   const data = items ?? [];
+
+  const handleAutoPO = useCallback(async () => {
+    if (creatingPO) return;
+    setCreatingPO(true);
+    try {
+      const res = await fetch("/api/purchase-orders/auto", { method: "POST", cache: "no-store" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(json.error ?? t("dashboard.autoPOFailed"));
+      }
+      if (json.created > 0 && json.skipped_no_supplier > 0) {
+        showToast(t("dashboard.autoPOCreatedSkip", { n: json.created, skipped: json.skipped_no_supplier }), "success");
+      } else if (json.created > 0) {
+        showToast(t("dashboard.autoPOCreated", { n: json.created }), "success");
+      } else if (json.skipped_no_supplier > 0) {
+        showToast(t("dashboard.autoPOSkipAll", { skipped: json.skipped_no_supplier }), "warning");
+      } else {
+        showToast(t("dashboard.autoPOEmpty"), "info");
+      }
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : t("dashboard.autoPOFailed"), "error");
+    } finally {
+      setCreatingPO(false);
+    }
+  }, [creatingPO, showToast, t]);
 
   return (
     <DashboardCard>
@@ -83,12 +113,24 @@ export function RestockRecommendations() {
         )}
 
         {data.length > 0 && (
-          <Link
-            href="/dashboard/inventory"
-            className="flex items-center justify-center gap-1 pt-1 text-xs font-semibold text-sky-600 hover:text-sky-500 dark:text-sky-400"
-          >
-            {t("common.seeAll")} <ArrowRight className="h-3 w-3" />
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 pt-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5 text-xs h-8 w-full sm:w-auto"
+              disabled={creatingPO}
+              onClick={handleAutoPO}
+            >
+              <PackagePlus className="h-3.5 w-3.5" />
+              {creatingPO ? t("common.loading") : t("dashboard.autoCreatePO")}
+            </Button>
+            <Link
+              href="/dashboard/inventory"
+              className="flex items-center justify-center gap-1 text-xs font-semibold text-sky-600 hover:text-sky-500 dark:text-sky-400"
+            >
+              {t("common.seeAll")} <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
         )}
       </div>
     </DashboardCard>

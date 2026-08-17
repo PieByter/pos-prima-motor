@@ -14,6 +14,7 @@ import {
   MapPin,
   Calendar,
   Loader,
+  Coins,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import type { Customer, PaginatedResponse } from "@/lib/types/database";
 import { CustomerFormDialog } from "@/components/customers/customer-form-dialog";
+import { CustomerPointsDialog } from "@/components/customers/customer-points-dialog";
 import { useLocale } from "@/lib/locales";
 
 const ITEMS_PER_PAGE = 10;
@@ -46,6 +48,7 @@ export function CustomersTable() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [pointsCustomer, setPointsCustomer] = useState<Customer | null>(null);
 
   async function readApiErrorMessage(res: Response, fallback: string) {
     try {
@@ -163,7 +166,7 @@ export function CustomersTable() {
     }
   }
 
-  async function handleSave(data: Omit<Customer, "id" | "created_at" | "updated_at">) {
+  async function handleSave(data: Omit<Customer, "id" | "created_at" | "updated_at" | "points">) {
     try {
       if (editingCustomer) {
         const res = await fetch(`/api/customers/${editingCustomer.id}`, {
@@ -299,6 +302,12 @@ export function CustomersTable() {
                     {t("masterData.joined")}
                   </div>
                 </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5 text-center w-20">
+                  <div className="flex items-center justify-center gap-1.5">
+                    <Coins className="h-3 w-3" />
+                    {t("masterData.points")}
+                  </div>
+                </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-5 text-center w-24">
                   {t("common.actions")}
                 </TableHead>
@@ -307,7 +316,7 @@ export function CustomersTable() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-16 text-center">
+                  <TableCell colSpan={9} className="py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <Loader className="h-7 w-7 animate-spin text-emerald-500" />
                       <span className="text-sm text-slate-500 dark:text-slate-400">
@@ -318,7 +327,7 @@ export function CustomersTable() {
                 </TableRow>
               ) : customers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-16 text-center">
+                  <TableCell colSpan={9} className="py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-full">
                         <Users className="h-6 w-6 text-slate-400" />
@@ -419,9 +428,26 @@ export function CustomersTable() {
                       </span>
                     </TableCell>
 
+                    {/* Poin */}
+                    <TableCell className="px-5 text-center">
+                      <span className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                        <Coins className="h-3.5 w-3.5" />
+                        {customer.points ?? 0}
+                      </span>
+                    </TableCell>
+
                     {/* Actions */}
                     <TableCell className="px-5 text-center">
                       <div className="flex items-center justify-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                          title={t("masterData.pointsManage")}
+                          onClick={() => setPointsCustomer(customer)}
+                        >
+                          <Coins className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -502,6 +528,14 @@ export function CustomersTable() {
         onOpenChange={setDialogOpen}
         customer={editingCustomer}
         onSave={handleSave}
+      />
+      <CustomerPointsDialog
+        open={!!pointsCustomer}
+        onOpenChange={(o) => {
+          if (!o) setPointsCustomer(null);
+        }}
+        customer={pointsCustomer}
+        onUpdated={() => void fetchCustomers()}
       />
     </div>
   );

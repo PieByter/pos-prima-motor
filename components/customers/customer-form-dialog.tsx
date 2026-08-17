@@ -25,7 +25,7 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   customer: Customer | null;
-  onSave: (data: Omit<Customer, "id" | "created_at" | "updated_at">) => void;
+  onSave: (data: Omit<Customer, "id" | "created_at" | "updated_at" | "points">) => void;
 };
 
 const emptyVehicleForm = { plate_number: "", brand: "", model: "", year: "" };

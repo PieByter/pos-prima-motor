@@ -22,8 +22,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Trash2, CalendarClock } from "lucide-react";
+import { Loader2, Plus, Trash2, CalendarClock, MessageCircle } from "lucide-react";
 import type { VehicleDocumentWithVehicle } from "@/lib/services/vehicle-documents.service";
+import { openWhatsApp, buildVehicleDocReminderMessage } from "@/lib/utils/whatsapp";
 import { useUserRole } from "@/lib/hooks/use-user-role";
 import { useLocale } from "@/lib/locales";
 
@@ -222,9 +223,23 @@ export function VehicleDocumentsPage() {
                         </td>
                         {isAdmin && (
                           <td className="px-4 py-3 text-right">
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500" onClick={() => handleDelete(d.id)}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 gap-1 text-emerald-600"
+                                disabled={!d.vehicle?.customers?.phone}
+                                title={t("vehicleDocuments.waReminderTitle")}
+                                onClick={() => {
+                                  if (d.vehicle?.customers?.phone) openWhatsApp(d.vehicle.customers.phone, buildVehicleDocReminderMessage(d));
+                                }}
+                              >
+                                <MessageCircle className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500" onClick={() => handleDelete(d.id)}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                           </td>
                         )}
                       </tr>

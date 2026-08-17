@@ -577,6 +577,20 @@ const en: LocaleDict = {
         searchItem: "Search item...",
     },
 
+    // ── Payment History Dialog ────────────────────────────────────
+    paymentHistory: {
+        title: "Payment History",
+        totalPaid: "Total paid: {amount} · {count} payments",
+        noPayments: "No payments recorded yet.",
+        noPaymentsShort: "No payments yet.",
+        deleteConfirm: "Delete this payment? Outstanding balance will be recalculated.",
+        deleteFailed: "Failed to delete payment",
+        loadFailed: "Failed to load payment history",
+        loadFailedShort: "Failed to load history",
+        deleteAria: "Delete payment",
+        deleteTitle: "Cancel payment",
+    },
+
     inventory: {
         title: "Inventory",
         subtitle: "Monitor stock, low-stock items, and movements.",
@@ -1173,6 +1187,26 @@ const en: LocaleDict = {
         typeStnk: "STNK (5-year)",
         stnk: "STNK",
         tax: "Tax",
+    },
+
+    // ── Vehicle History Dialog ────────────────────────────────────
+    vehicleHistory: {
+        title: "Motor Service History",
+        transactionCount: "Transactions",
+        totalSpent: "Total Spent",
+        serviceCount: "Service Times",
+        noTransactions: "No transactions for this motorcycle yet",
+        saleTypePurchase: "🛒 Buy",
+        saleTypeService: "🔧 Service",
+        saleTypeHybrid: "⚙️ Hybrid",
+        saleTypeFallback: "Transaction",
+        paymentStatusPaid: "Paid",
+        paymentStatusPartial: "Partial",
+        paymentStatusUnpaid: "Debt",
+        noItems: "No items",
+        serviceFee: "service {amount}",
+        total: "Total",
+        loadFailed: "Failed to load history",
     },
 
     time: {

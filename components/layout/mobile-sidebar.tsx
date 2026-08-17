@@ -296,7 +296,7 @@ export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
               type="button"
               onClick={handleLogout}
               className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition-colors shrink-0"
-              title="Keluar"
+              title={t("nav.logout")}
             >
               <LogOut className="h-4 w-4" />
             </button>

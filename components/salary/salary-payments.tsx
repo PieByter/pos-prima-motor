@@ -146,17 +146,17 @@ export function SalaryPaymentsPage() {
   return (
     <div className="space-y-6">
       <Navbar
-        title="Gaji Mekanik"
-        subtitle="Catat pembayaran gaji mingguan mekanik."
+        title={t("nav.salaryPayments")}
+        subtitle={t("salary.subtitle")}
       />
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
           <Wallet className="h-4 w-4" />
-          {total} catatan pembayaran
+          {t("salary.count", { n: total })}
         </div>
         <Button onClick={() => setDialogOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" /> Bayar Gaji
+          <Plus className="h-4 w-4" /> {t("salary.paySalary")}
         </Button>
       </div>
 

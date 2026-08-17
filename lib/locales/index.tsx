@@ -31,6 +31,8 @@ export type LocaleDict = {
     stockAdjustments: Record<string, string>;
     warrantyClaims: Record<string, string>;
     vehicleDocuments: Record<string, string>;
+    paymentHistory: Record<string, string>;
+    vehicleHistory: Record<string, string>;
     time: Record<string, string>;
     months: Record<string, string>;
     weekdays: Record<string, string>;

@@ -13,17 +13,12 @@ import { Bike, History, Loader2, Wrench, Package } from "lucide-react";
 import type { Vehicle } from "@/lib/types/database";
 import { formatRupiah } from "@/lib/data/items";
 import type { VehicleServiceHistoryEntry } from "@/lib/services/vehicles.service";
+import { useLocale } from "@/lib/locales";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   vehicle: Vehicle | null;
-};
-
-const SALE_TYPE_LABEL: Record<string, string> = {
-  purchase: "🛒 Beli",
-  service: "🔧 Service",
-  hybrid: "⚙️ Hybrid",
 };
 
 function saleTypeClass(type: string) {
@@ -38,13 +33,20 @@ function paymentStatusClass(status: string) {
   return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300";
 }
 
-const PAYMENT_STATUS_LABEL: Record<string, string> = {
-  paid: "Lunas",
-  partial: "Sebagian",
-  unpaid: "Utang",
-};
-
 export function VehicleHistoryDialog({ open, onOpenChange, vehicle }: Props) {
+  const { t, locale } = useLocale();
+  const saleTypeLabel = (type: string) =>
+    type === "service"
+      ? t("vehicleHistory.saleTypeService")
+      : type === "hybrid"
+        ? t("vehicleHistory.saleTypeHybrid")
+        : t("vehicleHistory.saleTypePurchase");
+  const paymentStatusLabel = (status: string) =>
+    status === "paid"
+      ? t("vehicleHistory.paymentStatusPaid")
+      : status === "partial"
+        ? t("vehicleHistory.paymentStatusPartial")
+        : t("vehicleHistory.paymentStatusUnpaid");
   const [entries, setEntries] = useState<VehicleServiceHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,11 +63,11 @@ export function VehicleHistoryDialog({ open, onOpenChange, vehicle }: Props) {
           cache: "no-store",
         });
         if (cancelled) return;
-        if (!res.ok) throw new Error("Gagal memuat riwayat");
+        if (!res.ok) throw new Error(t("vehicleHistory.loadFailed"));
         const data = (await res.json()) as VehicleServiceHistoryEntry[];
         setEntries(Array.isArray(data) ? data : []);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Gagal memuat riwayat");
+        if (!cancelled) setError(err instanceof Error ? err.message : t("vehicleHistory.loadFailed"));
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -74,7 +76,7 @@ export function VehicleHistoryDialog({ open, onOpenChange, vehicle }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [open, vehicle]);
+  }, [open, vehicle, t]);
 
   const totalSpent = entries.reduce((sum, e) => sum + e.total_amount, 0);
 
@@ -87,7 +89,7 @@ export function VehicleHistoryDialog({ open, onOpenChange, vehicle }: Props) {
               <History className="h-5 w-5 text-sky-600 dark:text-sky-400" />
             </div>
             <div>
-              <DialogTitle className="text-lg">Riwayat Service Motor</DialogTitle>
+              <DialogTitle className="text-lg">{t("vehicleHistory.title")}</DialogTitle>
               <DialogDescription className="mt-0.5 text-sm">
                 {vehicle
                   ? `${vehicle.plate_number}${vehicle.model ? ` · ${vehicle.model}` : ""}`
@@ -105,19 +107,19 @@ export function VehicleHistoryDialog({ open, onOpenChange, vehicle }: Props) {
                 <p className="text-2xl font-bold text-slate-900 dark:text-white">
                   {entries.length}
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Transaksi</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t("vehicleHistory.transactionCount")}</p>
               </div>
               <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 p-3 text-center">
                 <p className="text-2xl font-bold text-sky-600 dark:text-sky-400">
                   {formatRupiah(totalSpent)}
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Total Belanja</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t("vehicleHistory.totalSpent")}</p>
               </div>
               <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 p-3 text-center">
                 <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                   {entries.filter((e) => e.service_fee_total > 0).length}
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Kali Service</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t("vehicleHistory.serviceCount")}</p>
               </div>
             </div>
           )}
@@ -131,7 +133,7 @@ export function VehicleHistoryDialog({ open, onOpenChange, vehicle }: Props) {
           ) : entries.length === 0 ? (
             <div className="flex flex-col items-center py-12 text-slate-400">
               <Bike className="h-10 w-10 mb-2 opacity-30" />
-              <p className="text-sm font-medium">Belum ada transaksi untuk motor ini</p>
+              <p className="text-sm font-medium">{t("vehicleHistory.noTransactions")}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -149,12 +151,12 @@ export function VehicleHistoryDialog({ open, onOpenChange, vehicle }: Props) {
                       <span
                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${saleTypeClass(e.sale_type)}`}
                       >
-                        {SALE_TYPE_LABEL[e.sale_type] ?? "Transaksi"}
+                        {saleTypeLabel(e.sale_type)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-xs text-slate-500 dark:text-slate-400">
-                        {new Date(e.sale_date).toLocaleDateString("id-ID", {
+                        {new Date(e.sale_date).toLocaleDateString(locale, {
                           day: "numeric",
                           month: "short",
                           year: "numeric",
@@ -163,7 +165,7 @@ export function VehicleHistoryDialog({ open, onOpenChange, vehicle }: Props) {
                       <span
                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${paymentStatusClass(e.payment_status)}`}
                       >
-                        {PAYMENT_STATUS_LABEL[e.payment_status] ?? "—"}
+                        {paymentStatusLabel(e.payment_status)}
                       </span>
                     </div>
                   </div>
@@ -171,7 +173,7 @@ export function VehicleHistoryDialog({ open, onOpenChange, vehicle }: Props) {
                   {/* Item detail */}
                   <div className="px-4 py-3 space-y-1.5">
                     {e.items.length === 0 ? (
-                      <p className="text-xs text-slate-400">Tanpa item</p>
+                      <p className="text-xs text-slate-400">{t("vehicleHistory.noItems")}</p>
                     ) : (
                       e.items.map((item, idx) => (
                         <div key={idx} className="flex items-center justify-between gap-2 text-sm">
@@ -186,7 +188,7 @@ export function VehicleHistoryDialog({ open, onOpenChange, vehicle }: Props) {
                           </span>
                           {item.service_fee > 0 && (
                             <span className="text-xs text-violet-600 dark:text-violet-400 shrink-0">
-                              jasa {formatRupiah(item.service_fee)}
+                              {t("vehicleHistory.serviceFee", { amount: formatRupiah(item.service_fee) })}
                             </span>
                           )}
                         </div>
@@ -196,7 +198,7 @@ export function VehicleHistoryDialog({ open, onOpenChange, vehicle }: Props) {
 
                   {/* Total */}
                   <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-700">
-                    <span className="text-xs text-slate-500 dark:text-slate-400">Total</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">{t("vehicleHistory.total")}</span>
                     <span className="text-sm font-bold text-slate-900 dark:text-white">
                       {formatRupiah(e.total_amount)}
                     </span>
@@ -209,7 +211,7 @@ export function VehicleHistoryDialog({ open, onOpenChange, vehicle }: Props) {
 
         <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex justify-end">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Tutup
+            {t("common.close")}
           </Button>
         </div>
       </DialogContent>

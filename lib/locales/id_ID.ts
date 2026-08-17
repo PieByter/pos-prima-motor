@@ -584,6 +584,20 @@ const id: LocaleDict = {
         searchItem: "Cari item...",
     },
 
+    // ── Payment History Dialog ────────────────────────────────────
+    paymentHistory: {
+        title: "Riwayat Pembayaran",
+        totalPaid: "Total dibayar: {amount} · {count} pembayaran",
+        noPayments: "Belum ada pembayaran tercatat.",
+        noPaymentsShort: "Belum ada pembayaran.",
+        deleteConfirm: "Yakin ingin menghapus pembayaran ini? Status utang akan dihitung ulang.",
+        deleteFailed: "Gagal menghapus pembayaran",
+        loadFailed: "Gagal memuat riwayat pembayaran",
+        loadFailedShort: "Gagal memuat riwayat",
+        deleteAria: "Hapus pembayaran",
+        deleteTitle: "Batalkan pembayaran",
+    },
+
     // ── Inventory / Stock ──────────────────────────────────────────
     inventory: {
         title: "Inventory",
@@ -1192,6 +1206,26 @@ const id: LocaleDict = {
         typeStnk: "STNK (5 Tahunan)",
         stnk: "STNK",
         tax: "Pajak",
+    },
+
+    // ── Vehicle History Dialog ────────────────────────────────────
+    vehicleHistory: {
+        title: "Riwayat Service Motor",
+        transactionCount: "Transaksi",
+        totalSpent: "Total Belanja",
+        serviceCount: "Kali Service",
+        noTransactions: "Belum ada transaksi untuk motor ini",
+        saleTypePurchase: "🛒 Beli",
+        saleTypeService: "🔧 Service",
+        saleTypeHybrid: "⚙️ Hybrid",
+        saleTypeFallback: "Transaksi",
+        paymentStatusPaid: "Lunas",
+        paymentStatusPartial: "Sebagian",
+        paymentStatusUnpaid: "Utang",
+        noItems: "Tanpa item",
+        serviceFee: "jasa {amount}",
+        total: "Total",
+        loadFailed: "Gagal memuat riwayat",
     },
 
     // ── Time ───────────────────────────────────────────────────────

@@ -92,7 +92,7 @@ export function MechanicDashboard() {
         subtitle={t("mechanic.dashboardSubtitle")}
       />
       {isAdmin && (
-        <p className="text-xs text-slate-400 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-lg px-3 py-2">
+        <p className="my-4 text-xs text-slate-400 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-lg px-3 py-2">
           {t("mechanic.adminPreviewNote")}
         </p>
       )}

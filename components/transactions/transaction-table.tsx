@@ -8,6 +8,7 @@ import {
   SlidersHorizontal,
   Eye,
   Pencil,
+  Trash2,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -16,6 +17,8 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/lib/toast-provider";
+import { useLocale } from "@/lib/locales";
 import {
   Select,
   SelectContent,
@@ -94,6 +97,8 @@ export function TransactionTable({
   showMechanic = true,
 }: TransactionTableProps) {
   const router = useRouter();
+  const { t: translate } = useLocale();
+  const { showToast } = useToast();
   const [transactions, setTransactions] = useState<UiTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -172,6 +177,28 @@ export function TransactionTable({
 
     loadTransactions();
   }, [type]);
+
+  async function handleDelete(transaction: UiTransaction) {
+    if (!confirm(translate("common.confirmDelete"))) return;
+    try {
+      const endpoint =
+        type === "sale"
+          ? `/api/sales/${transaction.id}`
+          : `/api/purchases/${transaction.id}`;
+      const res = await fetch(endpoint, { method: "DELETE" });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error ?? translate("common.failedToDelete"));
+      }
+      showToast(translate("common.successfullyDeleted"), "success");
+      setTransactions((prev) => prev.filter((x) => x.id !== transaction.id));
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : translate("common.failedToDelete"),
+        "error"
+      );
+    }
+  }
 
   // Filter
   const filtered = useMemo(() => transactions.filter((t) => {
@@ -474,6 +501,18 @@ export function TransactionTable({
                             }}
                           >
                             <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-slate-400 hover:text-red-500"
+                            title={translate("common.delete")}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(t);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </td>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Pencil,
+  Trash2,
   MessageCircle,
   User,
   Wrench,
@@ -75,6 +76,28 @@ export function TransactionDetail({
   }
   const statusStyle = STATUS_STYLES[invoice.status];
   const isSale = invoice.transactionType === "sale";
+
+  async function handleDelete() {
+    if (!confirm(t("common.confirmDelete"))) return;
+    try {
+      const endpoint = isSale
+        ? `/api/sales/${invoice.id}`
+        : `/api/purchases/${invoice.id}`;
+      const res = await fetch(endpoint, { method: "DELETE" });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error ?? t("common.failedToDelete"));
+      }
+      showToast(t("common.successfullyDeleted"), "success");
+      router.push(backHref);
+      router.refresh();
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : t("common.failedToDelete"),
+        "error"
+      );
+    }
+  }
 
   return (
     <div className="max-w-6xl space-y-6">
@@ -165,6 +188,14 @@ export function TransactionDetail({
               {t("transactions.sendWhatsApp")}
             </Button>
           )}
+          <Button
+            variant="outline"
+            className="gap-2 text-red-600 dark:text-red-400 hover:text-red-600"
+            onClick={handleDelete}
+          >
+            <Trash2 className="h-4 w-4" />
+            {t("common.delete")}
+          </Button>
           <Receipt invoice={invoice} />
         </div>
       </div>

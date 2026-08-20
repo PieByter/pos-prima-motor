@@ -25,7 +25,7 @@ export async function getPurchaseOrders(
 
         let query = supabase
             .from('purchase_orders')
-            .select('*, suppliers(id, name), purchase_order_details(*, items(id, name, sku))', { count: 'exact' })
+            .select('*, suppliers(id, name, phone), purchase_order_details(*, items(id, name, sku))', { count: 'exact' })
             .order('order_date', { ascending: false })
             .range(from, to)
 
@@ -70,7 +70,7 @@ export async function getPurchaseOrderById(
     try {
         const { data, error } = await supabase
             .from('purchase_orders')
-            .select('*, suppliers(id, name), purchase_order_details(*, items(id, name, sku))')
+            .select('*, suppliers(id, name, phone), purchase_order_details(*, items(id, name, sku))')
             .eq('id', id)
             .single()
 

@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createNotification } from '@/lib/services/notifications.service'
 import type { NotificationType } from '@/lib/types/notifications'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 /**
  * Centralized notification dispatching.
@@ -130,4 +131,99 @@ export async function notifyMechanicSaleCreated(
         is_read: false,
         link: `/dashboard/transactions/sales/${saleId}`,
     })
+}
+
+/**
+ * Notifikasi otomatis piutang jatuh tempo — dipanggil saat laporan piutang
+ * dibuka (fire-and-forget). Hanya membuat notifikasi SEKALI per invoice
+ * (deduplikasi berdasarkan link + judul yang sudah ada).
+ */
+export async function notifyOverdueReceivables(supabase: SupabaseClient): Promise<number> {
+    try {
+        // Ambil semua penjualan belum lunas
+        const { data: sales } = await supabase
+            .from('sales')
+            .select('id, invoice_number, sale_date, remaining_amount, customers(name)')
+            .eq('status', 'completed')
+            .in('payment_status', ['partial', 'unpaid'])
+
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+
+        // Filter yang sudah lewat jatuh tempo (umur >= 1 hari)
+        const overdue = (sales ?? []).filter((s) => {
+            const saleDate = new Date(s.sale_date)
+            const aging = Math.floor((today.getTime() - saleDate.getTime()) / 86400000)
+            return aging >= 1
+        })
+
+        if (overdue.length === 0) return 0
+
+        const links = overdue.map((s) => `/dashboard/transactions/sales/${s.id}`)
+
+        // Deduplikasi — cek notifikasi piutang yang sudah ada untuk invoice tsb
+        const { data: existing } = await supabase
+            .from('notifications')
+            .select('link')
+            .in('link', links)
+            .eq('title', 'Piutang Jatuh Tempo 💳')
+
+        const existingLinks = new Set((existing ?? []).map((n) => n.link))
+        const toNotify = overdue.filter((s) => !existingLinks.has(`/dashboard/transactions/sales/${s.id}`))
+        if (toNotify.length === 0) return 0
+
+        const admin = createAdminClient()
+        const { data: admins } = await admin
+            .from('profiles')
+            .select('id')
+            .eq('role', 'admin')
+            .eq('is_active', true)
+
+        if (!admins || admins.length === 0) return 0
+
+        let created = 0
+        for (const s of toNotify) {
+            const remaining = Number(s.remaining_amount ?? 0)
+            const customerName = (s.customers as { name?: string | null } | null)?.name ?? 'Walk-in'
+            for (const a of admins) {
+                await createNotification(admin, {
+                    user_id: a.id,
+                    title: 'Piutang Jatuh Tempo 💳',
+                    message: `Invoice ${s.invoice_number} — sisa ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(remaining)} (${customerName})`,
+                    type: 'warning',
+                    is_read: false,
+                    link: `/dashboard/transactions/sales/${s.id}`,
+                })
+                created++
+            }
+        }
+        return created
+    } catch (err) {
+        console.error('Failed to notify overdue receivables:', err)
+        return 0
+    }
+}
+
+/**
+ * Notifikasi PO diterima — dipanggil saat status PO diubah menjadi 'received'.
+ * Barang sudah masuk stok (transaksi pembelian otomatis dibuat).
+ */
+export async function notifyPurchaseOrderReceived(
+    poId: number,
+    poNumber: string,
+    supplierName: string,
+    purchaseInvoiceNumber?: string | null,
+) {
+    const msg = purchaseInvoiceNumber
+        ? `PO ${poNumber} dari ${supplierName} sudah diterima. Barang masuk stok (${purchaseInvoiceNumber}).`
+        : `PO ${poNumber} dari ${supplierName} sudah diterima. Barang masuk stok.`
+
+    await notifyAdmin(
+        'PO Diterima 📦',
+        msg,
+        'success',
+        `/dashboard/transactions/purchase-orders`,
+    )
+
+    void poId
 }

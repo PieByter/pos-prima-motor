@@ -34,6 +34,7 @@ import { type TransactionType } from "@/lib/data/transactions";
 import { formatRupiah } from "@/lib/data/items";
 import type { Vehicle } from "@/lib/types/database";
 import { CameraBarcodeScanner } from "@/components/transactions/camera-barcode-scanner";
+import { SaleSuccessDialog } from "@/components/transactions/sale-success-dialog";
 import { useLocale } from "@/lib/locales";
 
 /* ------------------------------------------------------------------ */
@@ -183,6 +184,7 @@ export function TransactionForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [isOptionsLoading, setIsOptionsLoading] = useState(true);
+  const [savedSale, setSavedSale] = useState<{ id: number; invoiceNumber: string } | null>(null);
 
   useEffect(() => {
     const loadOptions = async () => {
@@ -477,9 +479,15 @@ export function TransactionForm({
           const errData = await res.json().catch(() => ({}));
           throw new Error(errData.error ?? t("transactions.saveSaleFailed"));
         }
-
-        router.push(backHref);
-        router.refresh();
+if (isEdit && numericId) {
+          // Edit → kembali ke daftar seperti biasa
+          router.push(backHref);
+          router.refresh();
+        } else {
+          // Transaksi baru → tampilkan dialog sukses (kirim struk via WA)
+          const saved = (await res.json()) as { id: number; invoice_number: string };
+          setSavedSale({ id: saved.id, invoiceNumber: saved.invoice_number });
+        }
       } else {
         // ── Submit purchase to API ─────────────────────────────────────
         const header = {
@@ -1152,6 +1160,17 @@ export function TransactionForm({
             {t("transactions.loadingOptions")}
           </span>
         </div>
+      )}
+      {savedSale && (
+        <SaleSuccessDialog
+          open={!!savedSale}
+          onOpenChange={(open) => {
+            if (!open) setSavedSale(null);
+          }}
+          saleId={savedSale.id}
+          invoiceNumber={savedSale.invoiceNumber}
+          backHref={backHref}
+        />
       )}
     </div>
   );

@@ -155,3 +155,29 @@ export function buildAppointmentReminderMessage(appt: AppointmentWithDetails): s
     lines.push("Mohon hadir tepat waktu. Terima kasih 🙏");
     return lines.join("\n");
 }
+
+/** Pesan konfirmasi ke supplier bahwa barang PO sudah diterima. */
+export function buildPurchaseOrderReceivedMessage(po: {
+    po_number?: string | null;
+    order_date?: string | null;
+    supplier?: { name?: string | null } | null;
+    details?: Array<{ quantity: number; price: number | string; item?: { name?: string | null } | null }>;
+}): string {
+    const lines: string[] = [];
+    lines.push("📦 *Konfirmasi Penerimaan Barang*");
+    lines.push("Prima Motor");
+    lines.push("------------------------------");
+    lines.push(`No. PO : ${po.po_number ?? "-"}`);
+    if (po.order_date) lines.push(`Tgl PO : ${new Date(po.order_date).toLocaleDateString("id-ID")}`);
+    lines.push("------------------------------");
+    if (po.details && po.details.length > 0) {
+        for (const d of po.details) {
+            lines.push(`🛒 ${d.item?.name ?? "Item"}`);
+            lines.push(`   ${d.quantity} x ${fmtRp(Number(d.price))}`);
+        }
+        lines.push("------------------------------");
+    }
+    lines.push("Barang sudah kami terima. Terima kasih 🙏");
+    lines.push("Prima Motor");
+    return lines.join("\n");
+}

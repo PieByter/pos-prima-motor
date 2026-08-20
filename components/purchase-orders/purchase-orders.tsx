@@ -30,10 +30,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Loader, Plus, Trash2, FileText, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader, Plus, Trash2, FileText, ChevronLeft, ChevronRight, MessageCircle } from "lucide-react";
 import type { PurchaseOrderWithDetails, PaginatedResponse, Supplier, Item } from "@/lib/types/database";
 import { formatCurrency } from "@/lib/format";
 import { useLocale } from "@/lib/locales";
+import { openWhatsApp, buildPurchaseOrderReceivedMessage } from "@/lib/utils/whatsapp";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const ITEMS_PER_PAGE = 10;
@@ -283,7 +284,22 @@ export function PurchaseOrdersPage() {
                             {t("purchaseOrders.receive")}
                           </Button>
                         )}
-                        {(po.status === "received" || po.status === "cancelled") && <span className="text-xs text-slate-400">—</span>}
+                        {po.status === "received" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs gap-1"
+                            disabled={!po.supplier?.phone}
+                            title={t("purchaseOrders.waSupplierTitle")}
+                            onClick={() => {
+                              if (po.supplier?.phone) openWhatsApp(po.supplier.phone, buildPurchaseOrderReceivedMessage(po));
+                            }}
+                          >
+                            <MessageCircle className="h-3.5 w-3.5" />
+                            {t("purchaseOrders.waSupplier")}
+                          </Button>
+                        )}
+                        {po.status === "cancelled" && <span className="text-xs text-slate-400">—</span>}
                       </div>
                     </TableCell>
                   </TableRow>

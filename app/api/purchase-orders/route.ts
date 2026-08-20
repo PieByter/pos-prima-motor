@@ -8,6 +8,7 @@ import {
     updatePurchaseOrderStatus,
     deletePurchaseOrder,
 } from '@/lib/services/purchase-orders.service'
+import { notifyPurchaseOrderReceived } from '@/lib/services/notification-triggers.service'
 import type { PurchaseOrderInsert } from '@/lib/types/database'
 
 type POInsert = PurchaseOrderInsert & {
@@ -107,6 +108,22 @@ export async function PATCH(request: NextRequest) {
             if (error || !data) {
                 return NextResponse.json({ error: error?.message ?? 'Failed to update PO status' }, { status: 400 })
             }
+
+            // Notifikasi PO diterima — barang sudah masuk stok (fire-and-forget)
+            if (body.status === 'received') {
+                const { data: poRow } = await admin
+                    .from('purchase_orders')
+                    .select('po_number, suppliers(name)')
+                    .eq('id', id)
+                    .single()
+                notifyPurchaseOrderReceived(
+                    id,
+                    poRow?.po_number ?? `#${id}`,
+                    (poRow?.suppliers as { name?: string | null } | null)?.name ?? 'Supplier',
+                    purchase?.invoice_number ?? null,
+                ).catch((e) => console.error('Failed to notify PO received:', e))
+            }
+
             return NextResponse.json({ ...data, purchase })
         }
 

@@ -4,12 +4,13 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader, Phone, TrendingUp, MessageCircle } from "lucide-react";
+import { Loader, Phone, TrendingUp, MessageCircle, SendHorizontal } from "lucide-react";
 import { formatRupiah } from "@/lib/data/items";
 import { openWhatsApp, buildReceivableReminderMessage } from "@/lib/utils/whatsapp";
 import { DashboardCard } from "@/components/dashboard/ui/dashboard-card";
 import type { ReceivablesReport, ReceivableRow } from "@/lib/types/database";
 import { useLocale } from "@/lib/locales";
+import { useToast } from "@/lib/toast-provider";
 
 function agingBadgeClass(days: number) {
   if (days <= 7) return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300";
@@ -34,6 +35,7 @@ function statusBadge(status: string, t: (k: string) => string) {
 
 export function ReceivablesTable() {
   const { t, locale } = useLocale();
+  const { showToast } = useToast();
   const [data, setData] = useState<ReceivablesReport | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +63,21 @@ export function ReceivablesTable() {
 
   const rows: ReceivableRow[] = data?.rows ?? [];
   const totalRows = rows.reduce((s, r) => s + r.remaining_amount, 0);
+
+  // Piutang jatuh tempo (umur >= 1 hari) yang punya nomor HP — target bulk reminder
+  const remindableRows = rows.filter((r) => r.aging_days >= 1 && r.customer_phone);
+
+  function handleSendAllReminders() {
+    if (remindableRows.length === 0) {
+      showToast(t("reports.noPhoneToRemind"), "error");
+      return;
+    }
+    // Buka WA satu per satu (link wa.me) — kasir tinggal tekan kirim di tiap chat
+    for (const r of remindableRows) {
+      if (r.customer_phone) openWhatsApp(r.customer_phone, buildReceivableReminderMessage(r));
+    }
+    showToast(t("reports.remindersOpened", { n: remindableRows.length }), "success");
+  }
 
   return (
     <div className="space-y-5">
@@ -97,6 +114,24 @@ export function ReceivablesTable() {
           </p>
         </DashboardCard>
       </div>
+
+      {/* Toolbar — kirim semua reminder */}
+      {!isLoading && !error && rows.length > 0 && (
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 h-8"
+            disabled={remindableRows.length === 0}
+            title={t("reports.sendAllRemindersTitle")}
+            onClick={handleSendAllReminders}
+          >
+            <SendHorizontal className="h-3.5 w-3.5" />
+            {t("reports.sendAllReminders")}
+            {remindableRows.length > 0 && ` (${remindableRows.length})`}
+          </Button>
+        </div>
+      )}
 
       {/* Table */}
       <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">

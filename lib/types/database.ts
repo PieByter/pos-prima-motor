@@ -32,6 +32,7 @@ export type Item = {
   purchase_price: number
   selling_price: number
   service_fee: number
+  stock: number
   warranty_months: number | null
   picture: string | null
   created_at: string

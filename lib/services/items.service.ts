@@ -82,9 +82,25 @@ export async function getItems(
 
     if (error) return { data: null, error: new Error(error.message) }
 
+    // Attach real-time stock from stock_summary view (single bulk query)
+    const rows = data ?? []
+    const ids = rows.map((r) => r.id as number)
+    let stockMap: Record<number, number> = {}
+    if (ids.length > 0) {
+      const { data: stockRows, error: stockError } = await supabase
+        .from('stock_summary')
+        .select('item_id, current_stock')
+        .in('item_id', ids)
+      if (!stockError) {
+        stockMap = Object.fromEntries(
+          (stockRows ?? []).map((s) => [s.item_id as number, Number(s.current_stock)]),
+        )
+      }
+    }
+
     return {
       data: {
-        data: (data ?? []).map(mapItem),
+        data: rows.map((r) => ({ ...mapItem(r), stock: stockMap[r.id as number] ?? 0 })),
         total: count ?? 0,
         page,
         limit,
@@ -92,6 +108,33 @@ export async function getItems(
       },
       error: null,
     }
+  } catch (err) {
+    return { data: null, error: err as Error }
+  }
+}
+
+export async function getItemBySku(
+  supabase: SupabaseClient,
+  sku: string,
+): Promise<{ data: (Item & { stock: number }) | null; error: Error | null }> {
+  try {
+    const { data, error } = await supabase
+      .from('items')
+      .select('*, categories(name), brands(name), item_suppliers(purchase_price, suppliers(id, name))')
+      .eq('sku', sku)
+      .maybeSingle()
+
+    if (error || !data) return { data: null, error: new Error('Item not found') }
+
+    const { data: stockRows } = await supabase
+      .from('stock_summary')
+      .select('current_stock')
+      .eq('item_id', data.id)
+      .maybeSingle()
+
+    const stock = stockRows ? Number(stockRows.current_stock) : 0
+
+    return { data: { ...mapItem(data), stock }, error: null }
   } catch (err) {
     return { data: null, error: err as Error }
   }

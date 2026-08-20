@@ -49,6 +49,7 @@ export type FormLineItem = {
   discountPercent: number;
   serviceFee: number;
   subtotal: number;
+  stock: number;
 };
 
 export type TransactionFormData = {
@@ -66,6 +67,7 @@ type ItemOption = {
   purchase_price: number;
   selling_price: number;
   service_fee: number;
+  stock?: number;
   suppliers?: { id: number; name: string; purchase_price: number | null }[];
 };
 
@@ -105,6 +107,7 @@ function emptyLine(): FormLineItem {
     discountPercent: 0,
     serviceFee: 0,
     subtotal: 0,
+    stock: 0,
   };
 }
 
@@ -356,6 +359,7 @@ export function TransactionForm({
         name: item.name,
         unitPrice,
         serviceFee: isSale ? item.service_fee : 0,
+        stock: item.stock ?? 0,
       });
     },
     [updateLine, isSale, itemOptions, supplierOptions, customerId]
@@ -366,19 +370,31 @@ export function TransactionForm({
     if (!sku.trim()) return;
     setBarcodeMsg(null);
     try {
-      // Search item by SKU via API
-      const res = await fetch(`/api/items?search=${encodeURIComponent(sku.trim())}&limit=1`);
-      if (!res.ok) {
-        setBarcodeMsg(t("transactions.barcodeNotFound", { sku }));
-        return;
-      }
-      const json = await res.json();
-      const items = json?.data ?? [];
-      if (items.length === 0) {
+      // Lookup item by exact SKU + real-time stock
+      const res = await fetch(`/api/items/lookup?sku=${encodeURIComponent(sku.trim())}`, { cache: "no-store" });
+      if (res.status === 404) {
         setBarcodeMsg(t("transactions.barcodeUnknown", { sku }));
         return;
       }
-      const item = items[0];
+      if (!res.ok) {
+        setBarcodeMsg(t("transactions.barcodeSearchFailed"));
+        return;
+      }
+      const item = await res.json();
+      const stock = Number(item.stock ?? 0);
+
+      // Real-time stock check
+      if (stock <= 0) {
+        setBarcodeMsg(t("transactions.stockOut", { name: item.name }));
+        return;
+      }
+
+      const existingLine = lines.find((l) => l.itemId === item.id);
+      if (existingLine && existingLine.qty + 1 > stock) {
+        setBarcodeMsg(t("transactions.stockNotEnough", { stock }));
+        return;
+      }
+
       const newLine = {
         key: newKey(),
         itemId: item.id,
@@ -388,7 +404,9 @@ export function TransactionForm({
         discountPercent: 0,
         serviceFee: isSale ? Number(item.service_fee) : 0,
         subtotal: isSale ? Number(item.selling_price) : Number(item.purchase_price),
+        stock,
       };
+
       setLines((prev) => {
         // Check if item already exists in list → increment qty
         const existing = prev.find((l) => l.itemId === item.id);
@@ -399,12 +417,12 @@ export function TransactionForm({
         }
         return [...prev, newLine];
       });
-      setBarcodeMsg(t("transactions.barcodeAdded", { name: item.name }));
+      setBarcodeMsg(t("transactions.barcodeAdded", { name: item.name, stock }));
       setTimeout(() => setBarcodeMsg(null), 2000);
     } catch {
       setBarcodeMsg(t("transactions.barcodeSearchFailed"));
     }
-  }, [isSale, t]);
+  }, [isSale, t, lines]);
 
   /* ---- handlers ---- */
   const backHref = isSale
@@ -760,6 +778,11 @@ export function TransactionForm({
                     <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-20">
                       {t("transactions.qty")}
                     </th>
+                    {isSale && (
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-16">
+                        {t("transactions.stockLabel")}
+                      </th>
+                    )}
                     <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-32">
                       {t("transactions.price")}
                     </th>
@@ -815,18 +838,38 @@ export function TransactionForm({
 
                       {/* Qty */}
                       <td className="px-4 py-3">
-                        <Input
-                          type="number"
-                          min={1}
-                          value={line.qty}
-                          onChange={(e) =>
-                            updateLine(line.key, {
-                              qty: Math.max(1, Number(e.target.value)),
-                            })
-                          }
-                          className="text-center w-20"
-                        />
+                        <div className="flex flex-col items-center gap-1">
+                          <Input
+                            type="number"
+                            min={1}
+                            value={line.qty}
+                            onChange={(e) =>
+                              updateLine(line.key, {
+                                qty: Math.max(1, Number(e.target.value)),
+                              })
+                            }
+                            className={`text-center w-20 ${isSale && line.itemId != null && line.qty > line.stock ? "border-red-400 focus-visible:ring-red-400" : ""}`}
+                          />
+                          {isSale && line.itemId != null && line.qty > line.stock && (
+                            <span className="text-[10px] font-medium text-red-600 whitespace-nowrap">
+                              {t("transactions.stockExceeded", { stock: line.stock })}
+                            </span>
+                          )}
+                        </div>
                       </td>
+
+                      {/* Stock (sale only) */}
+                      {isSale && (
+                        <td className="px-4 py-3 text-center">
+                          {line.itemId != null ? (
+                            <span className={line.qty > line.stock ? "text-red-600 font-semibold" : "text-slate-600 dark:text-slate-300"}>
+                              {line.stock}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300 dark:text-slate-600">-</span>
+                          )}
+                        </td>
+                      )}
 
                       {/* Unit Price */}
                       <td className="px-4 py-3">

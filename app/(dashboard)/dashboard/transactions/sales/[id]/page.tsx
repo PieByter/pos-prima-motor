@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
 import { TransactionDetail } from "@/components/transactions/transaction-detail";
 import { SalePaymentActions } from "@/components/transactions/sale-payment-actions";
-import type { InvoiceDetail } from "@/lib/data/invoice-details";
+import { mapSaleToInvoice } from "@/lib/data/invoice-details";
 import { getSaleById } from "@/lib/services/sales.service";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -19,67 +19,7 @@ export default async function SaleDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const invoice: InvoiceDetail = {
-    id: sale.id,
-    invoiceNumber: sale.invoice_number,
-    status:
-      sale.status === "completed"
-        ? "Completed"
-        : sale.status === "pending"
-          ? "Pending"
-          : sale.status === "in_progress"
-            ? "In Progress"
-            : "Cancelled",
-    saleType: sale.sale_type,
-    paymentStatus: sale.payment_status,
-    createdAt: new Date(sale.created_at).toLocaleString("id-ID"),
-    transactionType: "sale",
-    entityName: sale.customer?.name ?? "Walk-in Customer",
-    entityPhone: sale.customer?.phone ?? "-",
-    entityVehicle: sale.vehicle
-      ? [sale.vehicle.brand, sale.vehicle.model].filter(Boolean).join(" ") || undefined
-      : undefined,
-    entityPlate: sale.vehicle?.plate_number ?? undefined,
-    mechanicName: sale.mechanic?.name ?? "-",
-    mechanicStation: "-",
-    jobStart: "-",
-    jobEnd: "-",
-    paymentMethod: sale.payment_method?.name ?? "-",
-    paymentMethodIcon: sale.payment_method?.icon ?? null,
-    transactionId: sale.invoice_number,
-    cashAmount: sale.cash_amount,
-    changeAmount: sale.change_amount,
-    paidAmount: sale.paid_amount,
-    remainingAmount: sale.remaining_amount,
-    items: (sale.details ?? []).map((d) => ({
-      id: d.id,
-      name: d.item?.name ?? "Item",
-      description: d.item?.description ?? "",
-      type: d.service_fee > 0 ? "Service" : "Part",
-      unitPrice: d.base_price,
-      qty: d.quantity,
-      discount: d.discount_amount,
-      subtotal: d.subtotal,
-      icon: d.service_fee > 0 ? "wrench" : "package",
-    })),
-    subtotal: (sale.details ?? []).reduce((sum, d) => sum + d.subtotal, 0),
-    totalDiscount: (sale.details ?? []).reduce(
-      (sum, d) => sum + d.discount_amount,
-      0
-    ),
-    // Rincian PPN — subtotal di sale_details = DPP (belum termasuk pajak).
-    // Pajak = total yang dibayar − DPP.
-    // (konsisten dgn form transaksi: grandTotal = beforeTax + tax)
-    taxAmount: Math.max(0, sale.total_amount - (sale.details ?? []).reduce((sum, d) => sum + d.subtotal, 0)),
-    taxPercent: 0,
-    grandTotal: sale.total_amount,
-    createdBy: sale.created_by,
-  };
-
-  // Hitung persen pajak dari nilai (untuk tampilan "Pajak (11%)")
-  if (invoice.taxAmount > 0 && invoice.subtotal > 0) {
-    invoice.taxPercent = Math.round((invoice.taxAmount / invoice.subtotal) * 1000) / 10
-  }
+  const invoice = mapSaleToInvoice(sale);
 
   return (
     <>

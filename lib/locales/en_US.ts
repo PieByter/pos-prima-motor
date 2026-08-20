@@ -936,6 +936,9 @@ const en: LocaleDict = {
 
     receipt: {
         print: "Print Receipt",
+        reprint: "Reprint Receipt",
+        reprintDesc: "Choose paper size & copies, then print.",
+        loadFailed: "Failed to load sale data",
         storeName: "PRIMA MOTOR",
         storeDesc: "Spare Part & Service Shop",
         thanks: "Thank you for your visit!",

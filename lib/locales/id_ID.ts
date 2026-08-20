@@ -952,6 +952,9 @@ const id: LocaleDict = {
     // ── Receipt / Print ────────────────────────────────────────────
     receipt: {
         print: "Cetak Struk",
+        reprint: "Cetak Ulang Struk",
+        reprintDesc: "Pilih ukuran kertas & jumlah salinan, lalu cetak.",
+        loadFailed: "Gagal memuat data penjualan",
         storeName: "PRIMA MOTOR",
         storeDesc: "Toko Sparepart & Service Motor",
         thanks: "Terima kasih atas kunjungan Anda!",

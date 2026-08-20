@@ -9,6 +9,7 @@ import {
   Eye,
   Pencil,
   Trash2,
+  Printer,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -20,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/lib/toast-provider";
 import { useLocale } from "@/lib/locales";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ReceiptReprintDialog } from "@/components/transactions/receipt-reprint-dialog";
 import {
   Select,
   SelectContent,
@@ -106,6 +108,7 @@ export function TransactionTable({
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState<UiTransaction | null>(null);
+  const [reprintTarget, setReprintTarget] = useState<UiTransaction | null>(null);
 
   const detailBasePath =
     type === "sale"
@@ -482,6 +485,20 @@ export function TransactionTable({
                       {/* Actions */}
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <div className="flex items-center justify-center gap-1">
+                          {type === "sale" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-slate-400 hover:text-sky-500"
+                              title={translate("receipt.reprint")}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setReprintTarget(t);
+                              }}
+                            >
+                              <Printer className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -586,6 +603,16 @@ export function TransactionTable({
         onConfirm={() => {
           if (deleteTarget) return performDelete(deleteTarget);
         }}
+      />
+
+      {/* Dialog cetak ulang struk */}
+      <ReceiptReprintDialog
+        open={reprintTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setReprintTarget(null);
+        }}
+        saleId={reprintTarget?.id ?? 0}
+        invoiceNumber={reprintTarget?.invoiceNumber ?? ""}
       />
     </div>
   );

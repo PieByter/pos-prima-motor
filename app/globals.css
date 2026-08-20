@@ -159,6 +159,10 @@
 }
 
 /* ── Receipt Print Styles ── */
+.receipt-container {
+  display: none;
+}
+
 @media print {
   body:not(.printing-receipt) * {
     visibility: hidden;
@@ -172,18 +176,29 @@
     padding: 0;
   }
 
-  .receipt-container {
+  body.printing-receipt .receipt-container {
+    display: block;
     visibility: visible;
     position: absolute;
     left: 0;
     top: 0;
-    width: 80mm;
+    width: var(--receipt-width, 80mm);
     padding: 4mm 6mm;
     font-family: "Courier New", Courier, monospace;
   }
 
-  .receipt-container * {
+  body.printing-receipt .receipt-container * {
     visibility: visible;
+  }
+
+  .receipt-copy {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .receipt-copy:last-child {
+    page-break-after: auto;
+    break-after: auto;
   }
 
   .receipt-no-print {

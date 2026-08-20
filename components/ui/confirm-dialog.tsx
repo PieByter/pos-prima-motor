@@ -65,26 +65,34 @@ export function ConfirmDialog({
         if (!isLoading) onOpenChange(next);
       }}
     >
-      <DialogContent className="sm:max-w-md" showCloseButton={false}>
-        <DialogHeader className="flex flex-col items-center gap-3 text-center sm:text-center">
-          <div
-            className={cn(
-              "flex size-12 items-center justify-center rounded-full",
-              variant === "danger"
-                ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
-                : "bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400"
-            )}
-          >
-            {variant === "danger" ? (
-              <AlertTriangle className="h-6 w-6" />
-            ) : (
-              <Trash2 className="h-6 w-6" />
-            )}
+      <DialogContent className="sm:max-w-md rounded-xl" showCloseButton={false}>
+        <DialogHeader>
+          <div className="flex items-start gap-3">
+            <div
+              className={cn(
+                "p-2.5 rounded-xl",
+                variant === "danger"
+                  ? "bg-red-100 dark:bg-red-900/30"
+                  : "bg-sky-100 dark:bg-sky-900/30"
+              )}
+            >
+              {variant === "danger" ? (
+                <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+              ) : (
+                <Trash2 className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+              )}
+            </div>
+            <div className="min-w-0 pt-0.5">
+              <DialogTitle className="text-lg">{title}</DialogTitle>
+              {description && (
+                <DialogDescription className="mt-0.5 text-sm">
+                  {description}
+                </DialogDescription>
+              )}
+            </div>
           </div>
-          <DialogTitle className="text-lg">{title}</DialogTitle>
-          {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
-        <DialogFooter className="gap-2 sm:justify-center">
+        <DialogFooter className="gap-2 sm:justify-end">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
@@ -93,10 +101,14 @@ export function ConfirmDialog({
             {cancelLabel ?? t("common.cancel")}
           </Button>
           <Button
-            variant={variant === "danger" ? "destructive" : "default"}
             onClick={handleConfirm}
             disabled={isLoading}
-            className="gap-2"
+            className={cn(
+              "gap-2 text-white",
+              variant === "danger"
+                ? "bg-red-500 hover:bg-red-600"
+                : "bg-sky-500 hover:bg-sky-600"
+            )}
           >
             {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
             {confirmLabel ?? t("common.delete")}

@@ -34,6 +34,7 @@ import { Loader, Plus, Trash2, FileText, ChevronLeft, ChevronRight } from "lucid
 import type { PurchaseOrderWithDetails, PaginatedResponse, Supplier, Item } from "@/lib/types/database";
 import { formatCurrency } from "@/lib/format";
 import { useLocale } from "@/lib/locales";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -77,6 +78,8 @@ export function PurchaseOrdersPage() {
     notes: "",
   });
   const [rows, setRows] = useState<POItemRow[]>([{ item_id: "", quantity: "1", price: "" }]);
+  const [receiveTarget, setReceiveTarget] = useState<PurchaseOrderWithDetails | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<PurchaseOrderWithDetails | null>(null);
 
   const fetchOrders = useCallback(async (page = currentPage) => {
     try {
@@ -174,11 +177,6 @@ export function PurchaseOrdersPage() {
 
   async function handleStatus(id: number, status: string) {
     try {
-      // Konfirmasi saat menerima barang — akan membuat transaksi pembelian + stok masuk
-      if (status === "received") {
-        const ok = confirm(t("purchaseOrders.receiveConfirm"));
-        if (!ok) return;
-      }
       const res = await fetch(`/api/purchase-orders?id=${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -194,11 +192,11 @@ export function PurchaseOrdersPage() {
       await fetchOrders();
     } catch {
       showToast(t("purchaseOrders.statusUpdateFailed"), "error");
+      throw new Error("Status update failed");
     }
   }
 
-  async function handleDelete(id: number) {
-    if (!confirm(t("purchaseOrders.deleteConfirm"))) return;
+  async function performDelete(id: number) {
     try {
       const res = await fetch(`/api/purchase-orders?id=${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed");
@@ -206,6 +204,7 @@ export function PurchaseOrdersPage() {
       await fetchOrders();
     } catch {
       showToast(t("purchaseOrders.deleteFailed"), "error");
+      throw new Error("Delete failed");
     }
   }
 
@@ -274,13 +273,13 @@ export function PurchaseOrdersPage() {
                             <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleStatus(po.id, "sent")}>
                               {t("purchaseOrders.send")}
                             </Button>
-                            <Button size="sm" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-red-500 p-0" onClick={() => handleDelete(po.id)}>
+                            <Button size="sm" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-red-500 p-0" onClick={() => setDeleteTarget(po)}>
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </>
                         )}
                         {po.status === "sent" && (
-                          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleStatus(po.id, "received")}>
+                          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setReceiveTarget(po)}>
                             {t("purchaseOrders.receive")}
                           </Button>
                         )}
@@ -409,6 +408,30 @@ export function PurchaseOrdersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={receiveTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setReceiveTarget(null);
+        }}
+        title={t("purchaseOrders.receiveConfirm")}
+        description={receiveTarget ? receiveTarget.po_number : undefined}
+        confirmLabel={t("purchaseOrders.receive")}
+        onConfirm={() => {
+          if (receiveTarget) return handleStatus(receiveTarget.id, "received");
+        }}
+      />
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title={t("purchaseOrders.deleteConfirm")}
+        description={deleteTarget ? deleteTarget.po_number : undefined}
+        confirmLabel={t("common.delete")}
+        onConfirm={() => {
+          if (deleteTarget) return performDelete(deleteTarget.id);
+        }}
+      />
     </div>
   );
 }

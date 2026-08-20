@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/lib/toast-provider";
 import { Plus, Pencil, Trash2, Loader2, CreditCard, Wallet, Banknote, Smartphone } from "lucide-react";
 import { useLocale } from "@/lib/locales";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 type PaymentMethod = {
   id: number;
@@ -44,6 +45,7 @@ export function PaymentMethodsManager() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: "", icon: "", is_active: true });
+  const [deleteTarget, setDeleteTarget] = useState<PaymentMethod | null>(null);
 
   const fetchMethods = useCallback(async () => {
     try {
@@ -131,8 +133,7 @@ export function PaymentMethodsManager() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm(t("settings.paymentDeleteConfirm"))) return;
+  const performDelete = async (id: number) => {
     try {
       const res = await fetch(`/api/payment-methods/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed");
@@ -140,6 +141,7 @@ export function PaymentMethodsManager() {
       await fetchMethods();
     } catch {
       showToast(t("settings.paymentDeleteFailed"), "error");
+      throw new Error("Delete failed");
     }
   };
 
@@ -203,7 +205,7 @@ export function PaymentMethodsManager() {
                             <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(m)} title={t("common.edit")}>
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-600" onClick={() => handleDelete(m.id)} title={t("common.delete")}>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-600" onClick={() => setDeleteTarget(m)} title={t("common.delete")}>
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
@@ -277,6 +279,18 @@ export function PaymentMethodsManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title={t("settings.paymentDeleteConfirm")}
+        description={deleteTarget ? deleteTarget.name : undefined}
+        confirmLabel={t("common.delete")}
+        onConfirm={() => {
+          if (deleteTarget) return performDelete(deleteTarget.id);
+        }}
+      />
     </>
   );
 }

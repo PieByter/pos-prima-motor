@@ -34,6 +34,7 @@ import { Loader, Plus, Trash2, Wallet, ChevronLeft, ChevronRight } from "lucide-
 import type { SalaryPaymentWithMechanic, PaginatedResponse, Profile, PaymentMethod } from "@/lib/types/database";
 import { formatCurrency } from "@/lib/format";
 import { useLocale } from "@/lib/locales";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -59,6 +60,7 @@ export function SalaryPaymentsPage() {
     payment_method_id: "",
     notes: "",
   });
+  const [deleteTarget, setDeleteTarget] = useState<SalaryPaymentWithMechanic | null>(null);
 
   const fetchPayments = useCallback(async (page = currentPage) => {
     try {
@@ -131,8 +133,7 @@ export function SalaryPaymentsPage() {
     }
   }
 
-  async function handleDelete(id: number) {
-    if (!confirm(t("salary.deleteConfirm"))) return;
+  async function performDelete(id: number) {
     try {
       const res = await fetch(`/api/salary-payments/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed");
@@ -140,6 +141,7 @@ export function SalaryPaymentsPage() {
       await fetchPayments();
     } catch {
       showToast(t("salary.deleteFailed"), "error");
+      throw new Error("Delete failed");
     }
   }
 
@@ -205,7 +207,7 @@ export function SalaryPaymentsPage() {
                       {p.payment_method?.name ?? "—"}
                     </TableCell>
                     <TableCell className="px-5 text-center">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-500" onClick={() => handleDelete(p.id)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-500" onClick={() => setDeleteTarget(p)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>
@@ -293,6 +295,18 @@ export function SalaryPaymentsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title={t("salary.deleteConfirm")}
+        description={deleteTarget ? deleteTarget.mechanic?.name : undefined}
+        confirmLabel={t("common.delete")}
+        onConfirm={() => {
+          if (deleteTarget) return performDelete(deleteTarget.id);
+        }}
+      />
     </div>
   );
 }

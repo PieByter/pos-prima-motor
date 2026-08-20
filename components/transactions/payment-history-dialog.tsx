@@ -13,6 +13,8 @@ import { Loader, History, Trash2 } from "lucide-react";
 import type { SalePaymentWithMethod } from "@/lib/types/database";
 import { formatRupiah } from "@/lib/data/items";
 import { useLocale } from "@/lib/locales";
+import { useToast } from "@/lib/toast-provider";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 type Props = {
   open: boolean;
@@ -25,9 +27,11 @@ type Props = {
 
 export function PaymentHistoryDialog({ open, onOpenChange, type = "sale", saleId, onPaymentDone }: Props) {
   const { t, locale } = useLocale();
+  const { showToast } = useToast();
   const [payments, setPayments] = useState<SalePaymentWithMethod[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SalePaymentWithMethod | null>(null);
 
   const endpoint = type === "purchase"
     ? `/api/purchases/${saleId}/payments`
@@ -57,8 +61,7 @@ export function PaymentHistoryDialog({ open, onOpenChange, type = "sale", saleId
     };
   }, [open, saleId, endpoint, t]);
 
-  async function handleDelete(paymentId: number) {
-    if (!confirm(t("paymentHistory.deleteConfirm"))) return;
+  async function performDelete(paymentId: number) {
     try {
       const res = await fetch(`${endpoint}?paymentId=${paymentId}`, {
         method: "DELETE",
@@ -70,7 +73,8 @@ export function PaymentHistoryDialog({ open, onOpenChange, type = "sale", saleId
       setPayments((prev) => prev.filter((p) => p.id !== paymentId));
       onPaymentDone();
     } catch (err) {
-      alert(err instanceof Error ? err.message : t("paymentHistory.deleteFailed"));
+      showToast(err instanceof Error ? err.message : t("paymentHistory.deleteFailed"), "error");
+      throw new Error("Delete failed");
     }
   }
 
@@ -126,7 +130,7 @@ export function PaymentHistoryDialog({ open, onOpenChange, type = "sale", saleId
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleDelete(p.id)}
+                  onClick={() => setDeleteTarget(p)}
                   className="shrink-0 rounded-md p-1.5 text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 transition-colors"
                   aria-label={t("paymentHistory.deleteAria")}
                   title={t("paymentHistory.deleteTitle")}
@@ -144,6 +148,18 @@ export function PaymentHistoryDialog({ open, onOpenChange, type = "sale", saleId
           </Button>
         </div>
       </DialogContent>
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title={t("paymentHistory.deleteConfirm")}
+        description={deleteTarget ? formatRupiah(deleteTarget.amount) : undefined}
+        confirmLabel={t("common.delete")}
+        onConfirm={() => {
+          if (deleteTarget) return performDelete(deleteTarget.id);
+        }}
+      />
     </Dialog>
   );
 }

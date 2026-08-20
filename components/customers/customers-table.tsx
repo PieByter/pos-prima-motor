@@ -31,6 +31,7 @@ import type { Customer, PaginatedResponse } from "@/lib/types/database";
 import { CustomerFormDialog } from "@/components/customers/customer-form-dialog";
 import { CustomerPointsDialog } from "@/components/customers/customer-points-dialog";
 import { useLocale } from "@/lib/locales";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -49,6 +50,8 @@ export function CustomersTable() {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [pointsCustomer, setPointsCustomer] = useState<Customer | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   async function readApiErrorMessage(res: Response, fallback: string) {
     try {
@@ -129,8 +132,7 @@ export function CustomersTable() {
     setDialogOpen(true);
   }
 
-  async function handleDelete(id: number) {
-    if (!confirm(t("masterData.customerDeleteConfirm"))) return;
+  async function performDelete(id: number) {
     try {
       const res = await fetch(`/api/customers/${id}`, { method: "DELETE" });
       if (!res.ok) {
@@ -144,12 +146,12 @@ export function CustomersTable() {
       const msg = err instanceof Error ? err.message : t("masterData.customerDeleteFailed");
       setError(msg);
       showToast(msg, "error");
+      throw err;
     }
   }
 
-  async function handleBulkDelete() {
+  async function performBulkDelete() {
     if (selectedIds.size === 0) return;
-    if (!confirm(t("masterData.customerBulkDeleteConfirm", { count: selectedIds.size }))) return;
     try {
       const res = await fetch("/api/customers", {
         method: "DELETE",
@@ -163,6 +165,7 @@ export function CustomersTable() {
       await fetchCustomers(1);
     } catch {
       showToast(t("common.failedToDelete"), "error");
+      throw new Error("Bulk delete failed");
     }
   }
 
@@ -231,7 +234,7 @@ export function CustomersTable() {
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800">
           <span className="text-sm text-red-700 dark:text-red-400">{t("masterData.selectedCount", { count: selectedIds.size })}</span>
-          <Button size="sm" variant="destructive" className="h-8 gap-1" onClick={handleBulkDelete}>
+          <Button size="sm" variant="destructive" className="h-8 gap-1" onClick={() => setBulkDeleteOpen(true)}>
             <Trash2 className="h-3.5 w-3.5" /> {t("masterData.deleteSelected")}
           </Button>
           <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setSelectedIds(new Set())}>
@@ -460,7 +463,7 @@ export function CustomersTable() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                          onClick={() => handleDelete(customer.id)}
+                          onClick={() => setDeleteTarget(customer)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -536,6 +539,25 @@ export function CustomersTable() {
         }}
         customer={pointsCustomer}
         onUpdated={() => void fetchCustomers()}
+      />
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title={t("masterData.customerDeleteConfirm")}
+        description={deleteTarget ? deleteTarget.name : undefined}
+        confirmLabel={t("common.delete")}
+        onConfirm={() => {
+          if (deleteTarget) return performDelete(deleteTarget.id);
+        }}
+      />
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        title={t("masterData.customerBulkDeleteConfirm", { count: selectedIds.size })}
+        confirmLabel={t("masterData.deleteSelected")}
+        onConfirm={performBulkDelete}
       />
     </div>
   );

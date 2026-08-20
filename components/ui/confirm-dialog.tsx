@@ -65,21 +65,24 @@ export function ConfirmDialog({
         if (!isLoading) onOpenChange(next);
       }}
     >
-      <DialogContent className="sm:max-w-md rounded-xl" showCloseButton={false}>
+      <DialogContent
+        className="sm:max-w-md rounded-xl dark:bg-[#111C2B] dark:border-[#26364A]"
+        showCloseButton={false}
+      >
         <DialogHeader>
           <div className="flex items-start gap-3">
             <div
               className={cn(
                 "p-2.5 rounded-xl",
                 variant === "danger"
-                  ? "bg-red-100 dark:bg-red-900/30"
-                  : "bg-sky-100 dark:bg-sky-900/30"
+                  ? "bg-red-100 dark:bg-[#FF3344]/15"
+                  : "bg-sky-100 dark:bg-[#0077A8]/15"
               )}
             >
               {variant === "danger" ? (
-                <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                <AlertTriangle className="h-5 w-5 text-red-600 dark:text-[#FF3344]" />
               ) : (
-                <Trash2 className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+                <Trash2 className="h-5 w-5 text-sky-600 dark:text-[#0077A8]" />
               )}
             </div>
             <div className="min-w-0 pt-0.5">
@@ -106,8 +109,8 @@ export function ConfirmDialog({
             className={cn(
               "gap-2 text-white",
               variant === "danger"
-                ? "bg-red-500 hover:bg-red-600"
-                : "bg-sky-500 hover:bg-sky-600"
+                ? "bg-red-500 hover:bg-red-600 dark:bg-[#FF3344] dark:hover:bg-[#e02e3d]"
+                : "bg-sky-500 hover:bg-sky-600 dark:bg-[#0077A8] dark:hover:bg-[#006a96]"
             )}
           >
             {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}

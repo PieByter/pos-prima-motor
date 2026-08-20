@@ -39,6 +39,7 @@ import { useToast } from "@/lib/toast-provider";
 import { useLocale } from "@/lib/locales";
 import { ItemFormDialog } from "./item-form-dialog";
 import { BarcodeLabelPrint, type BarcodeLabelItem } from "@/components/inventory/barcode-label-print";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -150,6 +151,8 @@ export function ItemsTable() {
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [labelPrintOpen, setLabelPrintOpen] = useState(false);
   const [labelItems, setLabelItems] = useState<BarcodeLabelItem[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<Item | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const filteredItems = items.filter((item) => {
     if (stockFilter === "all") return true;
@@ -174,8 +177,7 @@ export function ItemsTable() {
     setDialogOpen(true);
   }
 
-  async function handleDeleteItem(id: number) {
-    if (!confirm(t("common.confirmDelete"))) return;
+  async function performDeleteItem(id: number) {
     try {
       const response = await fetch(`/api/items/${id}`, { method: "DELETE" });
       if (!response.ok) throw new Error("Failed to delete item");
@@ -184,6 +186,7 @@ export function ItemsTable() {
     } catch (error) {
       console.error("Error deleting item:", error);
       showToast(t("common.failedToDelete"), "error");
+      throw error;
     }
   }
 
@@ -205,9 +208,8 @@ export function ItemsTable() {
     });
   }, []);
 
-  const handleBulkDelete = useCallback(async () => {
+  const performBulkDelete = useCallback(async () => {
     if (selectedIds.size === 0) return;
-    if (!confirm(t("common.confirmBulkDelete", { count: selectedIds.size }))) return;
     try {
       const results = await Promise.allSettled(
         [...selectedIds].map((id) =>
@@ -230,6 +232,7 @@ export function ItemsTable() {
       }
     } catch {
       showToast(t("common.failedToDelete"), "error");
+      throw new Error("Bulk delete failed");
     }
   }, [selectedIds, showToast, t]);
 
@@ -427,7 +430,7 @@ export function ItemsTable() {
               variant="destructive"
               size="sm"
               className="gap-2 text-xs h-8"
-              onClick={handleBulkDelete}
+              onClick={() => setBulkDeleteOpen(true)}
             >
               <Trash className="h-3.5 w-3.5" />
               {t("masterData.deleteAll")}
@@ -670,7 +673,7 @@ export function ItemsTable() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                            onClick={() => handleDeleteItem(item.id)}
+                            onClick={() => setDeleteTarget(item)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -754,6 +757,25 @@ export function ItemsTable() {
         open={labelPrintOpen}
         onOpenChange={setLabelPrintOpen}
         items={labelItems}
+      />
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title={t("common.confirmDelete")}
+        description={deleteTarget ? deleteTarget.name : undefined}
+        confirmLabel={t("common.delete")}
+        onConfirm={() => {
+          if (deleteTarget) return performDeleteItem(deleteTarget.id);
+        }}
+      />
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        title={t("common.confirmBulkDelete", { count: selectedIds.size })}
+        confirmLabel={t("masterData.deleteAll")}
+        onConfirm={performBulkDelete}
       />
     </div>
   );

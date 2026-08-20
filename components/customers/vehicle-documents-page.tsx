@@ -27,6 +27,7 @@ import type { VehicleDocumentWithVehicle } from "@/lib/services/vehicle-document
 import { openWhatsApp, buildVehicleDocReminderMessage } from "@/lib/utils/whatsapp";
 import { useUserRole } from "@/lib/hooks/use-user-role";
 import { useLocale } from "@/lib/locales";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 type VehicleOption = {
   id: number;
@@ -46,6 +47,7 @@ export function VehicleDocumentsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<VehicleDocumentWithVehicle | null>(null);
   const [form, setForm] = useState({
     vehicle_id: "",
     doc_type: "pajak" as "stnk" | "pajak",
@@ -121,8 +123,7 @@ export function VehicleDocumentsPage() {
     }
   }
 
-  async function handleDelete(id: number) {
-    if (!confirm(t("vehicleDocuments.deleteConfirm"))) return;
+  async function performDelete(id: number) {
     try {
       const res = await fetch(`/api/vehicle-documents/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed");
@@ -130,6 +131,7 @@ export function VehicleDocumentsPage() {
       await fetchData();
     } catch {
       showToast(t("vehicleDocuments.deleteFailed"), "error");
+      throw new Error("Delete failed");
     }
   }
 
@@ -236,7 +238,7 @@ export function VehicleDocumentsPage() {
                               >
                                 <MessageCircle className="h-3.5 w-3.5" />
                               </Button>
-                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500" onClick={() => handleDelete(d.id)}>
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500" onClick={() => setDeleteTarget(d)}>
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>
@@ -308,6 +310,26 @@ export function VehicleDocumentsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title={t("vehicleDocuments.deleteConfirm")}
+        description={
+          deleteTarget
+            ? `${deleteTarget.vehicle?.plate_number ?? ""} · ${
+                deleteTarget.doc_type === "stnk"
+                  ? t("vehicleDocuments.stnk")
+                  : t("vehicleDocuments.tax")
+              }`
+            : undefined
+        }
+        confirmLabel={t("common.delete")}
+        onConfirm={() => {
+          if (deleteTarget) return performDelete(deleteTarget.id);
+        }}
+      />
     </>
   );
 }

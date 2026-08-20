@@ -36,6 +36,7 @@ import {
 import type { Estimate, EstimateWithDetails, PaginatedResponse } from "@/lib/types/database";
 import { formatRupiah } from "@/lib/data/items";
 import { useLocale } from "@/lib/locales";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -78,6 +79,8 @@ export function EstimatesPage() {
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [items, setItems] = useState<{ id: number; name: string }[]>([]);
   const [detailEstimate, setDetailEstimate] = useState<EstimateWithDetails | null>(null);
+  const [convertTarget, setConvertTarget] = useState<EstimateRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<EstimateRow | null>(null);
 
   const [form, setForm] = useState({
     customer_id: "",
@@ -204,8 +207,7 @@ export function EstimatesPage() {
     }
   }
 
-  async function handleConvert(id: number) {
-    if (!confirm(t("estimates.convertConfirm"))) return;
+  async function performConvert(id: number) {
     try {
       const res = await fetch("/api/estimates/convert", {
         method: "POST",
@@ -218,11 +220,11 @@ export function EstimatesPage() {
       await fetchEstimates();
     } catch (err) {
       showToast(err instanceof Error ? err.message : t("estimates.convertFailed"), "error");
+      throw new Error("Convert failed");
     }
   }
 
-  async function handleDelete(id: number) {
-    if (!confirm(t("estimates.deleteConfirm"))) return;
+  async function performDelete(id: number) {
     try {
       const res = await fetch(`/api/estimates?id=${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed");
@@ -230,6 +232,7 @@ export function EstimatesPage() {
       await fetchEstimates();
     } catch {
       showToast(t("estimates.deleteFailed"), "error");
+      throw new Error("Delete failed");
     }
   }
 
@@ -316,7 +319,7 @@ export function EstimatesPage() {
                             <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-sky-600" onClick={() => handleStatus(e.id, "sent")}>
                               <Send className="h-3 w-3" /> {t("estimates.send")}
                             </Button>
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400" title={t("estimates.delete")} onClick={() => handleDelete(e.id)}>
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400" title={t("estimates.delete")} onClick={() => setDeleteTarget(e)}>
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </>
@@ -333,7 +336,7 @@ export function EstimatesPage() {
                         )}
                         {e.status === "approved" && (
                           <>
-                            <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-violet-600" onClick={() => handleConvert(e.id)}>
+                            <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-violet-600" onClick={() => setConvertTarget(e)}>
                               <ArrowRightToLine className="h-3 w-3" /> {t("estimates.convert")}
                             </Button>
                             <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400" title={t("estimates.cancel")} onClick={() => handleStatus(e.id, "cancelled")}>
@@ -502,6 +505,34 @@ export function EstimatesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Dialog Konfirmasi Convert ── */}
+      <ConfirmDialog
+        open={convertTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setConvertTarget(null);
+        }}
+        title={t("estimates.convertConfirm")}
+        description={convertTarget ? convertTarget.estimate_number : undefined}
+        confirmLabel={t("estimates.convert")}
+        onConfirm={() => {
+          if (convertTarget) return performConvert(convertTarget.id);
+        }}
+      />
+
+      {/* ── Dialog Konfirmasi Hapus ── */}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title={t("estimates.deleteConfirm")}
+        description={deleteTarget ? deleteTarget.estimate_number : undefined}
+        confirmLabel={t("common.delete")}
+        onConfirm={() => {
+          if (deleteTarget) return performDelete(deleteTarget.id);
+        }}
+      />
     </div>
   );
 }

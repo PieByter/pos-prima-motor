@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/lib/toast-provider";
 import { Plus, Trash2, Tag, Factory, Loader2 } from "lucide-react";
 import { useLocale } from "@/lib/locales";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 type Category = { id: number; name: string; description: string | null };
 type Brand = { id: number; name: string };
@@ -22,6 +23,8 @@ export function CategoriesBrandsPage() {
   const [brandName, setBrandName] = useState("");
   const [savingCat, setSavingCat] = useState(false);
   const [savingBrand, setSavingBrand] = useState(false);
+  const [deleteCategoryTarget, setDeleteCategoryTarget] = useState<Category | null>(null);
+  const [deleteBrandTarget, setDeleteBrandTarget] = useState<Brand | null>(null);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -83,8 +86,7 @@ export function CategoriesBrandsPage() {
     }
   };
 
-  const deleteCategory = async (id: number) => {
-    if (!confirm(t("masterData.categoryDeleteConfirm"))) return;
+  const performDeleteCategory = async (id: number) => {
     try {
       const res = await fetch(`/api/categories/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed");
@@ -92,11 +94,11 @@ export function CategoriesBrandsPage() {
       await fetchAll();
     } catch {
       showToast(t("masterData.categoryDeleteFailed"), "error");
+      throw new Error("Delete category failed");
     }
   };
 
-  const deleteBrand = async (id: number) => {
-    if (!confirm(t("masterData.brandDeleteConfirm"))) return;
+  const performDeleteBrand = async (id: number) => {
     try {
       const res = await fetch(`/api/brands/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed");
@@ -104,6 +106,7 @@ export function CategoriesBrandsPage() {
       await fetchAll();
     } catch {
       showToast(t("masterData.brandDeleteFailed"), "error");
+      throw new Error("Delete brand failed");
     }
   };
 
@@ -146,7 +149,7 @@ export function CategoriesBrandsPage() {
                     <p className="text-sm font-medium">{c.name}</p>
                     {c.description && <p className="text-xs text-slate-400">{c.description}</p>}
                   </div>
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-600" onClick={() => deleteCategory(c.id)}>
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-600" onClick={() => setDeleteCategoryTarget(c)}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -184,7 +187,7 @@ export function CategoriesBrandsPage() {
               brands.map((b) => (
                 <div key={b.id} className="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2">
                   <p className="text-sm font-medium">{b.name}</p>
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-600" onClick={() => deleteBrand(b.id)}>
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-600" onClick={() => setDeleteBrandTarget(b)}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -193,6 +196,30 @@ export function CategoriesBrandsPage() {
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        open={deleteCategoryTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteCategoryTarget(null);
+        }}
+        title={t("masterData.categoryDeleteConfirm")}
+        description={deleteCategoryTarget ? deleteCategoryTarget.name : undefined}
+        confirmLabel={t("common.delete")}
+        onConfirm={() => {
+          if (deleteCategoryTarget) return performDeleteCategory(deleteCategoryTarget.id);
+        }}
+      />
+      <ConfirmDialog
+        open={deleteBrandTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteBrandTarget(null);
+        }}
+        title={t("masterData.brandDeleteConfirm")}
+        description={deleteBrandTarget ? deleteBrandTarget.name : undefined}
+        confirmLabel={t("common.delete")}
+        onConfirm={() => {
+          if (deleteBrandTarget) return performDeleteBrand(deleteBrandTarget.id);
+        }}
+      />
     </>
   );
 }

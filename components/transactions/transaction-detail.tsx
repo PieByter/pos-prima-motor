@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -32,6 +33,7 @@ import {
 import { STATUS_STYLES } from "@/lib/data/transactions";
 import { openWhatsAppReceipt } from "@/lib/utils/whatsapp";
 import { useLocale } from "@/lib/locales";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const ICON_MAP: Record<InvoiceItem["icon"], React.ElementType> = {
   wrench: Wrench,
@@ -65,6 +67,7 @@ export function TransactionDetail({
   const router = useRouter();
   const { showToast } = useToast();
   const { t } = useLocale();
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   function handleWhatsApp() {
     if (invoice.entityPhone === "-" || !invoice.entityPhone) {
@@ -77,8 +80,7 @@ export function TransactionDetail({
   const statusStyle = STATUS_STYLES[invoice.status];
   const isSale = invoice.transactionType === "sale";
 
-  async function handleDelete() {
-    if (!confirm(t("common.confirmDelete"))) return;
+  async function performDelete() {
     try {
       const endpoint = isSale
         ? `/api/sales/${invoice.id}`
@@ -96,6 +98,7 @@ export function TransactionDetail({
         err instanceof Error ? err.message : t("common.failedToDelete"),
         "error"
       );
+      throw err;
     }
   }
 
@@ -191,7 +194,7 @@ export function TransactionDetail({
           <Button
             variant="outline"
             className="gap-2 text-red-600 dark:text-red-400 hover:text-red-600"
-            onClick={handleDelete}
+            onClick={() => setConfirmDelete(true)}
           >
             <Trash2 className="h-4 w-4" />
             {t("common.delete")}
@@ -468,6 +471,16 @@ export function TransactionDetail({
           Invoice dibuat oleh {invoice.createdBy} pada {invoice.createdAt}
         </p>
       </div>
+
+      {/* Dialog konfirmasi hapus */}
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={t("common.confirmDelete")}
+        description={`${t("transactions.invoiceLabel")} #${invoice.invoiceNumber}`}
+        confirmLabel={t("common.delete")}
+        onConfirm={performDelete}
+      />
     </div>
   );
 }

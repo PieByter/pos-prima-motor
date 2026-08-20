@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/lib/toast-provider";
 import { useLocale } from "@/lib/locales";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Select,
   SelectContent,
@@ -104,6 +105,7 @@ export function TransactionTable({
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteTarget, setDeleteTarget] = useState<UiTransaction | null>(null);
 
   const detailBasePath =
     type === "sale"
@@ -178,8 +180,7 @@ export function TransactionTable({
     loadTransactions();
   }, [type]);
 
-  async function handleDelete(transaction: UiTransaction) {
-    if (!confirm(translate("common.confirmDelete"))) return;
+  async function performDelete(transaction: UiTransaction) {
     try {
       const endpoint =
         type === "sale"
@@ -197,6 +198,7 @@ export function TransactionTable({
         err instanceof Error ? err.message : translate("common.failedToDelete"),
         "error"
       );
+      throw err;
     }
   }
 
@@ -509,7 +511,7 @@ export function TransactionTable({
                             title={translate("common.delete")}
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDelete(t);
+                              setDeleteTarget(t);
                             }}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -567,6 +569,24 @@ export function TransactionTable({
           </div>
         )}
       </div>
+
+      {/* Dialog konfirmasi hapus */}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title={translate("common.confirmDelete")}
+        description={
+          deleteTarget
+            ? `${deleteTarget.invoiceNumber} · ${deleteTarget.customerOrSupplier}`
+            : undefined
+        }
+        confirmLabel={translate("common.delete")}
+        onConfirm={() => {
+          if (deleteTarget) return performDelete(deleteTarget);
+        }}
+      />
     </div>
   );
 }
